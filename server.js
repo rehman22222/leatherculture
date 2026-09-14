@@ -13,6 +13,13 @@ const port = Number(process.env.PORT || 8000);
 const adminPassword = process.env.ADMIN_PASSWORD || "leatherculture123";
 const mongoUri = process.env.MONGODB_URI;
 const mongoDbName = process.env.MONGODB_DB_NAME || "Leater-store";
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS || "http://localhost:8000,http://localhost:8001,http://127.0.0.1:8000,http://127.0.0.1:8001")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
+const crossSiteCookies = process.env.CROSS_SITE_COOKIES === "true" || Boolean(process.env.RENDER);
 const collectionNames = {
   settings: process.env.MONGODB_SETTINGS_COLLECTION || process.env.MONGODB_COLLECTION || "leater store",
   products: process.env.MONGODB_PRODUCTS_COLLECTION || "products",
@@ -752,6 +759,18 @@ async function connectDb() {
   await backfillSeoFields();
 }
 
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (!origin) return;
+  if (allowedOrigins.has(origin) || allowedOrigins.has("*")) {
+    res.setHeader("access-control-allow-origin", origin);
+    res.setHeader("access-control-allow-credentials", "true");
+    res.setHeader("access-control-allow-methods", "GET,POST,PUT,OPTIONS");
+    res.setHeader("access-control-allow-headers", "Content-Type");
+    res.setHeader("vary", "Origin");
+  }
+}
+
 function writeJson(res, status, payload) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -794,11 +813,13 @@ function isAdmin(req) {
 }
 
 function setSessionCookie(res, token) {
-  res.setHeader("set-cookie", `lc_admin_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800`);
+  const attributes = crossSiteCookies ? "HttpOnly; Secure; SameSite=None; Path=/; Max-Age=28800" : "HttpOnly; SameSite=Lax; Path=/; Max-Age=28800";
+  res.setHeader("set-cookie", `lc_admin_session=${encodeURIComponent(token)}; ${attributes}`);
 }
 
 function clearSessionCookie(res) {
-  res.setHeader("set-cookie", "lc_admin_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0");
+  const attributes = crossSiteCookies ? "HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0" : "HttpOnly; SameSite=Lax; Path=/; Max-Age=0";
+  res.setHeader("set-cookie", `lc_admin_session=; ${attributes}`);
 }
 
 function jsonWithCookie(res, status, payload) {
@@ -849,7 +870,9 @@ function escapeHtml(value) {
 }
 
 function originFor(req) {
-  return process.env.SITE_URL || `http://${req.headers.host}`;
+  const protocol = req.headers["x-forwarded-proto"] || "http";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  return process.env.SITE_URL || `${protocol}://${host}`;
 }
 
 function absoluteUrl(req, pathname) {
@@ -1019,6 +1042,13 @@ function safeFileFor(urlPath) {
 async function requestHandler(req, res) {
   if (dbReady) await dbReady;
   try {
+    setCorsHeaders(req, res);
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     const url = new URL(req.url, `http://${req.headers.host}`);
 
     if (url.pathname === "/api/storefront/settings" && req.method === "GET") {
@@ -1102,7 +1132,7 @@ async function requestHandler(req, res) {
     if (url.pathname === "/api/admin/upload" && req.method === "POST") {
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const body = JSON.parse(await readBody(req) || "{}");
-      return writeJson(res, 200, { url: saveUpload(body) });
+      return writeJson(res, 200, { url: absoluteUrl(req, saveUpload(body)) });
     }
 
     if (url.pathname === "/api/storefront/settings" && req.method === "PUT") {

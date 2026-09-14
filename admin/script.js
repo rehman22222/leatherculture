@@ -7,6 +7,18 @@ const loginStatus = document.getElementById("login-status");
 const passwordInput = document.getElementById("password");
 
 let settings = null;
+const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
+
+function apiUrl(path) {
+  return `${apiBase}${path}`;
+}
+
+function mediaUrl(value) {
+  if (!value) return value;
+  if (/^(https?:|data:|blob:)/i.test(value)) return value;
+  if (apiBase && value.startsWith("/assets/uploads/")) return `${apiBase}${value}`;
+  return value;
+}
 
 const simpleGroups = [
   {
@@ -151,7 +163,7 @@ function itemField(path, label, value, type = "input", options = []) {
 function imageField(path, altPath, image, alt) {
   return `
     <div class="image-row">
-      <img src="${escapeHtml(image || "/assets/images/image-bundle-45.png")}" alt="">
+      <img src="${escapeHtml(mediaUrl(image) || "/assets/images/image-bundle-45.png")}" alt="">
       <div class="grid">
         ${itemField(path, "Image URL", image)}
         ${itemField(altPath, "Alt text", alt)}
@@ -621,8 +633,9 @@ function fileToDataUrl(file) {
 
 async function uploadImage(file) {
   const dataUrl = await fileToDataUrl(file);
-  const response = await fetch("/api/admin/upload", {
+  const response = await fetch(apiUrl("/api/admin/upload"), {
     method: "POST",
+    credentials: "include",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ filename: file.name, dataUrl }),
   });
@@ -631,13 +644,13 @@ async function uploadImage(file) {
 }
 
 async function requireLogin() {
-  const response = await fetch("/api/admin/me", { cache: "no-store" });
+  const response = await fetch(apiUrl("/api/admin/me"), { cache: "no-store", credentials: "include" });
   document.body.classList.toggle("locked", !response.ok);
   if (response.ok) await load();
 }
 
 async function load() {
-  const response = await fetch("/api/storefront/settings", { cache: "no-store" });
+  const response = await fetch(apiUrl("/api/storefront/settings"), { cache: "no-store", credentials: "include" });
   settings = await response.json();
   render();
 }
@@ -645,8 +658,9 @@ async function load() {
 async function save() {
   status.textContent = "Saving...";
   normalizeBeforeSave();
-  const response = await fetch("/api/storefront/settings", {
+  const response = await fetch(apiUrl("/api/storefront/settings"), {
     method: "PUT",
+    credentials: "include",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(settings),
   });
@@ -658,8 +672,9 @@ async function save() {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   loginStatus.textContent = "Checking...";
-  const response = await fetch("/api/admin/login", {
+  const response = await fetch(apiUrl("/api/admin/login"), {
     method: "POST",
+    credentials: "include",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ password: passwordInput.value }),
   });
@@ -674,7 +689,7 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 logoutButton.addEventListener("click", async () => {
-  await fetch("/api/admin/logout", { method: "POST" });
+  await fetch(apiUrl("/api/admin/logout"), { method: "POST", credentials: "include" });
   document.body.classList.add("locked");
 });
 

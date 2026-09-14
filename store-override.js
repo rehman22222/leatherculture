@@ -65,6 +65,18 @@
   ];
   let settings = null;
   let previousSettings = null;
+  const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
+
+  function apiUrl(path) {
+    return `${apiBase}${path}`;
+  }
+
+  function mediaUrl(value) {
+    if (!value) return value;
+    if (/^(https?:|data:|blob:)/i.test(value)) return value;
+    if (apiBase && value.startsWith("/assets/uploads/")) return `${apiBase}${value}`;
+    return value;
+  }
 
   const hiddenTexts = [
     "Children's Wear",
@@ -198,7 +210,7 @@
     if (heroImage) {
       const hero = Array.from(document.querySelectorAll("img")).find((img) => (img.getAttribute("src") || "").includes("premium-wear-for-modern-living"));
       if (hero) {
-        hero.setAttribute("src", heroImage);
+        hero.setAttribute("src", mediaUrl(heroImage));
         hero.setAttribute("alt", heroAlt || "");
       }
     }
@@ -233,7 +245,7 @@
     candidates.forEach((img, index) => {
       const item = heroImages[index % heroImages.length];
       if (!item?.image) return;
-      img.setAttribute("src", item.image);
+      img.setAttribute("src", mediaUrl(item.image));
       img.setAttribute("alt", item.alt || item.label || "");
     });
   }
@@ -267,7 +279,7 @@
         const card = link.closest("a[href*='/shop/'], article, [data-framer-name*='Card'], [class*='container']") || link;
         if (card) {
           card.querySelectorAll("img").forEach((img) => {
-            if (product.image) img.setAttribute("src", product.image);
+            if (product.image) img.setAttribute("src", mediaUrl(product.image));
             img.setAttribute("alt", product.alt || product.name || "");
           });
         }
@@ -289,7 +301,7 @@
 
   async function loadSettings() {
     try {
-      const response = await fetch("/api/storefront/settings", { cache: "no-store" });
+      const response = await fetch(apiUrl("/api/storefront/settings"), { cache: "no-store", credentials: "include" });
       if (!response.ok) return;
       previousSettings = settings;
       settings = await response.json();

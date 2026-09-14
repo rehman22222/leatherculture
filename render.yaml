@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: leatherculture-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: CROSS_SITE_COOKIES
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        sync: false
+      - key: MONGODB_SETTINGS_COLLECTION
+        sync: false
+      - key: MONGODB_PRODUCTS_COLLECTION
+        sync: false
+      - key: MONGODB_CATEGORIES_COLLECTION
+        sync: false
+      - key: MONGODB_BANNERS_COLLECTION
+        sync: false
+      - key: MONGODB_BLOGS_COLLECTION
+        sync: false
+      - key: MONGODB_PAGES_COLLECTION
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
