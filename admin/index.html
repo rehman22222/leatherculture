@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LeatherCulture Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css" />
+  </head>
+  <body>
+    <div id="login-screen" class="login-screen">
+      <form id="login-form" class="login-card">
+        <p>LeatherCulture Admin</p>
+        <h1>Sign in</h1>
+        <label>
+          Password
+          <input id="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Login</button>
+        <div id="login-status" role="status"></div>
+      </form>
+    </div>
+
+    <aside>
+      <strong>LeatherCulture</strong>
+      <span>Store Admin</span>
+      <nav>
+        <a href="#brand">Brand</a>
+        <a href="#header">Header</a>
+        <a href="#hero">Hero</a>
+        <a href="#pages">Pages & SEO</a>
+        <a href="#banners">Banners</a>
+        <a href="#products">Products</a>
+        <a href="#categories">Categories</a>
+        <a href="#blogs">Blogs</a>
+        <a href="#sections">Sections</a>
+        <a href="#footer">Footer</a>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p>Online Store</p>
+          <h1>Header to footer editor</h1>
+        </div>
+        <div class="actions">
+          <a href="/" target="_blank">View Store</a>
+          <button id="logout" type="button" class="secondary">Logout</button>
+          <button id="save">Save changes</button>
+        </div>
+      </header>
+
+      <div id="status" role="status"></div>
+      <form id="editor"></form>
+    </main>
+
+    <script src="/admin/script.js"></script>
+  </body>
+</html>

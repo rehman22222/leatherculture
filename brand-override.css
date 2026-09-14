@@ -1,0 +1,94 @@
+/* LeatherCulture visual overrides for the restored storefront. */
+
+.framer-16gypsd,
+.framer-jt1lle-container,
+.framer-f9mt9f-container {
+  min-width: 178px !important;
+  width: 178px !important;
+  overflow: visible !important;
+}
+
+.framer-16gypsd img,
+.framer-jt1lle-container img,
+.framer-f9mt9f-container img {
+  opacity: 0 !important;
+}
+
+.framer-16gypsd a,
+.framer-jt1lle-container a,
+.framer-f9mt9f-container a {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.framer-16gypsd a::before,
+.framer-jt1lle-container a::before,
+.framer-f9mt9f-container a::before {
+  content: attr(data-brand) !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  z-index: 5 !important;
+  width: max-content !important;
+  transform: translateY(-50%) !important;
+  color: #fff !important;
+  font-family: Inter, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+body:has(.framer-14i4oy2) .framer-jt1lle-container a::before,
+body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
+  color: #fff !important;
+}
+
+.framer-14i4oy2 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  width: min(870px, calc(100vw - 40px)) !important;
+}
+
+.framer-a236u9,
+.framer-19pjcck {
+  display: none !important;
+}
+
+[data-framer-component-type="RichTextContainer"],
+[data-framer-component-type="RichTextContainer"] * {
+  opacity: 1 !important;
+}
+
+/* Keep the main navigation transparent on every page. */
+.framer-149q19i-container,
+.framer-149q19i-container nav,
+.framer-149q19i-container nav > div,
+.framer-149q19i-container [data-framer-name="Container"],
+.framer-149q19i-container [data-framer-name="Content wrapper"],
+.framer-149q19i-container [data-framer-name="Links wrapper"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.framer-149q19i-container [data-framer-component-type="RichTextContainer"] p,
+.framer-149q19i-container a {
+  color: rgba(255, 255, 255, 0.9) !important;
+  --framer-text-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.framer-149q19i-container [aria-label="Search Icon"],
+.framer-149q19i-container [data-framer-name="Search bar"] > div {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.framer-149q19i-container a[href$="shop"][data-framer-name],
+.framer-149q19i-container .framer-1ddq8ct-container a {
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+.framer-149q19i-container .framer-1ddq8ct-container p {
+  color: #000 !important;
+  --framer-text-color: #000 !important;
+}
