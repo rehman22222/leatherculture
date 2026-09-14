@@ -11,8 +11,8 @@ const root = __dirname;
 const uploadDir = path.join(root, "assets", "uploads");
 const port = Number(process.env.PORT || 8000);
 const adminPassword = process.env.ADMIN_PASSWORD || "leatherculture123";
-const mongoUri = process.env.MONGODB_URI;
-const mongoDbName = process.env.MONGODB_DB_NAME || "Leater-store";
+const mongoUri = cleanEnv(process.env.MONGODB_URI);
+const mongoDbName = cleanEnv(process.env.MONGODB_DB_NAME) || "Leater-store";
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS || "http://localhost:8000,http://localhost:8001,http://127.0.0.1:8000,http://127.0.0.1:8001")
     .split(",")
@@ -32,6 +32,12 @@ const settingsDocumentId = "storefront-settings";
 const sessions = new Map();
 const collections = {};
 let dbReady = null;
+
+function cleanEnv(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+}
 
 const mime = {
   ".html": "text/html; charset=utf-8",
