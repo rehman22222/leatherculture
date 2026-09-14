@@ -120,7 +120,7 @@
 
   function setLogoBrand() {
     const brand = get("brand.name") || "LeatherCulture";
-    const favicon = "/assets/brand/leather-culture-mark.svg";
+    const favicon = "/assets/brand/leather-culture-mark.png";
     document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']").forEach((link) => {
       link.setAttribute("href", favicon);
       link.removeAttribute("media");
