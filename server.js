@@ -32,11 +32,33 @@ const settingsDocumentId = "storefront-settings";
 const sessions = new Map();
 const collections = {};
 let dbReady = null;
+let dbError = null;
 
 function cleanEnv(value) {
   return String(value || "")
     .trim()
     .replace(/^['"]|['"]$/g, "");
+}
+
+function startDbConnection() {
+  dbError = null;
+  dbReady = connectDb()
+    .then(() => {
+      dbError = null;
+      console.log(`MongoDB: ${mongoDbName}`);
+      console.log(`Collections: ${Object.values(collectionNames).join(", ")}`);
+    })
+    .catch((error) => {
+      dbError = error;
+      console.error(`MongoDB connection failed: ${error.message}`);
+    });
+  return dbReady;
+}
+
+async function ensureDbReady() {
+  if (!dbReady || dbError) startDbConnection();
+  await dbReady;
+  if (dbError) throw dbError;
 }
 
 const mime = {
@@ -1046,7 +1068,6 @@ function safeFileFor(urlPath) {
 }
 
 async function requestHandler(req, res) {
-  if (dbReady) await dbReady;
   try {
     setCorsHeaders(req, res);
     if (req.method === "OPTIONS") {
@@ -1057,7 +1078,16 @@ async function requestHandler(req, res) {
 
     const url = new URL(req.url, `http://${req.headers.host}`);
 
+    if (url.pathname === "/health" && req.method === "GET") {
+      return writeJson(res, 200, {
+        ok: true,
+        database: dbError ? "error" : collections.settings ? "connected" : "connecting",
+        message: dbError ? dbError.message : "Service is running"
+      });
+    }
+
     if (url.pathname === "/api/storefront/settings" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await readSettings());
     }
 
@@ -1068,32 +1098,39 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/sitemap.xml" && req.method === "GET") {
+      await ensureDbReady();
       res.writeHead(200, { "content-type": "application/xml; charset=utf-8" });
       res.end(await sitemap(req));
       return;
     }
 
     if (url.pathname === "/api/storefront/pages" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await publicRecords("pages", { enabled: { $ne: false } }));
     }
 
     if (url.pathname === "/api/storefront/products" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await publicRecords("products", { enabled: { $ne: false } }));
     }
 
     if (url.pathname === "/api/storefront/categories" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await publicRecords("categories", { enabled: { $ne: false } }));
     }
 
     if (url.pathname === "/api/storefront/banners" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await publicRecords("banners", { enabled: { $ne: false } }));
     }
 
     if (url.pathname === "/api/storefront/blogs" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, 200, await publicRecords("blogs", { status: "published" }));
     }
 
     if (url.pathname.startsWith("/blog/") && req.method === "GET") {
+      await ensureDbReady();
       const slug = url.pathname.split("/").filter(Boolean)[1];
       const settings = await readSettings();
       const post = (settings.blogPosts || []).find((item) => item.slug === slug && item.status === "published");
@@ -1107,6 +1144,7 @@ async function requestHandler(req, res) {
     if (url.pathname.startsWith("/shop/") && req.method === "GET") {
       const slug = url.pathname.split("/").filter(Boolean)[1];
       const staticPage = path.join(root, "shop", slug || "", "index.html");
+      if (!fs.existsSync(staticPage)) await ensureDbReady();
       const product = !fs.existsSync(staticPage) && await collections.products.findOne({ slug, enabled: { $ne: false } });
       if (product) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -1116,6 +1154,7 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/api/admin/login" && req.method === "POST") {
+      await ensureDbReady();
       const body = JSON.parse(await readBody(req) || "{}");
       if (body.password !== adminPassword) return writeJson(res, 401, { message: "Invalid password" });
       const token = crypto.randomBytes(32).toString("hex");
@@ -1125,6 +1164,7 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/api/admin/logout" && req.method === "POST") {
+      await ensureDbReady();
       const token = parseCookies(req).lc_admin_session;
       if (token) sessions.delete(token);
       clearSessionCookie(res);
@@ -1132,16 +1172,19 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/api/admin/me" && req.method === "GET") {
+      await ensureDbReady();
       return writeJson(res, isAdmin(req) ? 200 : 401, { authenticated: isAdmin(req) });
     }
 
     if (url.pathname === "/api/admin/upload" && req.method === "POST") {
+      await ensureDbReady();
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const body = JSON.parse(await readBody(req) || "{}");
       return writeJson(res, 200, { url: absoluteUrl(req, saveUpload(body)) });
     }
 
     if (url.pathname === "/api/storefront/settings" && req.method === "PUT") {
+      await ensureDbReady();
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const body = await readBody(req);
       return writeJson(res, 200, await writeSettings(JSON.parse(body || "{}")));
@@ -1154,8 +1197,13 @@ async function requestHandler(req, res) {
       let data = await fs.promises.readFile(file);
       const ext = path.extname(file).toLowerCase();
       if (ext === ".html") {
-        const settings = await readSettings();
-        data = Buffer.from(injectStaticMeta(data.toString("utf8"), pageForPath(settings, url.pathname), req));
+        try {
+          await ensureDbReady();
+          const settings = await readSettings();
+          data = Buffer.from(injectStaticMeta(data.toString("utf8"), pageForPath(settings, url.pathname), req));
+        } catch (error) {
+          console.error(`Static HTML served without DB metadata: ${error.message}`);
+        }
       }
       res.writeHead(200, {
         "content-type": mime[ext] || "application/octet-stream"
@@ -1170,23 +1218,14 @@ async function requestHandler(req, res) {
   }
 }
 
-dbReady = connectDb();
+startDbConnection();
 
 if (process.env.VERCEL) {
   module.exports = requestHandler;
 } else {
   const server = http.createServer(requestHandler);
-  dbReady
-    .then(() => {
-    server.listen(port, () => {
-      console.log(`LeatherCulture store: http://localhost:${port}`);
-      console.log(`Admin panel: http://localhost:${port}/admin`);
-      console.log(`MongoDB: ${mongoDbName}`);
-      console.log(`Collections: ${Object.values(collectionNames).join(", ")}`);
-    });
-  })
-    .catch((error) => {
-      console.error(`MongoDB connection failed: ${error.message}`);
-      process.exit(1);
-    });
+  server.listen(port, () => {
+    console.log(`LeatherCulture store: http://localhost:${port}`);
+    console.log(`Admin panel: http://localhost:${port}/admin`);
+  });
 }
