@@ -975,6 +975,7 @@ function renderBlogPost(post, settings, req) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escapeHtml(title)}</title>
+    <link href="/assets/brand/leather-culture-mark.svg" rel="icon" type="image/svg+xml">
     ${metaTags({ title, description: post.metaDescription || post.excerpt || settings.brand?.description, keywords: post.keywords, canonicalPath: `/blog/${post.slug}`, image: post.coverImage }, req)}
     <style>
       body{margin:0;background:#f8f8f8;color:#080808;font-family:Inter,Arial,sans-serif}
@@ -1015,6 +1016,7 @@ function renderProductPage(product, settings, req) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escapeHtml(title)}</title>
+    <link href="/assets/brand/leather-culture-mark.svg" rel="icon" type="image/svg+xml">
     ${metaTags({ title, description: product.metaDescription || product.description || product.name, keywords: product.keywords, canonicalPath: `/shop/${product.slug}`, image: product.image }, req)}
     <style>
       body{margin:0;background:#f8f8f8;color:#080808;font-family:Inter,Arial,sans-serif}

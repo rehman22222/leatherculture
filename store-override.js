@@ -120,9 +120,23 @@
 
   function setLogoBrand() {
     const brand = get("brand.name") || "LeatherCulture";
+    const favicon = "/assets/brand/leather-culture-mark.svg";
+    document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']").forEach((link) => {
+      link.setAttribute("href", favicon);
+      link.removeAttribute("media");
+    });
+    if (!document.querySelector("link[rel='icon']")) {
+      const link = document.createElement("link");
+      link.setAttribute("rel", "icon");
+      link.setAttribute("href", favicon);
+      document.head.appendChild(link);
+    }
     document
       .querySelectorAll(".framer-16gypsd a, .framer-jt1lle-container a, .framer-f9mt9f-container a")
-      .forEach((link) => link.setAttribute("data-brand", brand));
+      .forEach((link) => {
+        link.setAttribute("data-brand", brand);
+        link.setAttribute("aria-label", brand);
+      });
   }
 
   function setPageMeta() {
