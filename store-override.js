@@ -78,6 +78,53 @@
     return value;
   }
 
+  let videoObserver = null;
+
+  function optimizeMedia() {
+    document.querySelectorAll("img").forEach((image, index) => {
+      image.decoding = "async";
+      if (index > 4) {
+        image.loading = "lazy";
+        image.fetchPriority = "low";
+      }
+    });
+
+    const videos = Array.from(document.querySelectorAll("video"));
+    videos.forEach((video) => {
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
+      video.removeAttribute("autoplay");
+      if (!video.dataset.lcVideoOptimized) {
+        video.pause();
+        video.dataset.lcVideoOptimized = "true";
+      }
+    });
+
+    if (!("IntersectionObserver" in window)) return;
+    if (!videoObserver) {
+      videoObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const video = entry.target;
+            if (entry.isIntersecting) {
+              video.play().catch(() => {});
+            } else {
+              video.pause();
+            }
+          });
+        },
+        { threshold: 0.55 }
+      );
+    }
+    videos.forEach((video) => {
+      if (!video.dataset.lcVideoObserved) {
+        video.dataset.lcVideoObserved = "true";
+        videoObserver.observe(video);
+      }
+    });
+  }
+
   const hiddenTexts = [
     "Children's Wear",
     "Mini Denim Overalls",
@@ -374,6 +421,7 @@
   function apply() {
     clearTimeout(timer);
     timer = setTimeout(() => {
+      optimizeMedia();
       hideByText();
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
@@ -382,6 +430,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    optimizeMedia();
     setLogoBrand();
     loadSettings();
     apply();

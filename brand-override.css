@@ -1,5 +1,45 @@
 /* LeatherCulture visual overrides for the restored storefront. */
 
+html {
+  scroll-behavior: auto !important;
+}
+
+*,
+*::before,
+*::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0s !important;
+}
+
+body,
+#main {
+  overscroll-behavior-y: none;
+}
+
+[class*="framer-"],
+[data-framer-component-type],
+[data-framer-name] {
+  will-change: auto !important;
+}
+
+[style*="backdrop-filter"],
+[style*="-webkit-backdrop-filter"],
+[style*="filter: blur"],
+[style*="filter:blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+}
+
+img,
+video {
+  content-visibility: auto;
+}
+
 .framer-16gypsd,
 .framer-jt1lle-container,
 .framer-f9mt9f-container {
