@@ -1010,6 +1010,16 @@ function renderBlogPost(post, settings, req) {
 function renderProductPage(product, settings, req) {
   const brand = settings.brand?.name || "LeatherCulture";
   const title = product.metaTitle || `${product.name} - ${brand}`;
+  const mediaItems = [
+    { image: product.image, alt: product.alt || product.name, label: product.name },
+    ...(product.variants || [])
+      .filter((variant) => variant.enabled !== false && variant.image)
+      .map((variant) => ({
+        image: variant.image,
+        alt: variant.alt || `${product.name} ${variant.name || "variant"}`,
+        label: variant.name || "Variant"
+      }))
+  ].filter((item, index, list) => item.image && list.findIndex((candidate) => candidate.image === item.image) === index);
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -1032,8 +1042,12 @@ function renderProductPage(product, settings, req) {
       .variants{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
       .variant{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #ddd;font-weight:800}
       .swatch{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+      .gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+      .thumb{width:72px;height:86px;padding:0;border:2px solid #ddd;border-radius:8px;background:#f4f4f4;cursor:pointer;overflow:hidden}
+      .thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+      .thumb.active{border-color:#050505}
       .button{display:inline-flex;margin-top:26px;min-height:48px;align-items:center;padding:0 20px;border-radius:999px;background:#050505;color:#fff;text-decoration:none;font-weight:900}
-      @media(max-width:820px){main{grid-template-columns:1fr}}
+      @media(max-width:820px){main{grid-template-columns:1fr}.gallery{flex-wrap:nowrap;overflow-x:auto}.thumb{flex:0 0 auto;width:62px;height:76px}}
     </style>
   </head>
   <body>
@@ -1042,7 +1056,13 @@ function renderProductPage(product, settings, req) {
       <nav>${(settings.header?.nav || []).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join("")}</nav>
     </header>
     <main>
-      <img src="${escapeHtml(product.image || "")}" alt="${escapeHtml(product.alt || product.name)}">
+      <div>
+        <img id="main-product-image" src="${escapeHtml(mediaItems[0]?.image || product.image || "")}" alt="${escapeHtml(mediaItems[0]?.alt || product.alt || product.name)}">
+        <div class="gallery" aria-label="Product variant images">${mediaItems.map((item, index) => `
+          <button class="thumb${index === 0 ? " active" : ""}" type="button" data-image="${escapeHtml(item.image)}" data-alt="${escapeHtml(item.alt)}" aria-label="${escapeHtml(item.label)}">
+            <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.alt)}" loading="lazy" decoding="async">
+          </button>`).join("")}</div>
+      </div>
       <section>
         ${product.badge ? `<span class="badge">${escapeHtml(product.badge)}</span>` : ""}
         <h1>${escapeHtml(product.name)}</h1>
@@ -1055,6 +1075,17 @@ function renderProductPage(product, settings, req) {
         <a class="button" href="/contact">Contact to order</a>
       </section>
     </main>
+    <script>
+      document.querySelectorAll(".thumb").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".thumb").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          const image = document.getElementById("main-product-image");
+          image.src = button.dataset.image;
+          image.alt = button.dataset.alt || "";
+        });
+      });
+    </script>
   </body>
 </html>`;
 }

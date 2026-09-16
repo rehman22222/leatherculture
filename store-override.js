@@ -318,6 +318,90 @@
     return (source && source.products || []).find((item) => item.id === id || item.slug === id);
   }
 
+  function currentProductFromPath() {
+    if (!settings?.products) return null;
+    const parts = location.pathname.split("/").filter(Boolean);
+    if (parts[0] !== "shop" || !parts[1]) return null;
+    return settings.products.find((item) => item.slug === parts[1] || item.id === parts[1]) || null;
+  }
+
+  function productMediaItems(product) {
+    const items = [];
+    const add = (item) => {
+      if (!item?.image) return;
+      const url = mediaUrl(item.image);
+      if (items.some((existing) => existing.url === url)) return;
+      items.push({
+        url,
+        alt: item.alt || item.name || item.label || product.name || "Product image",
+        label: item.name || item.label || product.name || "Product"
+      });
+    };
+    add({ image: product.image, alt: product.alt, name: product.name });
+    (product.variants || [])
+      .filter((variant) => variant.enabled !== false)
+      .forEach(add);
+    return items;
+  }
+
+  function findMainProductImage(product) {
+    const mediaNames = productMediaItems(product).map((item) => basename(item.url)).filter(Boolean);
+    const images = Array.from(document.querySelectorAll("img")).filter((image) => {
+      const rect = image.getBoundingClientRect();
+      const src = image.getAttribute("src") || "";
+      return rect.width > 150 && rect.height > 150 && !src.includes("leather-culture-logo") && !src.includes("leather-culture-mark");
+    });
+    const matched = images.find((image) => mediaNames.some((name) => (image.getAttribute("src") || "").includes(name)));
+    if (matched) return matched;
+    return images.sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return ar.top - br.top || (br.width * br.height) - (ar.width * ar.height);
+    })[0] || null;
+  }
+
+  function enhanceProductDetail() {
+    const product = currentProductFromPath();
+    if (!product) return;
+    const mediaItems = productMediaItems(product);
+    if (mediaItems.length < 2) return;
+
+    const mainImage = findMainProductImage(product);
+    if (!mainImage) return;
+
+    mainImage.classList.add("lc-product-main-image");
+    const first = mediaItems[0];
+    mainImage.removeAttribute("srcset");
+    mainImage.setAttribute("src", first.url);
+    mainImage.setAttribute("alt", first.alt);
+
+    let gallery = document.querySelector(".lc-variant-gallery");
+    if (!gallery) {
+      gallery = document.createElement("div");
+      gallery.className = "lc-variant-gallery";
+      gallery.setAttribute("aria-label", "Product variant images");
+      const imageBox = mainImage.closest("[data-framer-name='Image']") || mainImage.closest("[data-framer-background-image-wrapper]")?.parentElement || mainImage;
+      imageBox.insertAdjacentElement("afterend", gallery);
+    }
+
+    gallery.innerHTML = "";
+    mediaItems.forEach((item, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `lc-variant-thumb${index === 0 ? " is-active" : ""}`;
+      button.setAttribute("aria-label", item.label);
+      button.innerHTML = `<img src="${item.url}" alt="${item.alt}" loading="lazy" decoding="async">`;
+      button.addEventListener("click", () => {
+        gallery.querySelectorAll(".lc-variant-thumb").forEach((node) => node.classList.remove("is-active"));
+        button.classList.add("is-active");
+        mainImage.removeAttribute("srcset");
+        mainImage.setAttribute("src", item.url);
+        mainImage.setAttribute("alt", item.alt);
+      });
+      gallery.appendChild(button);
+    });
+  }
+
   function productLinks(product) {
     const keys = [product.id, product.slug].filter(Boolean);
     const links = [];
@@ -352,6 +436,8 @@
       replaceText([fallback.name, previous.name], product.name);
       replaceText([fallback.price, previous.price], product.price);
     });
+
+    enhanceProductDetail();
   }
 
   function applySettings() {
