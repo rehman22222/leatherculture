@@ -413,14 +413,15 @@
   }
 
   const communityFallbacks = [
-    { image: "/assets/images/woman-in-greenish-shirt-3.jpg", alt: "LeatherCulture community style" },
-    { image: "/assets/images/young-man-in-black-leather-double-breasted-jacket--1.png", alt: "Black leather jacket street style" },
+    { image: "/assets/images/shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png", alt: "Brown leather outfit" },
+    { image: "/assets/images/woman-in-greenish-shirt-3.jpg", alt: "LeatherCulture green shirt style" },
+    { image: "/assets/images/blue-t-shirt-3.png", alt: "Blue tee detail" },
+    { image: "/assets/images/boy-in-black-hoodie-1.png", alt: "Black hoodie streetwear" },
     { image: "/assets/images/hooded-puffer-vest-1.png", alt: "Modern puffer vest outfit" },
-    { image: "/assets/images/man-having-tatto-on-neck.png", alt: "Minimal menswear look" },
-    { image: "/assets/images/blue-t-shirt-3.png", alt: "Clean blue tee style" },
+    { image: "/assets/images/man-having-tatto-on-neck.png", alt: "Minimal menswear portrait" },
+    { image: "/assets/images/young-man-in-black-leather-double-breasted-jacket--1.png", alt: "Black leather jacket street style" },
     { image: "/assets/images/bold-fashion-portrait.png", alt: "Bold modern fashion portrait" },
     { image: "/assets/images/futuristic-fashion-pose-1.png", alt: "Contemporary silhouette" },
-    { image: "/assets/images/green-hoodie-1.jpeg", alt: "Green hoodie streetwear" },
   ];
 
   function communityMediaItems() {
@@ -437,20 +438,11 @@
       });
     };
 
-    (get("hero.images") || [])
-      .filter((item) => item.enabled !== false)
-      .forEach((item) => add(item, "Hero style"));
+    communityFallbacks.forEach((item) => add(item, item.alt));
     (settings?.products || [])
       .filter((product) => product.enabled !== false)
-      .forEach((product) => {
-        add(product, product.name);
-        (product.variants || [])
-          .filter((variant) => variant.enabled !== false)
-          .forEach((variant) => add(variant, product.name));
-      });
-    (settings?.categories || []).forEach((category) => add(category, category.name));
-
-    communityFallbacks.forEach((item) => add(item, item.alt));
+      .slice(0, 4)
+      .forEach((product) => add(product, product.name));
     return items.slice(0, 12);
   }
 
@@ -461,16 +453,21 @@
       || headings.find((node) => (node.textContent || "").trim() === "See our community in modern silhouettes");
     if (!heading) return null;
 
-    let section = heading.closest("section, header, article");
-    if (section) return section;
+    const semanticSection = heading.closest("section, header, article");
+    if (semanticSection) return semanticSection;
 
-    section = heading.parentElement;
-    while (section && section.parentElement && section.parentElement !== document.body) {
-      const rect = section.getBoundingClientRect();
-      if (rect.height > 280 || section.querySelectorAll("a, button").length >= 2) return section;
-      section = section.parentElement;
+    const ancestors = [];
+    let node = heading.parentElement;
+    while (node && node.parentElement && node.parentElement !== document.body) {
+      ancestors.push(node);
+      node = node.parentElement;
     }
-    return heading.parentElement;
+
+    const pageWidth = Math.min(window.innerWidth || 1200, 1200);
+    return ancestors.find((ancestor) => {
+      const rect = ancestor.getBoundingClientRect();
+      return rect.width >= pageWidth * 0.75 && rect.height >= 380;
+    }) || ancestors[ancestors.length - 1] || heading.parentElement;
   }
 
   function hideOriginalCommunityMedia(section) {
@@ -501,7 +498,7 @@
         return /collection|contact/i.test(text);
       });
       const anchor = buttons.length ? (buttons[buttons.length - 1].closest("div") || buttons[buttons.length - 1]) : null;
-      if (anchor && anchor.parentElement === section) {
+      if (anchor && section.contains(anchor)) {
         anchor.insertAdjacentElement("afterend", rail);
       } else {
         section.appendChild(rail);
