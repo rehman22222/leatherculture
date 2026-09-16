@@ -66,6 +66,8 @@
   let settings = null;
   let previousSettings = null;
   const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
+  const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mobileViewport = window.matchMedia && window.matchMedia("(max-width: 809px)").matches;
 
   function apiUrl(path) {
     return `${apiBase}${path}`;
@@ -91,7 +93,7 @@
 
     const videos = Array.from(document.querySelectorAll("video"));
     videos.forEach((video) => {
-      video.preload = "metadata";
+      video.preload = mobileViewport ? "none" : "metadata";
       video.muted = true;
       video.playsInline = true;
       video.removeAttribute("autoplay");
@@ -101,6 +103,7 @@
       }
     });
 
+    if (mobileViewport || prefersReducedMotion) return;
     if (!("IntersectionObserver" in window)) return;
     if (!videoObserver) {
       videoObserver = new IntersectionObserver(

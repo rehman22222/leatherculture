@@ -40,12 +40,19 @@ video {
   content-visibility: auto;
 }
 
+section,
+article,
+footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}
+
 .framer-16gypsd,
 .framer-jt1lle-container,
 .framer-f9mt9f-container {
-  min-width: 310px !important;
-  width: 310px !important;
-  height: 52px !important;
+  min-width: 265px !important;
+  width: 265px !important;
+  height: 44px !important;
   overflow: visible !important;
 }
 
@@ -70,8 +77,8 @@ video {
   left: 0 !important;
   top: 50% !important;
   z-index: 5 !important;
-  width: 310px !important;
-  height: 52px !important;
+  width: 265px !important;
+  height: 44px !important;
   transform: translateY(-50%) !important;
   background-image: url("/assets/brand/leather-culture-logo.png") !important;
   background-position: left center !important;
@@ -85,19 +92,32 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
 }
 
 @media (max-width: 809px) {
+  html,
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+
   .framer-16gypsd,
   .framer-jt1lle-container,
   .framer-f9mt9f-container {
-    min-width: 190px !important;
-    width: 190px !important;
-    height: 38px !important;
+    min-width: 168px !important;
+    width: 168px !important;
+    height: 34px !important;
   }
 
   .framer-16gypsd a::before,
   .framer-jt1lle-container a::before,
   .framer-f9mt9f-container a::before {
-    width: 190px !important;
-    height: 38px !important;
+    width: 168px !important;
+    height: 34px !important;
+  }
+
+  .framer-149q19i-container {
+    transform: none !important;
+  }
+
+  video {
+    display: none !important;
   }
 }
 
@@ -139,7 +159,6 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
   color: #fff !important;
 }
 
-.framer-149q19i-container a[href$="shop"][data-framer-name],
 .framer-149q19i-container .framer-1ddq8ct-container a {
   background-color: #fff !important;
   color: #000 !important;
