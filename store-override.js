@@ -80,6 +80,16 @@
     return value;
   }
 
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    })[char]);
+  }
+
   let videoObserver = null;
 
   function optimizeMedia() {
@@ -402,6 +412,110 @@
     });
   }
 
+  const communityFallbacks = [
+    { image: "/assets/images/woman-in-greenish-shirt-3.jpg", alt: "LeatherCulture community style" },
+    { image: "/assets/images/young-man-in-black-leather-double-breasted-jacket--1.png", alt: "Black leather jacket street style" },
+    { image: "/assets/images/hooded-puffer-vest-1.png", alt: "Modern puffer vest outfit" },
+    { image: "/assets/images/man-having-tatto-on-neck.png", alt: "Minimal menswear look" },
+    { image: "/assets/images/blue-t-shirt-3.png", alt: "Clean blue tee style" },
+    { image: "/assets/images/bold-fashion-portrait.png", alt: "Bold modern fashion portrait" },
+    { image: "/assets/images/futuristic-fashion-pose-1.png", alt: "Contemporary silhouette" },
+    { image: "/assets/images/green-hoodie-1.jpeg", alt: "Green hoodie streetwear" },
+  ];
+
+  function communityMediaItems() {
+    const items = [];
+    const add = (item, label) => {
+      const image = item?.image || item?.coverImage || item?.backgroundImage;
+      if (!image) return;
+      const url = mediaUrl(image);
+      if (items.some((existing) => existing.url === url)) return;
+      items.push({
+        url,
+        alt: item.alt || item.coverAlt || item.backgroundAlt || item.name || item.title || item.label || label || "LeatherCulture community style",
+        label: item.name || item.title || item.label || label || "Community"
+      });
+    };
+
+    (get("hero.images") || [])
+      .filter((item) => item.enabled !== false)
+      .forEach((item) => add(item, "Hero style"));
+    (settings?.products || [])
+      .filter((product) => product.enabled !== false)
+      .forEach((product) => {
+        add(product, product.name);
+        (product.variants || [])
+          .filter((variant) => variant.enabled !== false)
+          .forEach((variant) => add(variant, product.name));
+      });
+    (settings?.categories || []).forEach((category) => add(category, category.name));
+
+    communityFallbacks.forEach((item) => add(item, item.alt));
+    return items.slice(0, 12);
+  }
+
+  function findCommunitySection() {
+    const title = get("sections.community.title") || "See our community in modern silhouettes";
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3, p, div"));
+    const heading = headings.find((node) => (node.textContent || "").trim() === title)
+      || headings.find((node) => (node.textContent || "").trim() === "See our community in modern silhouettes");
+    if (!heading) return null;
+
+    let section = heading.closest("section, header, article");
+    if (section) return section;
+
+    section = heading.parentElement;
+    while (section && section.parentElement && section.parentElement !== document.body) {
+      const rect = section.getBoundingClientRect();
+      if (rect.height > 280 || section.querySelectorAll("a, button").length >= 2) return section;
+      section = section.parentElement;
+    }
+    return heading.parentElement;
+  }
+
+  function hideOriginalCommunityMedia(section) {
+    if (!section || section.dataset.lcCommunityCleaned) return;
+    section.querySelectorAll("img").forEach((image) => {
+      if (image.closest(".lc-community-rail")) return;
+      const holder = image.closest("[data-framer-name='Image']") || image.closest("[data-framer-background-image-wrapper]")?.parentElement || image;
+      holder.classList.add("lc-community-original-hidden");
+    });
+    section.dataset.lcCommunityCleaned = "true";
+  }
+
+  function enhanceCommunityScroller() {
+    if (location.pathname.replace(/\/$/, "") !== "") return;
+    const section = findCommunitySection();
+    if (!section) return;
+
+    hideOriginalCommunityMedia(section);
+
+    let rail = section.querySelector(".lc-community-rail");
+    if (!rail) {
+      rail = document.createElement("div");
+      rail.className = "lc-community-rail";
+      rail.setAttribute("aria-label", "Community collection");
+
+      const buttons = Array.from(section.querySelectorAll("a, button")).filter((node) => {
+        const text = (node.textContent || "").trim();
+        return /collection|contact/i.test(text);
+      });
+      const anchor = buttons.length ? (buttons[buttons.length - 1].closest("div") || buttons[buttons.length - 1]) : null;
+      if (anchor && anchor.parentElement === section) {
+        anchor.insertAdjacentElement("afterend", rail);
+      } else {
+        section.appendChild(rail);
+      }
+    }
+
+    const items = communityMediaItems();
+    rail.innerHTML = `<div class="lc-community-track">${items.map((item) => `
+      <a class="lc-community-card" href="/shop" aria-label="${escapeHtml(item.label)}">
+        <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt)}" loading="lazy" decoding="async">
+      </a>
+    `).join("")}</div>`;
+  }
+
   function productLinks(product) {
     const keys = [product.id, product.slug].filter(Boolean);
     const links = [];
@@ -447,6 +561,7 @@
     setLinksAndInputs();
     setImageData();
     setProductData();
+    enhanceCommunityScroller();
   }
 
   async function loadSettings() {
