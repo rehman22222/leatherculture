@@ -1,29 +1,17 @@
 /* LeatherCulture visual overrides for the restored storefront. */
 
-html {
-  scroll-behavior: auto !important;
+:root {
+  --lc-logo-header: url("/assets/brand/leather-culture-logo-white.png");
+  --lc-logo-footer: url("/assets/brand/leather-culture-logo-white.png");
 }
 
-*,
-*::before,
-*::after {
-  animation-duration: 0.001ms !important;
-  animation-delay: 0s !important;
-  animation-iteration-count: 1 !important;
-  scroll-behavior: auto !important;
-  transition-duration: 0.001ms !important;
-  transition-delay: 0s !important;
+body.lc-light-header {
+  --lc-logo-header: url("/assets/brand/leather-culture-logo-black.png");
 }
 
 body,
 #main {
   overscroll-behavior-y: none;
-}
-
-[class*="framer-"],
-[data-framer-component-type],
-[data-framer-name] {
-  will-change: auto !important;
 }
 
 [style*="backdrop-filter"],
@@ -33,11 +21,6 @@ body,
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   filter: none !important;
-}
-
-img,
-video {
-  content-visibility: auto;
 }
 
 .lc-variant-gallery {
@@ -74,114 +57,116 @@ video {
   border-color: #050505 !important;
 }
 
-.lc-community-original-hidden {
-  display: none !important;
-}
-
-.lc-community-rail {
-  width: min(1220px, calc(100vw - 40px)) !important;
-  margin: 112px auto 0 !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  position: relative !important;
-  z-index: 4 !important;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 330px;
-  scrollbar-color: #8d8d8d #efefef;
-  scrollbar-width: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.lc-community-track {
-  display: flex !important;
-  gap: 14px !important;
-  min-width: max-content !important;
-  padding: 0 0 24px !important;
-  scroll-snap-type: x mandatory !important;
-}
-
-.lc-community-rail::-webkit-scrollbar {
-  height: 10px;
-}
-
-.lc-community-rail::-webkit-scrollbar-track {
-  background: #efefef;
-}
-
-.lc-community-rail::-webkit-scrollbar-thumb {
-  background: #8d8d8d;
-  border-radius: 999px;
-}
-
-.lc-community-card {
-  background: #ededed !important;
-  border-radius: 8px !important;
-  display: block !important;
-  flex: 0 0 220px !important;
-  height: 292px !important;
-  overflow: hidden !important;
-  position: relative !important;
-  scroll-snap-align: center !important;
-  text-decoration: none !important;
-}
-
-.lc-community-card img {
-  display: block !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  object-position: center !important;
-  width: 100% !important;
-}
-
-section,
-article,
-footer {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 720px;
-}
-
 .framer-16gypsd,
-.framer-jt1lle-container,
-.framer-f9mt9f-container {
-  min-width: 265px !important;
-  width: 265px !important;
-  height: 44px !important;
+.framer-jt1lle-container {
+  min-width: 264px !important;
+  width: 264px !important;
+  height: 55px !important;
   overflow: visible !important;
 }
 
 .framer-16gypsd img,
-.framer-jt1lle-container img,
-.framer-f9mt9f-container img {
+.framer-jt1lle-container img {
   opacity: 0 !important;
 }
 
 .framer-16gypsd a,
-.framer-jt1lle-container a,
-.framer-f9mt9f-container a {
+.framer-jt1lle-container a {
   position: relative !important;
   overflow: visible !important;
 }
 
 .framer-16gypsd a::before,
-.framer-jt1lle-container a::before,
-.framer-f9mt9f-container a::before {
+.framer-jt1lle-container a::before {
   content: "" !important;
   position: absolute !important;
   left: 0 !important;
   top: 50% !important;
   z-index: 5 !important;
-  width: 265px !important;
-  height: 44px !important;
-  transform: translateY(-50%) !important;
-  background-image: url("/assets/brand/leather-culture-logo.png") !important;
+  width: 252px !important;
+  height: 70px !important;
+  transform: translateY(-10%) !important;
+  background-image: var(--lc-logo-header) !important;
   background-position: left center !important;
   background-repeat: no-repeat !important;
   background-size: contain !important;
+  filter: drop-shadow(0 0 0 currentColor) drop-shadow(0 0 0.65px currentColor) !important;
 }
 
-body:has(.framer-14i4oy2) .framer-jt1lle-container a::before,
-body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
-  filter: none !important;
+body.lc-light-header .framer-16gypsd a::before,
+body.lc-light-header .framer-jt1lle-container a::before {
+  filter: drop-shadow(0 0 0 #000) drop-shadow(0 0 0.65px #000) !important;
+}
+
+body:not(.lc-light-header) .framer-16gypsd a::before,
+body:not(.lc-light-header) .framer-jt1lle-container a::before {
+  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 0.65px #fff) !important;
+}
+
+/* Footer: small brand wordmark (replaces the template's WEARIX mark). */
+.framer-agjbad-container {
+  aspect-ratio: auto !important;
+  width: 190px !important;
+  height: 68px !important;
+  overflow: visible !important;
+}
+
+.framer-agjbad-container img,
+.framer-f9mt9f-container img {
+  opacity: 0 !important;
+}
+
+.framer-agjbad-container a {
+  display: block !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.framer-agjbad-container a::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: var(--lc-logo-footer) left center / contain no-repeat !important;
+  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 0.65px #fff) !important;
+}
+
+/* Footer: large centered signature logo at the very bottom. */
+.framer-f9mt9f-container {
+  aspect-ratio: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.framer-f9mt9f-container a {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: relative !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.framer-f9mt9f-container a > [data-framer-name="Image"] {
+  display: none !important;
+}
+
+.framer-f9mt9f-container a::before {
+  content: "" !important;
+  display: block !important;
+  width: min(560px, 60vw) !important;
+  aspect-ratio: 2.8 !important;
+  margin: 48px auto 16px !important;
+  background: var(--lc-logo-footer) center / contain no-repeat !important;
+  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 0.65px #fff) !important;
+  opacity: 0.96;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.framer-f9mt9f-container a:hover::before {
+  opacity: 1;
+  transform: scale(1.015);
 }
 
 @media (max-width: 809px) {
@@ -191,18 +176,26 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
   }
 
   .framer-16gypsd,
-  .framer-jt1lle-container,
-  .framer-f9mt9f-container {
-    min-width: 168px !important;
-    width: 168px !important;
-    height: 34px !important;
+  .framer-jt1lle-container {
+    min-width: 163px !important;
+    width: 163px !important;
+    height: 38px !important;
   }
 
   .framer-16gypsd a::before,
-  .framer-jt1lle-container a::before,
+  .framer-jt1lle-container a::before {
+    width: 158px !important;
+    height: 50px !important;
+  }
+
+  .framer-agjbad-container {
+    width: 150px !important;
+    height: 54px !important;
+  }
+
   .framer-f9mt9f-container a::before {
-    width: 168px !important;
-    height: 34px !important;
+    width: min(360px, 78vw) !important;
+    margin: 28px auto 12px !important;
   }
 
   .framer-149q19i-container {
@@ -228,20 +221,6 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
     height: 76px !important;
   }
 
-  .lc-community-rail {
-    margin-top: 56px !important;
-    width: calc(100vw - 24px) !important;
-  }
-
-  .lc-community-track {
-    gap: 10px !important;
-    padding-bottom: 18px !important;
-  }
-
-  .lc-community-card {
-    flex-basis: 168px !important;
-    height: 224px !important;
-  }
 }
 
 .framer-14i4oy2 {
@@ -257,6 +236,32 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
 [data-framer-component-type="RichTextContainer"],
 [data-framer-component-type="RichTextContainer"] * {
   opacity: 1 !important;
+}
+
+/* Let the logo overflow the header box instead of being clipped. */
+.framer-149q19i-container,
+.framer-149q19i-container nav,
+.framer-149q19i-container nav > div,
+.framer-149q19i-container [data-framer-name="Container"],
+.framer-149q19i-container [data-framer-name="Content wrapper"],
+.framer-149q19i-container [data-framer-name="Links wrapper"],
+.framer-16gypsd,
+.framer-jt1lle-container,
+.framer-16gypsd > *,
+.framer-jt1lle-container > * {
+  overflow: visible !important;
+}
+
+/* Header hides while scrolling down and returns on scroll up. */
+.framer-149q19i-container {
+  transition: transform 0.28s ease, opacity 0.28s ease !important;
+  will-change: transform;
+}
+
+body.lc-header-hidden .framer-149q19i-container {
+  transform: translateY(-120%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* Keep the main navigation transparent on every page. */
@@ -280,6 +285,18 @@ body:has(.framer-14i4oy2) .framer-f9mt9f-container a::before {
 .framer-149q19i-container [data-framer-name="Search bar"] > div {
   background-color: rgba(255, 255, 255, 0.15) !important;
   color: #fff !important;
+}
+
+body.lc-light-header .framer-149q19i-container [data-framer-component-type="RichTextContainer"] p,
+body.lc-light-header .framer-149q19i-container a {
+  color: rgba(0, 0, 0, 0.86) !important;
+  --framer-text-color: rgba(0, 0, 0, 0.86) !important;
+}
+
+body.lc-light-header .framer-149q19i-container [aria-label="Search Icon"],
+body.lc-light-header .framer-149q19i-container [data-framer-name="Search bar"] > div {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: #000 !important;
 }
 
 .framer-149q19i-container .framer-1ddq8ct-container a {

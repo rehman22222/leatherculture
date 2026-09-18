@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /shop/mini-denim-overalls
+Disallow: /shop/patterned-knit-sweater
+
+Sitemap: https://leatherculture.shop/sitemap.xml

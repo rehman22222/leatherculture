@@ -213,6 +213,43 @@ function renderPages() {
   `;
 }
 
+function renderContent() {
+  const groups = settings.content?.groups || [];
+  const values = settings.content?.values || {};
+  const changed = (group) => group.items.filter((item) => String(values[item.key] || "").trim()).length;
+  return `
+    <section id="content">
+      <h2>Page Content</h2>
+      <p class="hint">Every text on the store, page by page. Leave a field empty to keep the original wording. Product names, prices, blog posts and SEO have their own sections.</p>
+      ${groups
+        .map(
+          (group) => `
+            <details class="content-group" ${group.id === "shared" ? "open" : ""}>
+              <summary><strong>${escapeHtml(group.label)}</strong><span class="count">${group.items.length} texts${changed(group) ? ` · ${changed(group)} edited` : ""}</span></summary>
+              <div class="content-items">
+                ${group.items
+                  .map((item) => {
+                    const value = values[item.key] || "";
+                    const long = item.original.length > 60;
+                    return `
+                      <label class="content-item ${value ? "is-edited" : ""}">
+                        <span class="original" title="${escapeHtml(item.original)}">${escapeHtml(item.original)}</span>
+                        ${long
+                          ? `<textarea data-path="content.values.${item.key}" placeholder="${escapeHtml(item.original)}">${escapeHtml(value)}</textarea>`
+                          : `<input data-path="content.values.${item.key}" placeholder="${escapeHtml(item.original)}" value="${escapeHtml(value)}">`}
+                      </label>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </details>
+          `
+        )
+        .join("")}
+    </section>
+  `;
+}
+
 function renderHeroImages() {
   const images = settings.hero?.images || [];
   return `
@@ -360,10 +397,14 @@ function renderProducts() {
                 ${itemField(`products.${index}.name`, "Product name", product.name)}
                 ${itemField(`products.${index}.slug`, "Slug", product.slug)}
                 ${itemField(`products.${index}.category`, "Category", product.category, "select", categoryOptions)}
-                ${itemField(`products.${index}.price`, "Price", product.price)}
+                ${itemField(`products.${index}.price`, "Price (e.g. Rs 4,500)", product.price)}
+                ${itemField(`products.${index}.compareAtPrice`, "Compare-at price (strikethrough, optional)", product.compareAtPrice)}
                 ${itemField(`products.${index}.badge`, "Badge", product.badge)}
                 ${itemField(`products.${index}.enabled`, "Enabled", product.enabled, "checkbox")}
                 ${itemField(`products.${index}.description`, "Description", product.description, "textarea")}
+                ${itemField(`products.${index}.material`, "Material", product.material)}
+                ${itemField(`products.${index}.care`, "Care", product.care)}
+                ${itemField(`products.${index}.warranty`, "Warranty", product.warranty)}
               </div>
               ${imageField(`products.${index}.image`, `products.${index}.alt`, product.image, product.alt)}
               ${seoFields(`products.${index}`, product)}
@@ -532,6 +573,7 @@ function render() {
   editor.innerHTML = [
     ...simpleGroups.slice(0, 3).map(renderSimpleGroup),
     renderPages(),
+    renderContent(),
     renderBanners(),
     renderProducts(),
     renderCategories(),
@@ -573,7 +615,11 @@ function addItem(type) {
       name: "New Product",
       slug: "new-product",
       category: settings.categories?.[0]?.id || "men",
-      price: "$0.00",
+      price: "Rs 0",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       badge: "",
       image: "",
       alt: "",

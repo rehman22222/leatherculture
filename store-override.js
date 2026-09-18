@@ -3,6 +3,7 @@
     ["Black friday sale 50% off", "announcement.text"],
     ["Shop all items", "header.shopButton"],
     ["Soft", "hero.tag"],
+    ["Wearix", "hero.tag"],
     ["Warm Winter Layers", "hero.eyebrow"],
     ["Premium wear for modern living", "hero.title"],
     ["Discover our new range of soft clothes made for your daily look and your best days with the finest fabrics.", "hero.subtitle"],
@@ -29,9 +30,11 @@
     ["See our community in modern silhouettes", "sections.community.title"],
     ["Explore community", "sections.community.button"],
     ["Subscribe to our news letter", "footer.newsletterHeading"],
+    ["Subscribe to our news later", "footer.newsletterHeading"],
     ["Subscribe", "footer.newsletterButton"],
     ["A sophisticated e-commerce template designed for modern and minimalist brands.", "footer.description"],
     ["Contact LeatherCulture", "footer.contactButton"],
+    ["Contact Wearix", "footer.contactButton"],
     ["Quick Links", "footer.quickLinksTitle"],
     ["Follow us:", "footer.followTitle"],
     ["Get in touch", "footer.getInTouchTitle"],
@@ -78,16 +81,6 @@
     if (/^(https?:|data:|blob:)/i.test(value)) return value;
     if (apiBase && value.startsWith("/assets/uploads/")) return `${apiBase}${value}`;
     return value;
-  }
-
-  function escapeHtml(value) {
-    return String(value || "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      "\"": "&quot;",
-      "'": "&#39;",
-    })[char]);
   }
 
   let videoObserver = null;
@@ -156,12 +149,59 @@
     nodes.forEach(callback);
   }
 
+  function normalizeText(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, li, a, button, label";
+
+  // Replace text in text nodes first; fall back to whole elements whose visible text matches
+  // (Framer splits animated headings into one <span> per word, so text nodes alone can't match).
   function replaceText(candidates, next) {
     if (!next) return;
-    const lookup = new Set(candidates.filter(Boolean).map((value) => String(value).trim()));
+    const lookup = new Set(candidates.filter(Boolean).map((value) => normalizeText(value)));
+    lookup.delete(normalizeText(next));
+    if (!lookup.size) return;
+    let hit = false;
     walkTextNodes((node) => {
       const current = node.nodeValue.trim();
-      if (lookup.has(current)) node.nodeValue = node.nodeValue.replace(current, next);
+      if (lookup.has(current)) {
+        node.nodeValue = node.nodeValue.replace(current, next);
+        hit = true;
+      }
+    });
+    document.querySelectorAll(BLOCK_SELECTOR).forEach((element) => {
+      if (element.querySelector("p, h1, h2, h3, h4, h5, h6, li, button, div, label")) return;
+      if (!lookup.has(normalizeText(element.textContent))) return;
+      element.textContent = next;
+      hit = true;
+    });
+    document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach((input) => {
+      if (lookup.has(normalizeText(input.placeholder))) input.placeholder = next;
+    });
+    return hit;
+  }
+
+  function contentGroupsForPage() {
+    const groups = (settings && settings.content && settings.content.groups) || [];
+    const pathname = location.pathname.replace(/\/$/, "") || "/";
+    return groups.filter((group) => {
+      if (group.match === "all") return true;
+      if (group.match === "/shop/*") return /^\/shop\/[^/]+$/.test(pathname);
+      return group.match === pathname;
+    });
+  }
+
+  function applyPageContent() {
+    if (!settings || !settings.content) return;
+    const values = settings.content.values || {};
+    const previousValues = (previousSettings && previousSettings.content && previousSettings.content.values) || {};
+    contentGroupsForPage().forEach((group) => {
+      (group.items || []).forEach((item) => {
+        const next = normalizeText(values[item.key]);
+        if (!next) return;
+        replaceText([item.original, previousValues[item.key]], next);
+      });
     });
   }
 
@@ -178,11 +218,74 @@
     });
   }
 
+  function parseRgb(value) {
+    const match = String(value || "").match(/rgba?\(([^)]+)\)/i);
+    if (!match) return null;
+    const parts = match[1].split(",").map((part) => Number.parseFloat(part.trim()));
+    if (parts.length < 3 || parts.some((part, index) => index < 3 && Number.isNaN(part))) return null;
+    return {
+      r: parts[0],
+      g: parts[1],
+      b: parts[2],
+      a: parts.length > 3 && !Number.isNaN(parts[3]) ? parts[3] : 1,
+    };
+  }
+
+  function readableBackgroundAtLogo() {
+    const header = document.querySelector(".framer-149q19i-container");
+    const logo = document.querySelector(".framer-16gypsd, .framer-jt1lle-container");
+    const rect = (logo || header)?.getBoundingClientRect();
+    const x = rect ? Math.min(Math.max(rect.left + Math.min(rect.width * 0.45, 160), 1), window.innerWidth - 1) : Math.min(180, window.innerWidth / 2);
+    const y = rect ? Math.min(Math.max(rect.top + rect.height / 2, 1), window.innerHeight - 1) : 72;
+    const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
+
+    for (const element of stack) {
+      if (!(element instanceof Element)) continue;
+      if (header && header.contains(element)) continue;
+
+      let node = element;
+      while (node && node !== document.documentElement) {
+        const style = window.getComputedStyle(node);
+        const color = parseRgb(style.backgroundColor);
+        if (color && color.a > 0.55) {
+          return color;
+        }
+        node = node.parentElement;
+      }
+    }
+
+    return null;
+  }
+
+  function updateHeaderContrast() {
+    if (!document.body) return;
+    const pathname = location.pathname.replace(/\/$/, "") || "/";
+    let useBlackLogo = pathname !== "/";
+
+    if (pathname === "/" && window.scrollY < window.innerHeight * 0.58) {
+      useBlackLogo = false;
+    } else {
+      const color = readableBackgroundAtLogo();
+      if (color) {
+        const luminance = (0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b) / 255;
+        useBlackLogo = luminance > 0.62;
+      }
+    }
+
+    document.body.classList.toggle("lc-light-header", useBlackLogo);
+  }
+
   function setLogoBrand() {
     const brand = get("brand.name") || "LeatherCulture";
     const favicon = "/assets/brand/leather-culture-mark.png";
-    document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']").forEach((link) => {
+    updateHeaderContrast();
+    document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon']").forEach((link) => {
       link.setAttribute("href", favicon);
+      link.removeAttribute("media");
+    });
+    document.querySelectorAll("link[rel='apple-touch-icon']").forEach((link) => {
+      link.setAttribute("href", "/assets/brand/apple-touch-icon.png");
+      link.setAttribute("sizes", "180x180");
       link.removeAttribute("media");
     });
     if (!document.querySelector("link[rel='icon']")) {
@@ -191,12 +294,20 @@
       link.setAttribute("href", favicon);
       document.head.appendChild(link);
     }
+    if (!document.querySelector("link[rel='apple-touch-icon']")) {
+      const link = document.createElement("link");
+      link.setAttribute("rel", "apple-touch-icon");
+      link.setAttribute("href", "/assets/brand/apple-touch-icon.png");
+      link.setAttribute("sizes", "180x180");
+      document.head.appendChild(link);
+    }
     document
       .querySelectorAll(".framer-16gypsd a, .framer-jt1lle-container a, .framer-f9mt9f-container a")
       .forEach((link) => {
         link.setAttribute("data-brand", brand);
         link.setAttribute("aria-label", brand);
       });
+    updateHeaderContrast();
   }
 
   function setPageMeta() {
@@ -370,9 +481,49 @@
     })[0] || null;
   }
 
+  function setProductDetailFields(product) {
+    const heading = document.querySelector("h1");
+    if (!heading) return;
+    // Climb to the product info column: the ancestor that holds title, pricing, description and specs.
+    let info = heading.parentElement;
+    while (info && info !== document.body && !info.querySelector("[data-framer-name='Product Specs']")) info = info.parentElement;
+    if (!info || info === document.body) return;
+
+    const pricing = info.querySelector("[data-framer-name='Pricing']");
+    if (pricing) {
+      const priceNodes = Array.from(pricing.querySelectorAll("p"));
+      const compare = pricing.querySelector("[data-framer-name='Compared price']");
+      const main = priceNodes.find((node) => !compare || !compare.contains(node));
+      if (main && product.price) main.textContent = product.price;
+      if (compare) {
+        const compareText = normalizeText(product.compareAtPrice);
+        compare.style.display = compareText ? "" : "none";
+        const node = compare.querySelector("p") || compare;
+        if (compareText) node.textContent = compareText;
+      }
+    }
+
+    const description = info.querySelector("[data-framer-name='Description text wrapper'] p");
+    if (description && normalizeText(product.description)) description.textContent = product.description;
+
+    const specs = { material: product.material, care: product.care, warranty: product.warranty };
+    info.querySelectorAll("[data-framer-name='Product Specs'] [data-framer-name='Wrapper']").forEach((row) => {
+      const [label, value] = row.querySelectorAll("p");
+      const key = normalizeText(label && label.textContent).toLowerCase();
+      if (value && specs[key]) value.textContent = specs[key];
+    });
+
+    const category = (settings.categories || []).find((item) => item.id === product.category || item.slug === product.category);
+    if (category && category.name) {
+      const tag = Array.from(info.querySelectorAll("[data-framer-name='Text wrapper'] p")).find((node) => /wear$/i.test(normalizeText(node.textContent)));
+      if (tag) tag.textContent = category.name;
+    }
+  }
+
   function enhanceProductDetail() {
     const product = currentProductFromPath();
     if (!product) return;
+    setProductDetailFields(product);
     const mediaItems = productMediaItems(product);
     if (mediaItems.length < 2) return;
 
@@ -410,107 +561,6 @@
       });
       gallery.appendChild(button);
     });
-  }
-
-  const communityFallbacks = [
-    { image: "/assets/images/shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png", alt: "Brown leather outfit" },
-    { image: "/assets/images/woman-in-greenish-shirt-3.jpg", alt: "LeatherCulture green shirt style" },
-    { image: "/assets/images/blue-t-shirt-3.png", alt: "Blue tee detail" },
-    { image: "/assets/images/boy-in-black-hoodie-1.png", alt: "Black hoodie streetwear" },
-    { image: "/assets/images/hooded-puffer-vest-1.png", alt: "Modern puffer vest outfit" },
-    { image: "/assets/images/man-having-tatto-on-neck.png", alt: "Minimal menswear portrait" },
-    { image: "/assets/images/young-man-in-black-leather-double-breasted-jacket--1.png", alt: "Black leather jacket street style" },
-    { image: "/assets/images/bold-fashion-portrait.png", alt: "Bold modern fashion portrait" },
-    { image: "/assets/images/futuristic-fashion-pose-1.png", alt: "Contemporary silhouette" },
-  ];
-
-  function communityMediaItems() {
-    const items = [];
-    const add = (item, label) => {
-      const image = item?.image || item?.coverImage || item?.backgroundImage;
-      if (!image) return;
-      const url = mediaUrl(image);
-      if (items.some((existing) => existing.url === url)) return;
-      items.push({
-        url,
-        alt: item.alt || item.coverAlt || item.backgroundAlt || item.name || item.title || item.label || label || "LeatherCulture community style",
-        label: item.name || item.title || item.label || label || "Community"
-      });
-    };
-
-    communityFallbacks.forEach((item) => add(item, item.alt));
-    (settings?.products || [])
-      .filter((product) => product.enabled !== false)
-      .slice(0, 4)
-      .forEach((product) => add(product, product.name));
-    return items.slice(0, 12);
-  }
-
-  function findCommunitySection() {
-    const title = get("sections.community.title") || "See our community in modern silhouettes";
-    const headings = Array.from(document.querySelectorAll("h1, h2, h3, p, div"));
-    const heading = headings.find((node) => (node.textContent || "").trim() === title)
-      || headings.find((node) => (node.textContent || "").trim() === "See our community in modern silhouettes");
-    if (!heading) return null;
-
-    const semanticSection = heading.closest("section, header, article");
-    if (semanticSection) return semanticSection;
-
-    const ancestors = [];
-    let node = heading.parentElement;
-    while (node && node.parentElement && node.parentElement !== document.body) {
-      ancestors.push(node);
-      node = node.parentElement;
-    }
-
-    const pageWidth = Math.min(window.innerWidth || 1200, 1200);
-    return ancestors.find((ancestor) => {
-      const rect = ancestor.getBoundingClientRect();
-      return rect.width >= pageWidth * 0.75 && rect.height >= 380;
-    }) || ancestors[ancestors.length - 1] || heading.parentElement;
-  }
-
-  function hideOriginalCommunityMedia(section) {
-    if (!section || section.dataset.lcCommunityCleaned) return;
-    section.querySelectorAll("img").forEach((image) => {
-      if (image.closest(".lc-community-rail")) return;
-      const holder = image.closest("[data-framer-name='Image']") || image.closest("[data-framer-background-image-wrapper]")?.parentElement || image;
-      holder.classList.add("lc-community-original-hidden");
-    });
-    section.dataset.lcCommunityCleaned = "true";
-  }
-
-  function enhanceCommunityScroller() {
-    if (location.pathname.replace(/\/$/, "") !== "") return;
-    const section = findCommunitySection();
-    if (!section) return;
-
-    hideOriginalCommunityMedia(section);
-
-    let rail = section.querySelector(".lc-community-rail");
-    if (!rail) {
-      rail = document.createElement("div");
-      rail.className = "lc-community-rail";
-      rail.setAttribute("aria-label", "Community collection");
-
-      const buttons = Array.from(section.querySelectorAll("a, button")).filter((node) => {
-        const text = (node.textContent || "").trim();
-        return /collection|contact/i.test(text);
-      });
-      const anchor = buttons.length ? (buttons[buttons.length - 1].closest("div") || buttons[buttons.length - 1]) : null;
-      if (anchor && section.contains(anchor)) {
-        anchor.insertAdjacentElement("afterend", rail);
-      } else {
-        section.appendChild(rail);
-      }
-    }
-
-    const items = communityMediaItems();
-    rail.innerHTML = `<div class="lc-community-track">${items.map((item) => `
-      <a class="lc-community-card" href="/shop" aria-label="${escapeHtml(item.label)}">
-        <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt)}" loading="lazy" decoding="async">
-      </a>
-    `).join("")}</div>`;
   }
 
   function productLinks(product) {
@@ -551,14 +601,39 @@
     enhanceProductDetail();
   }
 
+  function syncProductSchema() {
+    const product = currentProductFromPath();
+    const script = document.querySelector("script[type='application/ld+json'][data-lc-seo]");
+    if (!product || !script) return;
+    try {
+      const data = JSON.parse(script.textContent);
+      const node = (data["@graph"] || []).find((item) => item["@type"] === "Product");
+      if (!node) return;
+      const amount = String(product.price || "").replace(/[^0-9.]/g, "");
+      node.name = product.name || node.name;
+      node.description = product.description || node.description;
+      if (product.image) node.image = [new URL(mediaUrl(product.image), location.origin).toString()];
+      node.offers = node.offers || {};
+      node.offers.priceCurrency = "PKR";
+      if (amount) node.offers.price = amount;
+      node.offers.availability = (product.variants || []).some((v) => v.enabled !== false && Number(v.stock) > 0) || !(product.variants || []).length
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock";
+      script.textContent = JSON.stringify(data);
+    } catch (error) {
+      /* leave static schema untouched */
+    }
+  }
+
   function applySettings() {
     setLogoBrand();
     setPageMeta();
     replaceBoundText();
+    applyPageContent();
     setLinksAndInputs();
     setImageData();
     setProductData();
-    enhanceCommunityScroller();
+    syncProductSchema();
   }
 
   async function loadSettings() {
@@ -569,6 +644,7 @@
       settings = await response.json();
       applySettings();
     } catch (error) {
+      console.error("LeatherCulture: could not apply store settings", error);
       setLogoBrand();
     }
   }
@@ -613,12 +689,72 @@
     }
   }
 
+  function retag(element, tag) {
+    const next = document.createElement(tag);
+    Array.from(element.attributes).forEach((attr) => next.setAttribute(attr.name, attr.value));
+    while (element.firstChild) next.appendChild(element.firstChild);
+    element.replaceWith(next);
+    return next;
+  }
+
+  function isRendered(element) {
+    return element.getClientRects().length > 0;
+  }
+
+  // Keep exactly one <h1> per page: promote the product title on product pages,
+  // demote any duplicate hero headings Framer renders for other breakpoints.
+  function enforceSingleH1() {
+    if (!document.body) return;
+    let headings = Array.from(document.querySelectorAll("h1"));
+
+    if (!headings.some(isRendered)) {
+      const product = currentProductFromPath();
+      const name = (product && product.name) || (productFallbacks[location.pathname.split("/").filter(Boolean)[1]] || {}).name;
+      const candidate = Array.from(document.querySelectorAll("h2, h3")).find((node) => {
+        const text = (node.textContent || "").trim();
+        return isRendered(node) && (node.classList.contains("framer-styles-preset-17m6oxo") || (name && text === name));
+      });
+      if (candidate) retag(candidate, "h1");
+      headings = Array.from(document.querySelectorAll("h1"));
+    }
+
+    const primary = headings.find(isRendered) || headings[0];
+    headings.forEach((node) => {
+      if (node !== primary) retag(node, "h2");
+    });
+  }
+
   function cleanVisibleBranding() {
     document.title = document.title.replace(/Wearix/gi, "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("iframe[id*='framer'], [class*='__framer-badge']").forEach((node) => node.remove());
   }
 
+  // Header visibility: hidden while scrolling down, shown again on scroll up.
+  const HIDE_HEADER_ON_SCROLL_DOWN = true;
+  const HEADER_SCROLL_THRESHOLD = 8;
+  let lastScrollY = window.scrollY || 0;
+  function updateHeaderVisibility() {
+    if (!document.body) return;
+    const y = window.scrollY || 0;
+    const delta = y - lastScrollY;
+    if (Math.abs(delta) < HEADER_SCROLL_THRESHOLD) return;
+    const scrollingDown = delta > 0;
+    const hide = y > 80 && (HIDE_HEADER_ON_SCROLL_DOWN ? scrollingDown : !scrollingDown);
+    document.body.classList.toggle("lc-header-hidden", hide);
+    lastScrollY = y;
+  }
+
   let timer = 0;
+  let contrastFrame = 0;
+  function scheduleHeaderContrast() {
+    if (contrastFrame) return;
+    contrastFrame = window.requestAnimationFrame(() => {
+      contrastFrame = 0;
+      updateHeaderVisibility();
+      updateHeaderContrast();
+    });
+  }
+
   function apply() {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -627,6 +763,7 @@
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
       applySettings();
+      enforceSingleH1();
     }, 80);
   }
 
@@ -635,7 +772,10 @@
     setLogoBrand();
     loadSettings();
     apply();
+    scheduleHeaderContrast();
   });
   window.addEventListener("load", apply);
+  window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
+  window.addEventListener("resize", scheduleHeaderContrast);
   new MutationObserver(apply).observe(document.documentElement, { childList: true, subtree: true });
 })();

@@ -65,7 +65,12 @@ const mime = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".gif": "image/gif",
+  ".ico": "image/x-icon",
+  ".avif": "image/avif",
   ".json": "application/json; charset=utf-8",
+  ".framercms": "application/octet-stream",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".jpg": "image/jpeg",
@@ -75,7 +80,577 @@ const mime = {
   ".mp4": "video/mp4"
 };
 
+// Editable page text. Keys are stable hashes of the original template string; values live in the settings document.
+const contentGroups = [
+  {
+    "id": "shared",
+    "label": "Header & Footer (all pages)",
+    "match": "all",
+    "items": [
+      {
+        "key": "34e80a799d",
+        "original": "Reviews"
+      },
+      {
+        "key": "4c1c7d945f",
+        "original": "Styles"
+      },
+      {
+        "key": "55f015a0c5",
+        "original": "Instagram"
+      },
+      {
+        "key": "ff47f96514",
+        "original": "Dribbble"
+      },
+      {
+        "key": "d85544fce4",
+        "original": "Facebook"
+      },
+      {
+        "key": "2491bc9c7d",
+        "original": "Twitter"
+      },
+      {
+        "key": "970cfba66b",
+        "original": "Youtube"
+      },
+      {
+        "key": "95d3fa6b9e",
+        "original": "Enter your email"
+      },
+      {
+        "key": "c63bff7931",
+        "original": "Connect with us on social media for a daily dose of fresh style, featuring exclusive looks from our community."
+      },
+      {
+        "key": "4c6d274e55",
+        "original": "See collections"
+      },
+      {
+        "key": "0005f78117",
+        "original": "Stay connected"
+      }
+    ]
+  },
+  {
+    "id": "home",
+    "label": "Home page",
+    "match": "/",
+    "items": [
+      {
+        "key": "8615658315",
+        "original": "Urban"
+      },
+      {
+        "key": "cd118d21c3",
+        "original": "Latest"
+      },
+      {
+        "key": "8d5e7e72f1",
+        "original": "Premium"
+      },
+      {
+        "key": "443531f5f0",
+        "original": "Arctic"
+      },
+      {
+        "key": "28d5d53226",
+        "original": "Casual"
+      },
+      {
+        "key": "b611bdd463",
+        "original": "Iconic"
+      },
+      {
+        "key": "d019979a29",
+        "original": "Unique"
+      },
+      {
+        "key": "01f7ac959c",
+        "original": "Best sellers"
+      },
+      {
+        "key": "34b5e3cde7",
+        "original": "Best seller"
+      },
+      {
+        "key": "66cc173fc2",
+        "original": "Since 2014"
+      },
+      {
+        "key": "3bd32ddc06",
+        "original": "A decade ago, we set out to redefine the modern silhouette. Today, we merge urban utility with high-end aesthetics in a resilient, beautiful collection."
+      },
+      {
+        "key": "997d8c85e7",
+        "original": "More about us"
+      },
+      {
+        "key": "1267031ac2",
+        "original": "Our Collections"
+      },
+      {
+        "key": "03c2e7e41f",
+        "original": "New"
+      },
+      {
+        "key": "5113789698",
+        "original": "Mens's wear"
+      },
+      {
+        "key": "06b63c0aa1",
+        "original": "Premium modern collection for men"
+      },
+      {
+        "key": "c6f683ca7a",
+        "original": "Upgrade your daily look with our crafted pieces made from the finest fabrics for lasting comfort and timeless style."
+      },
+      {
+        "key": "f444c76c25",
+        "original": "Pricing start from:"
+      },
+      {
+        "key": "de20253201",
+        "original": "All collections"
+      },
+      {
+        "key": "3c8ef50877",
+        "original": "Women's wear"
+      },
+      {
+        "key": "56dd1459c4",
+        "original": "Modern daily wear for women"
+      },
+      {
+        "key": "7f99e12635",
+        "original": "Elevate your style with our signature soft pieces designed to make every single day feel truly fresh and special."
+      },
+      {
+        "key": "7449432039",
+        "original": "$35.00"
+      },
+      {
+        "key": "45e46c84ff",
+        "original": "$150.00"
+      },
+      {
+        "key": "c92a103243",
+        "original": "2026"
+      },
+      {
+        "key": "8380411ba3",
+        "original": "Children's wear"
+      },
+      {
+        "key": "3dcb85ac85",
+        "original": "Modern easy styles for children"
+      },
+      {
+        "key": "70c2143eb1",
+        "original": "Provide your children with the best soft touch gear made for play & long lasting wear throughout every single busy day."
+      },
+      {
+        "key": "c18676ceb7",
+        "original": "$25.00"
+      },
+      {
+        "key": "580606daf1",
+        "original": "Customer reviews"
+      },
+      {
+        "key": "ba2f793616",
+        "original": "Experience the difference through the words of customers who value premium fabrics and timeless design."
+      },
+      {
+        "key": "9f3ba3723d",
+        "original": "The premium quality of the men's collection is truly unmatched lately. The fabrics feel incredibly premium and soft. This specific tailored fit is perfect for my busy office. A very sharp look. I love it every day."
+      },
+      {
+        "key": "cd445c0f4b",
+        "original": "James Carter"
+      },
+      {
+        "key": "6901e85410",
+        "original": "Creative Director"
+      },
+      {
+        "key": "40bdad82a0",
+        "original": "4.9/5 from 1k+ reviews"
+      },
+      {
+        "key": "90e9aee824",
+        "original": "Wearix Voice"
+      },
+      {
+        "key": "3a5c25d6f6",
+        "original": "Read all blogs"
+      },
+      {
+        "key": "aec7b47248",
+        "original": "Style Guide"
+      },
+      {
+        "key": "1eabdc7fcc",
+        "original": "How to master the art of minimal street style"
+      },
+      {
+        "key": "eb55f9110c",
+        "original": "Build a timeless, comfortable wardrobe with high-quality fabrics, muted tones, and effortless oversized fits."
+      },
+      {
+        "key": "01a9edbc37",
+        "original": "Fashion Tips"
+      },
+      {
+        "key": "3f439d4262",
+        "original": "Elevate everyday outfits using modern minimalist styling"
+      },
+      {
+        "key": "51d4e1a476",
+        "original": "Build a capsule wardrobe that works year round"
+      }
+    ]
+  },
+  {
+    "id": "shop",
+    "label": "Shop page",
+    "match": "/shop",
+    "items": [
+      {
+        "key": "92b6e6ddf1",
+        "original": "The new season"
+      },
+      {
+        "key": "bc18ec4c5b",
+        "original": "Elevate your daily wardrobe with ease"
+      },
+      {
+        "key": "d1fe76475f",
+        "original": "Explore our handpicked modern silhouettes crafted from the world's most sustainable fabrics."
+      },
+      {
+        "key": "e3f261695e",
+        "original": "Explore stories"
+      },
+      {
+        "key": "cf23ee2798",
+        "original": "About us"
+      }
+    ]
+  },
+  {
+    "id": "about",
+    "label": "About page",
+    "match": "/about",
+    "items": [
+      {
+        "key": "1278166ebd",
+        "original": "Know about Wearix"
+      },
+      {
+        "key": "bbbe6da011",
+        "original": "Timeless design, modern wearability"
+      },
+      {
+        "key": "553ddfe257",
+        "original": "We focus on creating essential garments that remain relevant, functional, and refined across seasons."
+      },
+      {
+        "key": "0b9e9037d5",
+        "original": "Browse collections"
+      },
+      {
+        "key": "cf23ee2798",
+        "original": "About us"
+      },
+      {
+        "key": "8823b9751c",
+        "original": "4.9/5 rating"
+      },
+      {
+        "key": "c45bc9e4f1",
+        "original": "Trusted by 1k+ businesses"
+      },
+      {
+        "key": "a3a0349bb9",
+        "original": "About Wearix"
+      },
+      {
+        "key": "6fdef98b49",
+        "original": "More than fashion, Wearix is a commitment to intentional design. Our curated collections focus on sleek silhouettes, empowering your unique and personal journey with modern ease."
+      },
+      {
+        "key": "5f3940e0d1",
+        "original": "10M+"
+      },
+      {
+        "key": "79e77f001d",
+        "original": "Pieces worn daily"
+      },
+      {
+        "key": "2f2a93e35c",
+        "original": "98%"
+      },
+      {
+        "key": "c2af71c447",
+        "original": "Customer Satisfaction"
+      },
+      {
+        "key": "f79134598f",
+        "original": "300+"
+      },
+      {
+        "key": "a9c5b0c97d",
+        "original": "Essential Styles"
+      },
+      {
+        "key": "fd7f9240e2",
+        "original": "500K+"
+      },
+      {
+        "key": "ea9889f0eb",
+        "original": "Community worldwide"
+      }
+    ]
+  },
+  {
+    "id": "blog",
+    "label": "Blog page",
+    "match": "/blog",
+    "items": [
+      {
+        "key": "45217aeda3",
+        "original": "Read our stories"
+      },
+      {
+        "key": "9888185425",
+        "original": "The craft behind every single stitch"
+      },
+      {
+        "key": "0a30b7e698",
+        "original": "Discover the detailed process of creating premium garments from our sustainable materials."
+      },
+      {
+        "key": "0b9e9037d5",
+        "original": "Browse collections"
+      },
+      {
+        "key": "cf23ee2798",
+        "original": "About us"
+      },
+      {
+        "key": "3a40393678",
+        "original": "All Blogs"
+      },
+      {
+        "key": "aec7b47248",
+        "original": "Style Guide"
+      },
+      {
+        "key": "01a9edbc37",
+        "original": "Fashion Tips"
+      },
+      {
+        "key": "031d4abe04",
+        "original": "Brand Stories"
+      },
+      {
+        "key": "1eabdc7fcc",
+        "original": "How to master the art of minimal street style"
+      },
+      {
+        "key": "eb55f9110c",
+        "original": "Build a timeless, comfortable wardrobe with high-quality fabrics, muted tones, and effortless oversized fits."
+      },
+      {
+        "key": "3f439d4262",
+        "original": "Elevate everyday outfits using modern minimalist styling"
+      },
+      {
+        "key": "51d4e1a476",
+        "original": "Build a capsule wardrobe that works year round"
+      },
+      {
+        "key": "363b47feb7",
+        "original": "Refine casual streetwear with thoughtful styling choices"
+      },
+      {
+        "key": "c6374a4e3f",
+        "original": "Style outfits confidently using seasonal color palettes"
+      },
+      {
+        "key": "d8f28afdb0",
+        "original": "Discover timeless essentials that shape modern wardrobes"
+      },
+      {
+        "key": "0fbbe73d2a",
+        "original": "Build a strong fashion identity through consistency"
+      },
+      {
+        "key": "971cd34432",
+        "original": "Design intentional outfits that feel effortless daily"
+      },
+      {
+        "key": "17c94bfc18",
+        "original": "Use texture to elevate everyday outfit styling"
+      }
+    ]
+  },
+  {
+    "id": "contact",
+    "label": "Contact page",
+    "match": "/contact",
+    "items": [
+      {
+        "key": "5d5d07bda3",
+        "original": "Here to help you"
+      },
+      {
+        "key": "f55d05e629",
+        "original": "Helping you define your personal style"
+      },
+      {
+        "key": "ce876a6ea1",
+        "original": "Contact us today for refined service designed for our discerning Wearix fashion community."
+      },
+      {
+        "key": "0b9e9037d5",
+        "original": "Browse collections"
+      },
+      {
+        "key": "cf23ee2798",
+        "original": "About us"
+      },
+      {
+        "key": "643a860f99",
+        "original": "Email Address"
+      },
+      {
+        "key": "1e4dbc7eaa",
+        "original": "Phone Number"
+      },
+      {
+        "key": "b3551febf4",
+        "original": "England, London"
+      },
+      {
+        "key": "ce5bf55137",
+        "original": "Location"
+      },
+      {
+        "key": "bc910f8bdf",
+        "original": "First Name"
+      },
+      {
+        "key": "77587239bf",
+        "original": "Last Name"
+      },
+      {
+        "key": "ce8ae9da5b",
+        "original": "Email"
+      },
+      {
+        "key": "57887c3861",
+        "original": "Phone No"
+      },
+      {
+        "key": "c7892ebbb1",
+        "original": "Subject"
+      },
+      {
+        "key": "4c2a8fe7ea",
+        "original": "Message"
+      },
+      {
+        "key": "1432f32780",
+        "original": "Send Message"
+      },
+      {
+        "key": "d61d599737",
+        "original": "Nasir"
+      },
+      {
+        "key": "689b095728",
+        "original": "Nawaz"
+      },
+      {
+        "key": "86a1f4d3c7",
+        "original": "+123 456 789 00"
+      },
+      {
+        "key": "3aa676c63e",
+        "original": "Enquiry ...."
+      },
+      {
+        "key": "b1ca38fadc",
+        "original": "Enter message here..."
+      }
+    ]
+  },
+  {
+    "id": "product",
+    "label": "Product page (template)",
+    "match": "/shop/*",
+    "items": [
+      {
+        "key": "03c2e7e41f",
+        "original": "New"
+      },
+      {
+        "key": "ceda7c15d4",
+        "original": "Order Now"
+      },
+      {
+        "key": "d92a8333dd",
+        "original": "Material"
+      },
+      {
+        "key": "6bc43cc153",
+        "original": "Care"
+      },
+      {
+        "key": "b10f0c75b7",
+        "original": "Warranty"
+      },
+      {
+        "key": "6f2c3442a7",
+        "original": "Trusted Quality"
+      },
+      {
+        "key": "aa4a627f41",
+        "original": "very piece is checked to ensure it meets our standards."
+      },
+      {
+        "key": "f948050d6e",
+        "original": "Real Time Tracking"
+      },
+      {
+        "key": "b824694988",
+        "original": "Get live updates from our warehouse to your doorstep."
+      },
+      {
+        "key": "d4df78f9eb",
+        "original": "Secure Payments"
+      },
+      {
+        "key": "c6560072ea",
+        "original": "Shop confidently with our secure, encrypted checkout."
+      },
+      {
+        "key": "c7e3c65d0e",
+        "original": "Easy Returns"
+      },
+      {
+        "key": "a496f4bd68",
+        "original": "Change your mind? Return any item easily within thirty days."
+      }
+    ]
+  }
+];
+
 const defaultSettings = {
+  content: { groups: contentGroups, values: {} },
   brand: {
     name: "LeatherCulture",
     title: "LeatherCulture - Premium Leather Store",
@@ -326,6 +901,10 @@ const defaultSettings = {
       metaDescription: "Buy the Structured Trench Coat from LeatherCulture Pakistan, designed for refined everyday layering.",
       keywords: "structured trench coat Pakistan, women's trench coat, LeatherCulture coat",
       image: "/assets/images/structured-trench-coat-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Structured trench coat product photo",
       enabled: true,
       variants: [
@@ -345,6 +924,10 @@ const defaultSettings = {
       metaDescription: "Shop a premium heavyweight oversized hoodie for men in Pakistan from LeatherCulture.",
       keywords: "oversized hoodie Pakistan, heavyweight hoodie, men's hoodie Pakistan",
       image: "/assets/images/heavyweight-oversized-hoodie-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Heavyweight oversized hoodie product photo",
       enabled: true,
       variants: [
@@ -364,6 +947,10 @@ const defaultSettings = {
       metaDescription: "Shop pleated smart trousers in Pakistan from LeatherCulture for polished everyday looks.",
       keywords: "pleated trousers Pakistan, smart trousers women, LeatherCulture trousers",
       image: "/assets/images/pleated-smart-trousers-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Pleated smart trousers product photo",
       enabled: true,
       variants: [
@@ -383,6 +970,10 @@ const defaultSettings = {
       metaDescription: "Buy the Riviera Collar Shirt in Pakistan from LeatherCulture, a refined casual shirt for men.",
       keywords: "riviera collar shirt Pakistan, men's summer shirt, premium shirt Pakistan",
       image: "/assets/images/riviera-collar-shirt-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Riviera collar shirt product photo",
       enabled: true,
       variants: [
@@ -402,6 +993,10 @@ const defaultSettings = {
       metaDescription: "Shop the Classic Boxy Tee in Pakistan from LeatherCulture for clean everyday styling.",
       keywords: "boxy tee Pakistan, classic t shirt Pakistan, men's tee Pakistan",
       image: "/assets/images/classic-boxy-tee-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Classic boxy tee product photo",
       enabled: true,
       variants: [
@@ -421,6 +1016,10 @@ const defaultSettings = {
       metaDescription: "Buy a premium stretch jersey tee in Pakistan from LeatherCulture.",
       keywords: "stretch jersey tee Pakistan, premium t shirt Pakistan",
       image: "/assets/images/stretch-jersey-tee-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Stretch jersey tee product photo",
       enabled: true,
       variants: [
@@ -440,6 +1039,10 @@ const defaultSettings = {
       metaDescription: "Shop Urban Utility Cargo pants in Pakistan from LeatherCulture for modern daily style.",
       keywords: "cargo pants Pakistan, utility cargo Pakistan, men's cargo pants",
       image: "/assets/images/urban-utility-cargo-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Urban utility cargo product photo",
       enabled: true,
       variants: [
@@ -459,6 +1062,10 @@ const defaultSettings = {
       metaDescription: "Shop the Textured Knitted Shirt in Pakistan from LeatherCulture for refined everyday wear.",
       keywords: "knitted shirt Pakistan, textured shirt women, premium shirt Pakistan",
       image: "/assets/images/textured-knitted-shirt-1.jpg",
+      compareAtPrice: "",
+      material: "",
+      care: "",
+      warranty: "",
       alt: "Textured knitted shirt product photo",
       enabled: true,
       variants: [
@@ -498,7 +1105,9 @@ function mergeDefaults(source, defaults) {
 
 function publicSettings(document) {
   const { _id, createdAt, updatedAt, order, ...settings } = document || {};
-  return mergeDefaults(settings, defaultSettings);
+  const merged = mergeDefaults(settings, defaultSettings);
+  merged.content = { groups: contentGroups, values: (settings.content && settings.content.values) || {} };
+  return merged;
 }
 
 function publicRecord(document) {
@@ -534,6 +1143,7 @@ async function readSettings() {
 
 async function writeSettings(next) {
   const merged = normalizeStoreData(mergeDefaults(next, defaultSettings));
+  merged.content = { values: Object.fromEntries(Object.entries((merged.content && merged.content.values) || {}).filter(([, value]) => String(value || "").trim())) };
   await collections.settings.updateOne(
     { _id: settingsDocumentId },
     { $set: { ...settingsOnly(merged), updatedAt: new Date() } },
@@ -962,7 +1572,8 @@ function injectStaticMeta(html, page, req) {
   );
   return html
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
-    .replace(/<meta name="description" content="[^"]*"\s*\/?>/i, "")
+    .replace(/\s*<meta (?:name|property)="(?:description|keywords|og:title|og:description|og:url|twitter:card|twitter:title|twitter:description)"[^>]*>/gi, "")
+    .replace(/\s*<link rel="canonical"[^>]*>/i, "")
     .replace(/<head>/i, `<head>${meta}`);
 }
 
@@ -1095,8 +1706,10 @@ function safeFileFor(urlPath) {
   if (requestPath === "/admin") requestPath = "/admin/";
   if (requestPath.endsWith("/")) requestPath += "index.html";
 
-  const file = path.normalize(path.join(root, requestPath));
+  let file = path.normalize(path.join(root, requestPath));
   if (!file.startsWith(root)) return null;
+  // Clean URLs: /shop/slug -> /shop/slug/index.html
+  if (!path.extname(file) && fs.existsSync(path.join(file, "index.html"))) file = path.join(file, "index.html");
   return file;
 }
 
