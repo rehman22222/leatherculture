@@ -14,6 +14,15 @@ body,
   overscroll-behavior-y: none;
 }
 
+/* Paint content immediately instead of waiting for Framer's JS "appear" animations
+   (they start everything at opacity 0.001, which delays LCP by the whole hydration time). */
+[data-framer-appear-id],
+[data-framer-appear-id] [style*="opacity:0.001"],
+[data-framer-appear-id] [style*="opacity: 0.001"] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 [style*="backdrop-filter"],
 [style*="-webkit-backdrop-filter"],
 [style*="filter: blur"],
@@ -173,6 +182,23 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
   html,
   body {
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Announcement bar: static on phones. The JS marquee repaints 60x/s for the whole
+     session, which hurts scrolling and Speed Index far more than it helps. */
+  .framer-78r21n-container ul,
+  .framer-78r21n-container li.ticker-item {
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .framer-78r21n-container ul {
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .framer-78r21n-container li.ticker-item:not(:first-child) {
+    display: none !important;
   }
 
   .framer-16gypsd,

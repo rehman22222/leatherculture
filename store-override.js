@@ -86,12 +86,17 @@
   let videoObserver = null;
 
   function optimizeMedia() {
-    document.querySelectorAll("img").forEach((image, index) => {
+    const fold = window.innerHeight * 1.25;
+    document.querySelectorAll("img").forEach((image) => {
       image.decoding = "async";
-      if (index > 4) {
+      if (image.dataset.lcMediaOptimized || image.getAttribute("fetchpriority") === "high") return;
+      const rect = image.getBoundingClientRect();
+      const aboveFold = rect.width > 0 && rect.top + window.scrollY < fold;
+      if (!aboveFold) {
         image.loading = "lazy";
         image.fetchPriority = "low";
       }
+      image.dataset.lcMediaOptimized = "true";
     });
 
     const videos = Array.from(document.querySelectorAll("video"));
@@ -141,43 +146,82 @@
     return path.split(".").reduce((current, key) => current && current[key], source);
   }
 
-  function walkTextNodes(callback) {
-    if (!document.body) return;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(callback);
-  }
-
   function normalizeText(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
   const BLOCK_SELECTOR = "h1, h2, h3, h4, h5, h6, p, li, a, button, label";
+  const BLOCK_CHILD_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, button, div, label";
+
+  // One DOM walk per apply pass: every text node, leaf block and placeholder keyed by its
+  // normalized text. All replacements then run as map lookups instead of full-document scans.
+  let textIndex = null;
+
+  function pushIndex(map, key, value) {
+    if (!key) return;
+    const list = map.get(key);
+    if (list) list.push(value);
+    else map.set(key, [value]);
+  }
+
+  function buildTextIndex() {
+    const index = { nodes: new Map(), blocks: new Map(), inputs: new Map() };
+    if (!document.body) return index;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) pushIndex(index.nodes, walker.currentNode.nodeValue.trim(), walker.currentNode);
+    document.querySelectorAll(BLOCK_SELECTOR).forEach((element) => {
+      if (element.querySelector(BLOCK_CHILD_SELECTOR)) return;
+      pushIndex(index.blocks, normalizeText(element.textContent), element);
+    });
+    document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach((input) => {
+      pushIndex(index.inputs, normalizeText(input.placeholder), input);
+    });
+    return index;
+  }
+
+  function getTextIndex() {
+    if (!textIndex) textIndex = buildTextIndex();
+    return textIndex;
+  }
+
+  function invalidateTextIndex() {
+    textIndex = null;
+  }
+
+  function findBlocks(text) {
+    return getTextIndex().blocks.get(normalizeText(text)) || [];
+  }
 
   // Replace text in text nodes first; fall back to whole elements whose visible text matches
   // (Framer splits animated headings into one <span> per word, so text nodes alone can't match).
   function replaceText(candidates, next) {
-    if (!next) return;
+    if (!next) return false;
+    const target = normalizeText(next);
     const lookup = new Set(candidates.filter(Boolean).map((value) => normalizeText(value)));
-    lookup.delete(normalizeText(next));
-    if (!lookup.size) return;
+    lookup.delete(target);
+    if (!lookup.size) return false;
+    const index = getTextIndex();
     let hit = false;
-    walkTextNodes((node) => {
-      const current = node.nodeValue.trim();
-      if (lookup.has(current)) {
-        node.nodeValue = node.nodeValue.replace(current, next);
+    lookup.forEach((key) => {
+      (index.nodes.get(key) || []).forEach((node) => {
+        if (!node.isConnected || node.nodeValue.trim() !== key) return;
+        // only whole blocks: never rewrite one word-span of a longer heading or sentence
+        const block = node.parentElement && node.parentElement.closest(BLOCK_SELECTOR);
+        if (block && normalizeText(block.textContent) !== key) return;
+        node.nodeValue = node.nodeValue.replace(key, next);
         hit = true;
-      }
-    });
-    document.querySelectorAll(BLOCK_SELECTOR).forEach((element) => {
-      if (element.querySelector("p, h1, h2, h3, h4, h5, h6, li, button, div, label")) return;
-      if (!lookup.has(normalizeText(element.textContent))) return;
-      element.textContent = next;
-      hit = true;
-    });
-    document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach((input) => {
-      if (lookup.has(normalizeText(input.placeholder))) input.placeholder = next;
+      });
+      (index.blocks.get(key) || []).forEach((element) => {
+        if (!element.isConnected || normalizeText(element.textContent) !== key) return;
+        element.textContent = next;
+        hit = true;
+      });
+      (index.inputs.get(key) || []).forEach((input) => {
+        if (input.isConnected) input.placeholder = next;
+      });
+      // keep the index usable for later lookups of the new value
+      (index.nodes.get(key) || []).forEach((node) => pushIndex(index.nodes, target, node));
+      (index.blocks.get(key) || []).forEach((element) => pushIndex(index.blocks, target, element));
     });
     return hit;
   }
@@ -410,11 +454,11 @@
       ...(settings.blogPosts || []).map((item) => ({ image: item.coverImage, alt: item.coverAlt || item.title })),
     ];
 
+    const images = Array.from(document.querySelectorAll("img")).map((img) => [img, img.getAttribute("src") || ""]);
     mediaItems.forEach((item) => {
       const file = basename(item.image);
       if (!file || !item.alt) return;
-      document.querySelectorAll("img").forEach((img) => {
-        const src = img.getAttribute("src") || "";
+      images.forEach(([img, src]) => {
         if (src.includes(file)) img.setAttribute("alt", item.alt);
       });
     });
@@ -482,7 +526,7 @@
   }
 
   function setProductDetailFields(product) {
-    const heading = document.querySelector("h1");
+    const heading = document.querySelector("h1, .framer-styles-preset-17m6oxo");
     if (!heading) return;
     // Climb to the product info column: the ancestor that holds title, pricing, description and specs.
     let info = heading.parentElement;
@@ -507,7 +551,8 @@
     if (description && normalizeText(product.description)) description.textContent = product.description;
 
     const specs = { material: product.material, care: product.care, warranty: product.warranty };
-    info.querySelectorAll("[data-framer-name='Product Specs'] [data-framer-name='Wrapper']").forEach((row) => {
+    info.querySelectorAll("[data-framer-name='Product Specs'] [data-framer-name='Wrapper']").forEach((wrapper) => {
+      const row = wrapper.parentElement || wrapper;
       const [label, value] = row.querySelectorAll("p");
       const key = normalizeText(label && label.textContent).toLowerCase();
       if (value && specs[key]) value.textContent = specs[key];
@@ -642,7 +687,7 @@
       if (!response.ok) return;
       previousSettings = settings;
       settings = await response.json();
-      applySettings();
+      apply();
     } catch (error) {
       console.error("LeatherCulture: could not apply store settings", error);
       setLogoBrand();
@@ -650,27 +695,21 @@
   }
 
   function hideByText() {
-    const nodes = Array.from(document.querySelectorAll("a, button, div, section, article"));
-    for (const node of nodes) {
-      const text = (node.textContent || "").trim();
-      if (!text) continue;
-
-      if (text === "Children's Wear") {
-        const target = node.closest("a, button") || node;
-        target.style.display = "none";
-      }
-
-      if (hiddenTexts.some((value) => text.includes(value))) {
+    findBlocks("Children's Wear").forEach((node) => {
+      const target = node.closest("a, button") || node;
+      target.style.display = "none";
+    });
+    hiddenTexts.forEach((text) => {
+      findBlocks(text).forEach((node) => {
         const card = node.closest("a[href*='/shop/'], article, [data-framer-name*='Card'], [class*='container']");
         if (card && card !== document.body) card.style.display = "none";
-      }
-    }
+      });
+    });
   }
 
   function moveVideoAfterBestSellers() {
-    const headings = Array.from(document.querySelectorAll("h1, h2, h3, p, div"));
-    const bestHeading = headings.find((node) => (node.textContent || "").trim() === "Our signature best selling pieces");
-    const videoHeading = headings.find((node) => (node.textContent || "").trim() === "Defining modern style");
+    const bestHeading = findBlocks(get("sections.bestSellers.title") || "Our signature best selling pieces")[0] || findBlocks("Our signature best selling pieces")[0];
+    const videoHeading = findBlocks(get("sections.video.title") || "Defining modern style")[0] || findBlocks("Defining modern style")[0];
     if (!bestHeading || !videoHeading) return;
 
     const bestSection = bestHeading.closest("section, header");
@@ -755,17 +794,45 @@
     });
   }
 
-  function apply() {
+  let applying = false;
+  let pageLoaded = false;
+  const runLog = [];
+  function runApply() {
+    runLog.push({ t: Math.round(performance.now()), settings: !!settings, product: !!(settings && currentProductFromPath()) });
     clearTimeout(timer);
-    timer = setTimeout(() => {
+    clearTimeout(maxTimer);
+    maxTimer = 0;
+    applying = true;
+    try {
+      invalidateTextIndex();
       optimizeMedia();
       hideByText();
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
-      applySettings();
       enforceSingleH1();
-    }, 80);
+      applySettings();
+    } catch (error) {
+      runLog.push({ error: String(error && error.stack || error).slice(0, 300) });
+      console.error("LeatherCulture: store override failed", error);
+    } finally {
+      // our own DOM writes trigger the observer; let that batch flush before listening again
+      setTimeout(() => {
+        applying = false;
+      }, 0);
+    }
   }
+
+  // Debounce DOM churn, but never let a busy page (Framer re-rendering, tickers, galleries)
+  // starve the pass: a max-wait timer guarantees a run within 1.2s of the first request.
+  let maxTimer = 0;
+  function apply() {
+    clearTimeout(timer);
+    timer = setTimeout(runApply, pageLoaded ? 400 : 80);
+    if (!maxTimer) maxTimer = setTimeout(runApply, pageLoaded ? 1200 : 300);
+  }
+
+  // Debug hook: window.LeatherCultureStore.apply() re-runs the pass; .settings() shows the loaded data.
+  window.LeatherCultureStore = { apply: runApply, settings: () => settings, product: currentProductFromPath, runs: () => runLog };
 
   document.addEventListener("DOMContentLoaded", () => {
     optimizeMedia();
@@ -774,8 +841,13 @@
     apply();
     scheduleHeaderContrast();
   });
-  window.addEventListener("load", apply);
+  window.addEventListener("load", () => {
+    pageLoaded = true;
+    apply();
+  });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
   window.addEventListener("resize", scheduleHeaderContrast);
-  new MutationObserver(apply).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    if (!applying) apply();
+  }).observe(document.documentElement, { childList: true, subtree: true });
 })();

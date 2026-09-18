@@ -6,6 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 const { URL } = require("url");
+const zlib = require("zlib");
 
 const root = __dirname;
 const uploadDir = path.join(root, "assets", "uploads");
@@ -1851,9 +1852,22 @@ async function requestHandler(req, res) {
           console.error(`Static HTML served without DB metadata: ${error.message}`);
         }
       }
-      res.writeHead(200, {
-        "content-type": mime[ext] || "application/octet-stream"
-      });
+      const cacheable = url.pathname.startsWith("/assets/") && ext !== ".html";
+      const headers = {
+        "content-type": mime[ext] || "application/octet-stream",
+        "cache-control": cacheable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
+        vary: "accept-encoding"
+      };
+      const compressible = /^(text\/|application\/(json|javascript|xml)|image\/svg)/.test(headers["content-type"]) || ext === ".framercms";
+      const accepts = String(req.headers["accept-encoding"] || "").split(",").map((value) => value.trim().split(";")[0]);
+      if (compressible && data.length > 1024 && accepts.includes("br")) {
+        data = zlib.brotliCompressSync(data, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } });
+        headers["content-encoding"] = "br";
+      } else if (compressible && data.length > 1024 && accepts.includes("gzip")) {
+        data = zlib.gzipSync(data, { level: 6 });
+        headers["content-encoding"] = "gzip";
+      }
+      res.writeHead(200, headers);
       res.end(data);
     } catch (error) {
       res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
