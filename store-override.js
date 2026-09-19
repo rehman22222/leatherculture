@@ -119,6 +119,7 @@
           entries.forEach((entry) => {
             const video = entry.target;
             if (entry.isIntersecting) {
+              if (video.dataset.lcPoster && !video.poster) video.poster = video.dataset.lcPoster;
               video.play().catch(() => {});
             } else {
               video.pause();
@@ -635,7 +636,7 @@
   }
 
   // Re-point a template product card at one of the store's products.
-  function fillProductCard(link, product) {
+  function fillProductCard(link, product, imageInfo) {
     link.setAttribute("href", `/shop/${product.slug || product.id}`);
     const texts = Array.from(link.querySelectorAll("p, h2, h3, h4, h5")).filter((node) => !node.querySelector("p, h2, h3, h4, h5"));
     const isPrice = (text) => /^(rs\.?|pkr|\$|€|£)?\s*[\d.,]+(\.\d{2})?$/i.test(text) || /^(usd|pkr|rs)\s/i.test(text);
@@ -648,11 +649,10 @@
       prices[1].textContent = compare;
       prices[1].style.display = compare ? "" : "none";
     }
-    const images = Array.from(link.querySelectorAll("img")).sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width);
+    const images = imageInfo || Array.from(link.querySelectorAll("img")).map((img) => [img, true]);
     const variants = (product.variants || []).filter((variant) => variant.enabled !== false && variant.image);
     let swatch = 0;
-    images.forEach((img) => {
-      const large = img.getBoundingClientRect().width > 80 || img.getBoundingClientRect().width === 0;
+    images.forEach(([img, large]) => {
       const source = large ? product.image : (variants[swatch++] || {}).image;
       const holder = img.closest("[data-framer-background-image-wrapper]") || img;
       if (!source) {
@@ -677,18 +677,27 @@
     if (!settings) return;
     const live = (settings.products || []).filter((item) => item.enabled !== false && (item.slug || item.id));
     const products = new Set(live.flatMap((item) => [item.slug, item.id]).filter(Boolean));
+    // Read all layout first (one reflow), then write.
     const cards = Array.from(document.querySelectorAll("a[href*='/shop/']"))
-      .map((link) => [link, (linkPath(link).match(/^\/shop\/([^/]+)$/) || [])[1]])
+      .map((link) => {
+        const slug = (linkPath(link).match(/^\/shop\/([^/]+)$/) || [])[1];
+        const rendered = link.getClientRects().length > 0;
+        const images = Array.from(link.querySelectorAll("img")).map((img) => {
+          const width = img.getBoundingClientRect().width;
+          return [img, width > 80 || width === 0];
+        });
+        return [link, slug, rendered, images];
+      })
       .filter(([, slug]) => slug)
       // rendered cards decide the mapping; hidden breakpoint variants follow it
-      .sort(([a], [b]) => (b.getClientRects().length ? 1 : 0) - (a.getClientRects().length ? 1 : 0));
+      .sort(([, , a], [, , b]) => (b ? 1 : 0) - (a ? 1 : 0));
     const bySlug = new Map(live.flatMap((item) => [[item.slug, item], [item.id, item]]).filter(([key]) => key));
-    const shown = new Set(cards.filter(([link, slug]) => products.has(slug) && link.getClientRects().length).map(([, slug]) => (bySlug.get(slug) || {}).slug || slug));
+    const shown = new Set(cards.filter(([, slug, rendered]) => products.has(slug) && rendered).map(([, slug]) => (bySlug.get(slug) || {}).slug || slug));
     const spare = live.filter((item) => !shown.has(item.slug));
     const assigned = new Map();
-    cards.forEach(([link, slug]) => {
+    cards.forEach(([link, slug, , images]) => {
       if (products.has(slug)) {
-        fillProductCard(link, bySlug.get(slug));
+        fillProductCard(link, bySlug.get(slug), images);
         return;
       }
       if (!assigned.has(slug)) assigned.set(slug, spare.shift() || null);
@@ -697,7 +706,7 @@
         hideCard(link);
         return;
       }
-      fillProductCard(link, product);
+      fillProductCard(link, product, images);
     });
 
     const posts = (settings.blogPosts || []).filter((post) => post.status === "published" && post.slug);

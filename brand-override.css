@@ -1,12 +1,12 @@
 /* LeatherCulture visual overrides for the restored storefront. */
 
 :root {
-  --lc-logo-header: url("/assets/brand/leather-culture-logo-white.png");
-  --lc-logo-footer: url("/assets/brand/leather-culture-logo-white.png");
+  --lc-logo-header: url("/assets/brand/leather-culture-logo-white.webp");
+  --lc-logo-footer: url("/assets/brand/leather-culture-logo-white.webp");
 }
 
 body.lc-light-header {
-  --lc-logo-header: url("/assets/brand/leather-culture-logo-black.png");
+  --lc-logo-header: url("/assets/brand/leather-culture-logo-black.webp");
 }
 
 body,
