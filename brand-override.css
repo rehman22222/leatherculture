@@ -214,6 +214,7 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
   .framer-78r21n-container ul {
     justify-content: center !important;
     gap: 0 !important;
+    opacity: 1 !important;
   }
 
   .framer-78r21n-container li.ticker-item:not(:first-child) {
