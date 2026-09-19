@@ -105,9 +105,29 @@
       video.muted = true;
       video.playsInline = true;
       video.removeAttribute("autoplay");
-      if (!video.dataset.lcVideoOptimized) {
-        video.pause();
-        video.dataset.lcVideoOptimized = "true";
+      // park the media until the video is actually on screen
+      if (!video.dataset.lcParked) {
+        const src = video.getAttribute("src");
+        if (src) {
+          video.dataset.lcSrc = src;
+          video.removeAttribute("src");
+        }
+        const poster = video.getAttribute("poster");
+        if (poster) {
+          video.dataset.lcPoster = poster;
+          video.removeAttribute("poster");
+        }
+        video.querySelectorAll("source[src]").forEach((source) => {
+          source.dataset.lcSrc = source.getAttribute("src");
+          source.removeAttribute("src");
+        });
+        try {
+          video.pause();
+          video.load();
+        } catch (error) {
+          /* ignore */
+        }
+        video.dataset.lcParked = "true";
       }
     });
 
@@ -119,7 +139,11 @@
           entries.forEach((entry) => {
             const video = entry.target;
             if (entry.isIntersecting) {
-              if (video.dataset.lcPoster && !video.poster) video.poster = video.dataset.lcPoster;
+              if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
+              if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", video.dataset.lcSrc);
+              video.querySelectorAll("source[data-lc-src]").forEach((source) => {
+                if (!source.getAttribute("src")) source.setAttribute("src", source.dataset.lcSrc);
+              });
               video.play().catch(() => {});
             } else {
               video.pause();
@@ -652,14 +676,16 @@
     const images = imageInfo || Array.from(link.querySelectorAll("img")).map((img) => [img, true]);
     const variants = (product.variants || []).filter((variant) => variant.enabled !== false && variant.image);
     let swatch = 0;
+    const cardImage = (url) => (/^\/assets\/images\/.+\.webp$/.test(url || "") && !/-card\.webp$/.test(url) ? url.replace(/\.webp$/, "-card.webp") : url);
     images.forEach(([img, large]) => {
-      const source = large ? product.image : (variants[swatch++] || {}).image;
+      const source = large ? cardImage(product.image) : (variants[swatch++] || {}).image;
       const holder = img.closest("[data-framer-background-image-wrapper]") || img;
       if (!source) {
         if (!large) (holder.parentElement || holder).style.display = "none";
         return;
       }
       img.removeAttribute("srcset");
+      if (source !== product.image && large) img.onerror = () => { img.onerror = null; img.setAttribute("src", mediaUrl(product.image)); };
       img.setAttribute("src", mediaUrl(source));
       img.setAttribute("alt", product.alt || product.name || "");
     });
