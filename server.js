@@ -15,8 +15,17 @@ const adminPassword = process.env.ADMIN_PASSWORD || "leatherculture123";
 const mongoUri = cleanEnv(process.env.MONGODB_URI);
 const mongoDbName = cleanEnv(process.env.MONGODB_DB_NAME) || "Leater-store";
 const allowedOrigins = new Set(
-  (process.env.CORS_ORIGINS || "http://localhost:8000,http://localhost:8001,http://127.0.0.1:8000,http://127.0.0.1:8001")
-    .split(",")
+  [
+    // the storefront's own domains are always allowed; CORS_ORIGINS adds more (e.g. preview deployments)
+    "https://leatherculture.shop",
+    "https://www.leatherculture.shop",
+    "https://leatherculture.vercel.app",
+    "http://localhost:8000",
+    "http://localhost:8001",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8001",
+    ...String(process.env.CORS_ORIGINS || "").split(",")
+  ]
     .map((origin) => origin.trim())
     .filter(Boolean)
 );
