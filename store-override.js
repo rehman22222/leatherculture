@@ -948,6 +948,31 @@
     if (!maxTimer) maxTimer = setTimeout(runApply, pageLoaded ? 1200 : 300);
   }
 
+  // Internal links always do a full page load. Framer's client-side router swaps pages in place,
+  // which fights the DOM changes made here (and its route data loader 404s on this host).
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      const href = link.getAttribute("href") || "";
+      if (/^(#|mailto:|tel:|javascript:)/i.test(href)) return;
+      let url;
+      try {
+        url = new URL(href, location.href);
+      } catch (error) {
+        return;
+      }
+      if (url.origin !== location.origin) return;
+      if (url.pathname === location.pathname && url.hash) return;
+      event.preventDefault();
+      event.stopPropagation();
+      location.href = url.href;
+    },
+    true
+  );
+
   // Debug hook: window.LeatherCultureStore.apply() re-runs the pass; .settings() shows the loaded data.
   window.LeatherCultureStore = { apply: runApply, settings: () => settings, product: currentProductFromPath, runs: () => runLog };
 
