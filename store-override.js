@@ -1047,7 +1047,23 @@
   // Debug hook: window.LeatherCultureStore.apply() re-runs the pass; .settings() shows the loaded data.
   window.LeatherCultureStore = { apply: runApply, settings: () => settings, product: currentProductFromPath, runs: () => runLog };
 
+  // Framer's runtime is started only after the first frame is on screen. When the network is fast
+  // its ~1.5s of hydration work would otherwise run before first paint and push LCP behind it.
+  function startFramerRuntime() {
+    const holder = document.querySelector("script[data-lc-framer-main]");
+    if (!holder || holder.dataset.lcStarted) return;
+    holder.dataset.lcStarted = "true";
+    const script = document.createElement("script");
+    script.type = "module";
+    script.async = true;
+    script.setAttribute("data-framer-bundle", "main");
+    script.src = holder.dataset.lcFramerMain;
+    document.body.appendChild(script);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    requestAnimationFrame(() => requestAnimationFrame(startFramerRuntime));
+    setTimeout(startFramerRuntime, 1500);
     optimizeMedia();
     setLogoBrand();
     loadSettings();
