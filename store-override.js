@@ -85,6 +85,67 @@
 
   let videoObserver = null;
 
+  function parkVideo(video) {
+    if (video.dataset.lcActive === "true") return;
+    video.removeAttribute("autoplay");
+    video.preload = "none";
+    video.muted = true;
+    video.playsInline = true;
+    let changed = false;
+    const src = video.getAttribute("src");
+    if (src) {
+      video.dataset.lcSrc = src;
+      video.removeAttribute("src");
+      changed = true;
+    }
+    const poster = video.getAttribute("poster");
+    if (poster) {
+      video.dataset.lcPoster = poster;
+      video.removeAttribute("poster");
+    }
+    video.querySelectorAll("source[src]").forEach((source) => {
+      source.dataset.lcSrc = source.getAttribute("src");
+      source.removeAttribute("src");
+      changed = true;
+    });
+    if (changed) {
+      try {
+        video.pause();
+        video.load();
+      } catch (error) {
+        /* ignore */
+      }
+    }
+    video.dataset.lcParked = "true";
+  }
+
+  function wakeVideo(video) {
+    video.dataset.lcActive = "true";
+    if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
+    if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", video.dataset.lcSrc);
+    video.querySelectorAll("source[data-lc-src]").forEach((source) => {
+      if (!source.getAttribute("src")) source.setAttribute("src", source.dataset.lcSrc);
+    });
+  }
+
+  // Runs synchronously on every DOM change touching media, so a re-rendered <video autoplay>
+  // is disarmed before the browser starts downloading it.
+  new MutationObserver((records) => {
+    records.forEach((record) => {
+      if (record.type === "attributes") {
+        const target = record.target;
+        const video = target.tagName === "VIDEO" ? target : target.tagName === "SOURCE" ? target.closest("video") : null;
+        if (video && video.dataset.lcActive !== "true" && (target.getAttribute("src") || target.getAttribute("autoplay") !== null)) parkVideo(video);
+        return;
+      }
+      record.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        const videos = node.tagName === "VIDEO" ? [node] : Array.from(node.querySelectorAll("video"));
+        videos.forEach(parkVideo);
+      });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "autoplay", "poster"] });
+
   function optimizeMedia() {
     const fold = window.innerHeight * 1.25;
     document.querySelectorAll("img").forEach((image) => {
@@ -101,34 +162,7 @@
 
     const videos = Array.from(document.querySelectorAll("video"));
     videos.forEach((video) => {
-      video.preload = "none";
-      video.muted = true;
-      video.playsInline = true;
-      video.removeAttribute("autoplay");
-      // park the media until the video is actually on screen
-      if (!video.dataset.lcParked) {
-        const src = video.getAttribute("src");
-        if (src) {
-          video.dataset.lcSrc = src;
-          video.removeAttribute("src");
-        }
-        const poster = video.getAttribute("poster");
-        if (poster) {
-          video.dataset.lcPoster = poster;
-          video.removeAttribute("poster");
-        }
-        video.querySelectorAll("source[src]").forEach((source) => {
-          source.dataset.lcSrc = source.getAttribute("src");
-          source.removeAttribute("src");
-        });
-        try {
-          video.pause();
-          video.load();
-        } catch (error) {
-          /* ignore */
-        }
-        video.dataset.lcParked = "true";
-      }
+      if (!video.dataset.lcParked) parkVideo(video);
     });
 
     if (prefersReducedMotion) return;
@@ -139,11 +173,7 @@
           entries.forEach((entry) => {
             const video = entry.target;
             if (entry.isIntersecting) {
-              if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
-              if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", video.dataset.lcSrc);
-              video.querySelectorAll("source[data-lc-src]").forEach((source) => {
-                if (!source.getAttribute("src")) source.setAttribute("src", source.dataset.lcSrc);
-              });
+              wakeVideo(video);
               video.play().catch(() => {});
             } else {
               video.pause();
@@ -678,14 +708,15 @@
     let swatch = 0;
     const cardImage = (url) => (/^\/assets\/images\/.+\.webp$/.test(url || "") && !/-card\.webp$/.test(url) ? url.replace(/\.webp$/, "-card.webp") : url);
     images.forEach(([img, large]) => {
-      const source = large ? cardImage(product.image) : (variants[swatch++] || {}).image;
+      const source = cardImage(large ? product.image : (variants[swatch++] || {}).image);
       const holder = img.closest("[data-framer-background-image-wrapper]") || img;
       if (!source) {
         if (!large) (holder.parentElement || holder).style.display = "none";
         return;
       }
       img.removeAttribute("srcset");
-      if (source !== product.image && large) img.onerror = () => { img.onerror = null; img.setAttribute("src", mediaUrl(product.image)); };
+      const original = large ? product.image : source.replace(/-card\.webp$/, ".webp");
+      if (source !== original) img.onerror = () => { img.onerror = null; img.setAttribute("src", mediaUrl(original)); };
       img.setAttribute("src", mediaUrl(source));
       img.setAttribute("alt", product.alt || product.name || "");
     });
