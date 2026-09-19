@@ -101,7 +101,7 @@
 
     const videos = Array.from(document.querySelectorAll("video"));
     videos.forEach((video) => {
-      video.preload = mobileViewport ? "none" : "metadata";
+      video.preload = "none";
       video.muted = true;
       video.playsInline = true;
       video.removeAttribute("autoplay");
@@ -111,7 +111,7 @@
       }
     });
 
-    if (mobileViewport || prefersReducedMotion) return;
+    if (prefersReducedMotion) return;
     if (!("IntersectionObserver" in window)) return;
     if (!videoObserver) {
       videoObserver = new IntersectionObserver(
@@ -136,11 +136,7 @@
     });
   }
 
-  const hiddenTexts = [
-    "Children's Wear",
-    "Mini Denim Overalls",
-    "Patterned Knit Sweater",
-  ];
+  const hiddenTexts = ["Children's Wear"];
 
   function get(path, source = settings) {
     return path.split(".").reduce((current, key) => current && current[key], source);
@@ -283,19 +279,26 @@
     const y = rect ? Math.min(Math.max(rect.top + rect.height / 2, 1), window.innerHeight - 1) : 72;
     const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
 
+    const isPhoto = (node, style) => node.tagName === "IMG" || node.tagName === "VIDEO" || (style.backgroundImage && style.backgroundImage !== "none");
+    // 1. everything painted under the logo, top-most first (overlays, photos, panels)
     for (const element of stack) {
       if (!(element instanceof Element)) continue;
       if (header && header.contains(element)) continue;
-
-      let node = element;
-      while (node && node !== document.documentElement) {
-        const style = window.getComputedStyle(node);
-        const color = parseRgb(style.backgroundColor);
-        if (color && color.a > 0.55) {
-          return color;
-        }
-        node = node.parentElement;
-      }
+      const style = window.getComputedStyle(element);
+      if (isPhoto(element, style)) return { r: 40, g: 40, b: 40, a: 1 };
+      const color = parseRgb(style.backgroundColor);
+      if (color && color.a > 0.55) return color;
+      // a dark tint over a photo still means "dark"
+      if (color && color.a >= 0.3 && (0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b) / 255 < 0.4) return { r: 40, g: 40, b: 40, a: 1 };
+    }
+    // 2. nothing solid in the stack: inherit from the ancestors of the deepest element
+    let node = stack.find((element) => element instanceof Element && !(header && header.contains(element))) || null;
+    while (node && node !== document.documentElement) {
+      const style = window.getComputedStyle(node);
+      if (isPhoto(node, style)) return { r: 40, g: 40, b: 40, a: 1 };
+      const color = parseRgb(style.backgroundColor);
+      if (color && color.a > 0.55) return color;
+      node = node.parentElement;
     }
 
     return null;
@@ -304,9 +307,13 @@
   function updateHeaderContrast() {
     if (!document.body) return;
     const pathname = location.pathname.replace(/\/$/, "") || "/";
-    let useBlackLogo = pathname !== "/";
+    let useBlackLogo = false;
+    const scrolled = window.scrollY > 40;
+    document.body.classList.toggle("lc-scrolled", scrolled);
 
-    if (pathname === "/" && window.scrollY < window.innerHeight * 0.58) {
+    if (scrolled) {
+      useBlackLogo = true;
+    } else if (pathname === "/" && window.scrollY < window.innerHeight * 0.58) {
       useBlackLogo = false;
     } else {
       const color = readableBackgroundAtLogo();
@@ -619,6 +626,111 @@
     return links;
   }
 
+  function linkPath(link) {
+    try {
+      return new URL(link.getAttribute("href") || "", location.href).pathname.replace(/\/$/, "");
+    } catch (error) {
+      return "";
+    }
+  }
+
+  // Re-point a template product card at one of the store's products.
+  function fillProductCard(link, product) {
+    link.setAttribute("href", `/shop/${product.slug || product.id}`);
+    const texts = Array.from(link.querySelectorAll("p, h2, h3, h4, h5")).filter((node) => !node.querySelector("p, h2, h3, h4, h5"));
+    const isPrice = (text) => /^(rs\.?|pkr|\$|€|£)?\s*[\d.,]+(\.\d{2})?$/i.test(text) || /^(usd|pkr|rs)\s/i.test(text);
+    const prices = texts.filter((node) => isPrice(normalizeText(node.textContent)));
+    const name = texts.find((node) => !isPrice(normalizeText(node.textContent)) && normalizeText(node.textContent).length > 12);
+    if (name && product.name) name.textContent = product.name;
+    if (prices[0] && product.price) prices[0].textContent = product.price;
+    if (prices[1]) {
+      const compare = normalizeText(product.compareAtPrice);
+      prices[1].textContent = compare;
+      prices[1].style.display = compare ? "" : "none";
+    }
+    const images = Array.from(link.querySelectorAll("img")).sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width);
+    const variants = (product.variants || []).filter((variant) => variant.enabled !== false && variant.image);
+    let swatch = 0;
+    images.forEach((img) => {
+      const large = img.getBoundingClientRect().width > 80 || img.getBoundingClientRect().width === 0;
+      const source = large ? product.image : (variants[swatch++] || {}).image;
+      const holder = img.closest("[data-framer-background-image-wrapper]") || img;
+      if (!source) {
+        if (!large) (holder.parentElement || holder).style.display = "none";
+        return;
+      }
+      img.removeAttribute("srcset");
+      img.setAttribute("src", mediaUrl(source));
+      img.setAttribute("alt", product.alt || product.name || "");
+    });
+  }
+
+  function formatDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value || "";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  // The template ships demo products and blog posts from Framer's CMS. Cards that point at
+  // items the store doesn't have are hidden; blog cards are re-pointed at real posts in order.
+  function syncCatalogLinks() {
+    if (!settings) return;
+    const live = (settings.products || []).filter((item) => item.enabled !== false && (item.slug || item.id));
+    const products = new Set(live.flatMap((item) => [item.slug, item.id]).filter(Boolean));
+    const cards = Array.from(document.querySelectorAll("a[href*='/shop/']"))
+      .map((link) => [link, (linkPath(link).match(/^\/shop\/([^/]+)$/) || [])[1]])
+      .filter(([, slug]) => slug)
+      // rendered cards decide the mapping; hidden breakpoint variants follow it
+      .sort(([a], [b]) => (b.getClientRects().length ? 1 : 0) - (a.getClientRects().length ? 1 : 0));
+    const bySlug = new Map(live.flatMap((item) => [[item.slug, item], [item.id, item]]).filter(([key]) => key));
+    const shown = new Set(cards.filter(([link, slug]) => products.has(slug) && link.getClientRects().length).map(([, slug]) => (bySlug.get(slug) || {}).slug || slug));
+    const spare = live.filter((item) => !shown.has(item.slug));
+    const assigned = new Map();
+    cards.forEach(([link, slug]) => {
+      if (products.has(slug)) {
+        fillProductCard(link, bySlug.get(slug));
+        return;
+      }
+      if (!assigned.has(slug)) assigned.set(slug, spare.shift() || null);
+      const product = assigned.get(slug);
+      if (!product) {
+        hideCard(link);
+        return;
+      }
+      fillProductCard(link, product);
+    });
+
+    const posts = (settings.blogPosts || []).filter((post) => post.status === "published" && post.slug);
+    const order = [];
+    document.querySelectorAll("a[href*='/blog/']").forEach((link) => {
+      const match = linkPath(link).match(/^\/blog\/([^/]+)$/);
+      if (!match) return;
+      const slug = match[1];
+      if (posts.some((post) => post.slug === slug)) return;
+      if (!order.includes(slug)) order.push(slug);
+      const post = posts[order.indexOf(slug)];
+      if (!post) {
+        hideCard(link);
+        return;
+      }
+      link.setAttribute("href", `/blog/${post.slug}`);
+      const texts = Array.from(link.querySelectorAll("h1, h2, h3, h4, h5, h6, p")).filter((node) => !node.querySelector("p, h1, h2, h3, h4, h5, h6"));
+      const title = texts.find((node) => /^h[1-6]$/i.test(node.tagName)) || texts.slice().sort((a, b) => parseFloat(getComputedStyle(b).fontSize) - parseFloat(getComputedStyle(a).fontSize))[0];
+      if (title && post.title) title.textContent = post.title;
+      const excerpt = texts.find((node) => node !== title && normalizeText(node.textContent).length > 40);
+      if (excerpt && post.excerpt) excerpt.textContent = post.excerpt;
+      const date = texts.find((node) => /^(\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Z][a-z]{2} \d{1,2}, \d{4})$/.test(normalizeText(node.textContent)));
+      if (date && post.date) date.textContent = formatDate(post.date);
+      if (post.coverImage) {
+        link.querySelectorAll("img").forEach((img) => {
+          img.removeAttribute("srcset");
+          img.setAttribute("src", mediaUrl(post.coverImage));
+          img.setAttribute("alt", post.coverAlt || post.title || "");
+        });
+      }
+    });
+  }
+
   function setProductData() {
     if (!settings || !settings.products) return;
 
@@ -678,6 +790,7 @@
     setLinksAndInputs();
     setImageData();
     setProductData();
+    syncCatalogLinks();
     syncProductSchema();
   }
 
@@ -694,16 +807,20 @@
     }
   }
 
+  // Hide a whole card including its grid wrapper so the layout closes the gap.
+  function hideCard(node) {
+    const link = node.closest("a[href*='/shop/'], a[href*='/blog/']") || node;
+    const cell = link.parentElement && /-container$/.test((link.parentElement.className || "").split(" ")[0] || "") ? link.parentElement : link;
+    cell.style.display = "none";
+  }
+
   function hideByText() {
     findBlocks("Children's Wear").forEach((node) => {
       const target = node.closest("a, button") || node;
       target.style.display = "none";
     });
     hiddenTexts.forEach((text) => {
-      findBlocks(text).forEach((node) => {
-        const card = node.closest("a[href*='/shop/'], article, [data-framer-name*='Card'], [class*='container']");
-        if (card && card !== document.body) card.style.display = "none";
-      });
+      findBlocks(text).forEach((node) => hideCard(node));
     });
   }
 

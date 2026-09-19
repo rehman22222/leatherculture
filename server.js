@@ -1605,7 +1605,7 @@ function renderBlogPost(post, settings, req) {
   </head>
   <body>
     <header>
-      <a href="/">${escapeHtml(brand)}</a>
+      <a href="/" aria-label="${escapeHtml(brand)}"><img src="/assets/brand/leather-culture-logo-white.png" alt="${escapeHtml(brand)}" style="height:44px;width:auto;display:block"></a>
       <nav>${(settings.header?.nav || []).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join("")}</nav>
     </header>
     <main>
@@ -1614,6 +1614,7 @@ function renderBlogPost(post, settings, req) {
       <h1>${escapeHtml(post.title)}</h1>
       <p class="excerpt">${escapeHtml(post.excerpt || "")}</p>
       <article>${post.body || ""}</article>
+      <p style="margin-top:48px"><a href="/blog" style="color:#080808;font-weight:800">&larr; Back to the journal</a></p>
     </main>
   </body>
 </html>`;
@@ -1870,8 +1871,14 @@ async function requestHandler(req, res) {
       res.writeHead(200, headers);
       res.end(data);
     } catch (error) {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("Not found");
+      let body = "Not found";
+      try {
+        body = await fs.promises.readFile(path.join(root, "404.html"), "utf8");
+      } catch (missing) {
+        /* fall back to plain text */
+      }
+      res.writeHead(404, { "content-type": "text/html; charset=utf-8" });
+      res.end(body);
     }
   } catch (error) {
     writeJson(res, 500, { message: error.message || "Server error" });

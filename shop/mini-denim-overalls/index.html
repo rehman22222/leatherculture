@@ -91,9 +91,9 @@ body,
 
 /* Paint content immediately instead of waiting for Framer's JS "appear" animations
    (they start everything at opacity 0.001, which delays LCP by the whole hydration time). */
-[data-framer-appear-id],
-[data-framer-appear-id] [style*="opacity:0.001"],
-[data-framer-appear-id] [style*="opacity: 0.001"] {
+[data-framer-appear-id]:not(.framer-149q19i-container *),
+[data-framer-appear-id] [style*="opacity:0.001"]:not(.framer-149q19i-container *),
+[data-framer-appear-id] [style*="opacity: 0.001"]:not(.framer-149q19i-container *) {
   opacity: 1 !important;
   transform: none !important;
 }
@@ -259,6 +259,25 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
     -webkit-overflow-scrolling: touch;
   }
 
+  /* The phone menu is a light dropdown panel: always dark text inside it. */
+  .framer-149q19i-container [data-framer-name="Links wrapper"] {
+    background-color: rgba(250, 250, 250, 0.98) !important;
+  }
+
+  .framer-149q19i-container [data-framer-name="Links wrapper"] a,
+  .framer-149q19i-container [data-framer-name="Links wrapper"] p,
+  body:not(.lc-light-header) .framer-149q19i-container [data-framer-name="Links wrapper"] a,
+  body:not(.lc-light-header) .framer-149q19i-container [data-framer-name="Links wrapper"] p {
+    color: rgba(0, 0, 0, 0.88) !important;
+    --framer-text-color: rgba(0, 0, 0, 0.88) !important;
+  }
+
+  .framer-149q19i-container [data-framer-name="Links wrapper"] a[data-framer-name="Black"],
+  .framer-149q19i-container [data-framer-name="Links wrapper"] a[data-framer-name="Black"] p {
+    color: #fff !important;
+    --framer-text-color: #fff !important;
+  }
+
   /* Announcement bar: static on phones. The JS marquee repaints 60x/s for the whole
      session, which hurts scrolling and Speed Index far more than it helps. */
   .framer-78r21n-container ul,
@@ -303,10 +322,6 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
     transform: none !important;
   }
 
-  video {
-    display: none !important;
-  }
-
   .lc-variant-gallery {
     flex-wrap: nowrap !important;
     margin-top: 10px !important;
@@ -339,18 +354,20 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
   opacity: 1 !important;
 }
 
-/* Let the logo overflow the header box instead of being clipped. */
-.framer-149q19i-container,
-.framer-149q19i-container nav,
-.framer-149q19i-container nav > div,
-.framer-149q19i-container [data-framer-name="Container"],
-.framer-149q19i-container [data-framer-name="Content wrapper"],
-.framer-149q19i-container [data-framer-name="Links wrapper"],
-.framer-16gypsd,
-.framer-jt1lle-container,
-.framer-16gypsd > *,
-.framer-jt1lle-container > * {
-  overflow: visible !important;
+/* Let the logo overflow the header box instead of being clipped (desktop only; on phones the
+   header contains the collapsible menu, which relies on its own overflow). */
+@media (min-width: 810px) {
+  .framer-149q19i-container,
+  .framer-149q19i-container nav,
+  .framer-149q19i-container nav > div,
+  .framer-149q19i-container [data-framer-name="Container"],
+  .framer-149q19i-container [data-framer-name="Content wrapper"],
+  .framer-16gypsd,
+  .framer-jt1lle-container,
+  .framer-16gypsd > *,
+  .framer-jt1lle-container > * {
+    overflow: visible !important;
+  }
 }
 
 /* Header hides while scrolling down and returns on scroll up. */
@@ -365,15 +382,19 @@ body.lc-header-hidden .framer-149q19i-container {
   pointer-events: none !important;
 }
 
-/* Keep the main navigation transparent on every page. */
-.framer-149q19i-container,
-.framer-149q19i-container nav,
-.framer-149q19i-container nav > div,
-.framer-149q19i-container [data-framer-name="Container"],
-.framer-149q19i-container [data-framer-name="Content wrapper"],
-.framer-149q19i-container [data-framer-name="Links wrapper"] {
+/* Navigation: transparent over the hero at the top of the page, solid once scrolled. */
+body:not(.lc-scrolled) .framer-149q19i-container,
+body:not(.lc-scrolled) .framer-149q19i-container nav,
+body:not(.lc-scrolled) .framer-149q19i-container nav > div,
+body:not(.lc-scrolled) .framer-149q19i-container [data-framer-name="Container"],
+body:not(.lc-scrolled) .framer-149q19i-container [data-framer-name="Content wrapper"] {
   background: transparent !important;
   background-color: transparent !important;
+}
+
+body.lc-scrolled .framer-149q19i-container nav {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .framer-149q19i-container [data-framer-component-type="RichTextContainer"] p,
@@ -441,5 +462,5 @@ body.lc-light-header .framer-149q19i-container [data-framer-name="Search bar"] >
 	<!-- Start of bodyEnd -->
     
     <!-- End of bodyEnd -->
-<script src="/site-config.js?v=split-1"></script><script src="/store-override.js?v=perf-16"></script></body>
+<script src="/site-config.js?v=split-1"></script><script src="/store-override.js?v=fix-3"></script></body>
 </html>
