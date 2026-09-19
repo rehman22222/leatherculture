@@ -130,7 +130,7 @@
 
   // Runs synchronously on every DOM change touching media, so a re-rendered <video autoplay>
   // is disarmed before the browser starts downloading it.
-  new MutationObserver((records) => {
+  const mediaObserver = new MutationObserver((records) => {
     records.forEach((record) => {
       if (record.type === "attributes") {
         const target = record.target;
@@ -140,11 +140,16 @@
       }
       record.addedNodes.forEach((node) => {
         if (!(node instanceof Element)) return;
-        const videos = node.tagName === "VIDEO" ? [node] : Array.from(node.querySelectorAll("video"));
-        videos.forEach(parkVideo);
+        if (node.tagName === "VIDEO") parkVideo(node);
+        else if (node.firstElementChild) node.querySelectorAll("video").forEach(parkVideo);
       });
     });
-  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "autoplay", "poster"] });
+  });
+  // Only needed once Framer's runtime starts re-rendering (after load); during HTML parsing the
+  // static <video preload="none"> is handled by optimizeMedia, and observing parse-time inserts costs paint time.
+  window.addEventListener("load", () => {
+    mediaObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "autoplay", "poster"] });
+  });
 
   function optimizeMedia() {
     const fold = window.innerHeight * 1.25;
