@@ -3,60 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
     <title>LeatherCulture Admin</title>
     <link href="/assets/brand/leather-culture-mark.png" rel="icon" type="image/png" />
-    <link rel="stylesheet" href="/admin/styles.css?v=content-2" />
+    <link rel="stylesheet" href="/admin/styles.css?v=wp-1" />
   </head>
-  <body>
+  <body class="locked">
     <div id="login-screen" class="login-screen">
       <form id="login-form" class="login-card">
-        <p>LeatherCulture Admin</p>
-        <h1>Sign in</h1>
+        <img src="/assets/brand/leather-culture-logo-black.webp" alt="LeatherCulture" class="login-logo" />
+        <h1>Sign in to Admin</h1>
         <label>
           Password
           <input id="password" type="password" autocomplete="current-password" required />
         </label>
-        <button type="submit">Login</button>
+        <button type="submit" class="primary">Login</button>
         <div id="login-status" role="status"></div>
       </form>
     </div>
 
-    <aside>
-      <strong>LeatherCulture</strong>
-      <span>Store Admin</span>
-      <nav>
-        <a href="#brand">Brand</a>
-        <a href="#header">Header</a>
-        <a href="#hero">Hero</a>
-        <a href="#pages">Pages & SEO</a>
-        <a href="#content">Page Content</a>
-        <a href="#banners">Banners</a>
-        <a href="#products">Products</a>
-        <a href="#categories">Categories</a>
-        <a href="#blogs">Blogs</a>
-        <a href="#sections">Sections</a>
-        <a href="#footer">Footer</a>
+    <aside class="sidebar">
+      <a class="brand" href="#/">
+        <img src="/assets/brand/leather-culture-logo-white.webp" alt="LeatherCulture" />
+      </a>
+      <nav id="nav">
+        <a href="#/" data-route="dashboard"><span class="ico">▦</span>Dashboard</a>
+        <div class="nav-group">Store</div>
+        <a href="#/products" data-route="products"><span class="ico">◈</span>Products</a>
+        <a href="#/categories" data-route="categories"><span class="ico">◫</span>Categories</a>
+        <a href="#/banners" data-route="banners"><span class="ico">▭</span>Banners</a>
+        <div class="nav-group">Content</div>
+        <a href="#/blog" data-route="blog"><span class="ico">✎</span>Blog Posts</a>
+        <a href="#/pages" data-route="pages"><span class="ico">▤</span>Pages &amp; SEO</a>
+        <a href="#/content" data-route="content"><span class="ico">¶</span>Page Text</a>
+        <div class="nav-group">Design</div>
+        <a href="#/appearance" data-route="appearance"><span class="ico">◐</span>Appearance</a>
       </nav>
+      <div class="sidebar-foot">
+        <a href="/" target="_blank" rel="noopener">↗ View store</a>
+        <button id="logout" type="button" class="link">Log out</button>
+      </div>
     </aside>
 
-    <main>
+    <div class="shell">
       <header class="topbar">
-        <div>
-          <p>Online Store</p>
-          <h1>Header to footer editor</h1>
+        <button id="menu-toggle" type="button" class="icon-btn" aria-label="Menu">☰</button>
+        <div class="topbar-title">
+          <div id="crumbs" class="crumbs"></div>
+          <h1 id="page-title">Dashboard</h1>
         </div>
-        <div class="actions">
-          <a href="/" target="_blank">View Store</a>
-          <button id="logout" type="button" class="secondary">Logout</button>
-          <button id="save">Save changes</button>
+        <div class="topbar-actions">
+          <span id="dirty" class="dirty" hidden>Unsaved changes</span>
+          <button id="save" type="button" class="primary" disabled>Save changes</button>
         </div>
       </header>
+      <main id="view" class="view"></main>
+    </div>
 
-      <div id="status" role="status"></div>
-      <form id="editor"></form>
-    </main>
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <script src="/site-config.js?v=split-1"></script>
-    <script src="/admin/script.js?v=content-2"></script>
+    <script src="/admin/script.js?v=wp-1"></script>
   </body>
 </html>
