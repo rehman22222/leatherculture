@@ -1734,6 +1734,11 @@ function parsePrice(value) {
   return match ? Number(match[0]) : 0;
 }
 
+function publicOrder(document) {
+  const { _id, ...order } = document || {};
+  return order;
+}
+
 function orderId() {
   const stamp = Date.now().toString(36).toUpperCase().slice(-5);
   const rand = crypto.randomBytes(2).toString("hex").toUpperCase();
@@ -1812,7 +1817,7 @@ async function createOrder(body) {
     updatedAt: new Date()
   };
   await collections.orders.insertOne(order);
-  return publicRecord(order);
+  return publicOrder(order);
 }
 
 function safeFileFor(urlPath) {
@@ -1951,7 +1956,7 @@ async function requestHandler(req, res) {
       await ensureDbReady();
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const orders = await collections.orders.find({}).sort({ createdAt: -1 }).limit(500).toArray();
-      return writeJson(res, 200, orders.map(publicRecord));
+      return writeJson(res, 200, orders.map(publicOrder));
     }
 
     const orderMatch = url.pathname.match(/^\/api\/admin\/orders\/([A-Za-z0-9-]+)$/);
@@ -1965,7 +1970,7 @@ async function requestHandler(req, res) {
       if (typeof body.adminNote === "string") update.adminNote = cleanText(body.adminNote, 1000);
       await collections.orders.updateOne({ id: orderMatch[1] }, { $set: update });
       const order = await collections.orders.findOne({ id: orderMatch[1] });
-      return writeJson(res, order ? 200 : 404, order ? publicRecord(order) : { message: "Order not found" });
+      return writeJson(res, order ? 200 : 404, order ? publicOrder(order) : { message: "Order not found" });
     }
 
     if (orderMatch && req.method === "DELETE") {
