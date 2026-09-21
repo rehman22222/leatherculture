@@ -625,6 +625,17 @@
       if (value && specs[key]) value.textContent = specs[key];
     });
 
+    // "Order Now" (a template link to framer.com) becomes the add-to-cart button
+    const orderButton = Array.from(info.querySelectorAll("a[href]")).find((link) => /framer\.com/i.test(link.getAttribute("href") || "") || /^(order now|add to cart)/i.test(normalizeText(link.textContent)) || link.dataset.lcCartBound);
+    if (orderButton && window.LeatherCultureCart) {
+      window.LeatherCultureCart.bindProductButton(orderButton, product, () => {
+        const active = document.querySelector(".lc-variant-thumb.is-active");
+        const index = active ? Array.from(active.parentElement.children).indexOf(active) - 1 : -1;
+        const variants = (product.variants || []).filter((variant) => variant.enabled !== false);
+        return index >= 0 ? variants[index] || null : variants[0] || null;
+      });
+    }
+
     const category = (settings.categories || []).find((item) => item.id === product.category || item.slug === product.category);
     if (category && category.name) {
       const tag = Array.from(info.querySelectorAll("[data-framer-name='Text wrapper'] p")).find((node) => /wear$/i.test(normalizeText(node.textContent)));
@@ -854,6 +865,7 @@
   }
 
   function applySettings() {
+    if (window.LeatherCultureCart) window.LeatherCultureCart.configure(settings);
     setLogoBrand();
     setPageMeta();
     replaceBoundText();
@@ -1026,7 +1038,7 @@
     (event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+      if (!link || link.target === "_blank" || link.hasAttribute("download") || link.dataset.lcCartBound) return;
       const href = link.getAttribute("href") || "";
       if (/^(#|mailto:|tel:|javascript:)/i.test(href)) return;
       let url;

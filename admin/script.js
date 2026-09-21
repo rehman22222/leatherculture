@@ -199,8 +199,10 @@ function renderDashboard() {
   const posts = settings.blogPosts || [];
   const edited = Object.values(settings.content?.values || {}).filter((v) => String(v).trim()).length;
   const live = products.filter((p) => p.enabled !== false).length;
+  const fresh = (orders || []).filter((o) => o.status === "new").length;
   return `
     <div class="stats">
+      <a class="stat" href="#/orders"><b>${orders ? orders.length : "…"}</b><span>Orders <em>${fresh ? `${fresh} new` : ""}</em></span></a>
       <a class="stat" href="#/products"><b>${products.length}</b><span>Products <em>${live} live</em></span></a>
       <a class="stat" href="#/blog"><b>${posts.filter((p) => p.status === "published").length}</b><span>Published posts <em>${posts.length - posts.filter((p) => p.status === "published").length} drafts</em></span></a>
       <a class="stat" href="#/pages"><b>${(settings.pages || []).length}</b><span>Pages</span></a>
@@ -562,10 +564,167 @@ function renderAppearance() {
   `;
 }
 
+/* ---------- orders ---------- */
+
+let orders = null;
+const ORDER_STATUSES = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+
+async function loadOrders(force = false) {
+  if (orders && !force) return orders;
+  const response = await fetch(apiUrl("/api/admin/orders"), { cache: "no-store", credentials: "include" });
+  orders = response.ok ? await response.json() : [];
+  const fresh = orders.filter((o) => o.status === "new").length;
+  const badgeEl = document.getElementById("orders-badge");
+  badgeEl.hidden = !fresh;
+  badgeEl.textContent = fresh;
+  return orders;
+}
+
+function money(amount, currency) {
+  return `${currency || settings.checkout?.currency || "Rs"} ${Math.round(Number(amount) || 0).toLocaleString("en-PK")}`;
+}
+
+function statusBadge(status) {
+  const cls = { new: "on", confirmed: "info", shipped: "info", delivered: "off", cancelled: "danger" }[status] || "off";
+  return `<span class="badge ${cls}">${escapeHtml(status)}</span>`;
+}
+
+function renderOrders() {
+  if (!orders) {
+    loadOrders().then(render);
+    return `<div class="empty">Loading orders…</div>`;
+  }
+  if (state.params[0] === "view") return renderOrderDetail(state.params[1]);
+  const filter = state.params[0] && ORDER_STATUSES.includes(state.params[0]) ? state.params[0] : "";
+  const query = (state.search || "").toLowerCase();
+  const rows = orders.filter((o) => (!filter || o.status === filter) && (!query || `${o.id} ${o.customer?.name} ${o.customer?.phone} ${o.customer?.city}`.toLowerCase().includes(query)));
+  const count = (status) => orders.filter((o) => !status || o.status === status).length;
+  return `
+    <div class="tabs">
+      <a class="tab ${!filter ? "active" : ""}" href="#/orders">All <span class="count">${count()}</span></a>
+      ${ORDER_STATUSES.map((st) => `<a class="tab ${filter === st ? "active" : ""}" href="#/orders/${st}">${st[0].toUpperCase() + st.slice(1)} <span class="count">${count(st)}</span></a>`).join("")}
+    </div>
+    <div class="list-head">
+      <input type="search" id="search" placeholder="Search by order, name, phone, city…" value="${escapeHtml(state.search || "")}">
+      <button type="button" class="secondary" data-refresh-orders>Refresh</button>
+    </div>
+    <div class="card table-card">
+      ${rows.length
+        ? `<table>
+            <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody>${rows
+              .map(
+                (o) => `<tr data-href="#/orders/view/${escapeHtml(o.id)}">
+                  <td><b>${escapeHtml(o.id)}</b><small>${escapeHtml(new Date(o.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</small></td>
+                  <td><b>${escapeHtml(o.customer?.name)}</b><small>${escapeHtml(o.customer?.phone)} · ${escapeHtml(o.customer?.city)}</small></td>
+                  <td>${o.items.reduce((n, i) => n + i.qty, 0)}</td>
+                  <td><b>${money(o.total, o.currency)}</b><small>Cash on delivery</small></td>
+                  <td>${statusBadge(o.status)}</td>
+                  <td class="row-actions"><a href="#/orders/view/${escapeHtml(o.id)}">View</a></td>
+                </tr>`
+              )
+              .join("")}</tbody>
+          </table>`
+        : `<div class="empty">No orders${filter ? ` with status "${filter}"` : " yet"}.</div>`}
+    </div>`;
+}
+
+function renderOrderDetail(id) {
+  const o = orders.find((order) => order.id === id);
+  if (!o) return `<div class="empty">Order not found.</div>`;
+  const c = o.customer || {};
+  const wa = String(c.phone || "").replace(/[^\d]/g, "").replace(/^0/, "92");
+  const main = `
+    ${backLink("#/orders", "All orders")}
+    <section class="card">
+      <div class="card-head"><h3>Items</h3><span>${statusBadge(o.status)}</span></div>
+      ${o.items
+        .map(
+          (i) => `<div class="order-line">${thumb(i.image)}<div><b>${escapeHtml(i.name)}</b><small>${escapeHtml(i.variantName ? `Colour: ${i.variantName}` : "")}${i.sku ? ` · SKU ${escapeHtml(i.sku)}` : ""}</small></div><div class="muted">× ${i.qty}</div><div class="right"><b>${money(i.lineTotal, o.currency)}</b><small>${money(i.unitPrice, o.currency)} each</small></div></div>`
+        )
+        .join("")}
+      <div class="totals">
+        <div><span>Subtotal</span><span>${money(o.subtotal, o.currency)}</span></div>
+        <div><span>Delivery</span><span>${o.shipping ? money(o.shipping, o.currency) : "Free"}</span></div>
+        <div class="grand"><span>Total (cash on delivery)</span><span>${money(o.total, o.currency)}</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <h3>Customer</h3>
+      <div class="grid">
+        <div><small>Name</small><b>${escapeHtml(c.name)}</b></div>
+        <div><small>Phone</small><b><a href="tel:${escapeHtml(c.phone)}">${escapeHtml(c.phone)}</a></b></div>
+        <div><small>Email</small><b>${escapeHtml(c.email || "—")}</b></div>
+        <div><small>City</small><b>${escapeHtml(c.city)}</b></div>
+      </div>
+      <div style="margin-top:12px"><small>Address</small><div>${escapeHtml(c.address)}</div></div>
+      ${c.notes ? `<div style="margin-top:12px"><small>Customer notes</small><div>${escapeHtml(c.notes)}</div></div>` : ""}
+      <div class="btn-row">
+        <a class="secondary" href="tel:${escapeHtml(c.phone)}">Call</a>
+        <a class="secondary" href="https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${c.name}, this is LeatherCulture about your order ${o.id}.`)}" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </section>
+  `;
+  const side = `
+    <section class="panel">
+      <h3>Order ${escapeHtml(o.id)}</h3>
+      <small>Placed ${escapeHtml(new Date(o.createdAt).toLocaleString("en-GB"))}</small>
+      <label style="margin-top:14px">Status<select data-order-status="${escapeHtml(o.id)}">${ORDER_STATUSES.map((st) => `<option value="${st}" ${o.status === st ? "selected" : ""}>${st[0].toUpperCase() + st.slice(1)}</option>`).join("")}</select></label>
+      <label>Internal note<textarea data-order-note="${escapeHtml(o.id)}" placeholder="Courier, tracking number, call notes…">${escapeHtml(o.adminNote || "")}</textarea></label>
+      <button type="button" class="primary block" data-order-save="${escapeHtml(o.id)}">Update order</button>
+      <button type="button" class="secondary block" onclick="window.print()">Print</button>
+      <button type="button" class="link danger block" data-order-delete="${escapeHtml(o.id)}">Delete order</button>
+    </section>
+  `;
+  return editorLayout(main, side);
+}
+
+async function saveOrder(id) {
+  const status = view.querySelector(`[data-order-status="${id}"]`).value;
+  const adminNote = view.querySelector(`[data-order-note="${id}"]`).value;
+  const response = await fetch(apiUrl(`/api/admin/orders/${id}`), { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, adminNote }) });
+  if (!response.ok) throw new Error((await response.json()).message || "Could not update the order");
+  const updated = await response.json();
+  orders = orders.map((o) => (o.id === id ? updated : o));
+  await loadOrders(true);
+  render();
+  showToast(`Order ${id} marked ${status}.`);
+}
+
+function renderCheckoutSettings() {
+  const c = settings.checkout || {};
+  return `
+    <section class="card">
+      <h3>Cash on delivery</h3>
+      <div class="grid">
+        ${field("checkout.currency", "Currency label", "input", [], { help: "Shown before amounts, e.g. Rs or PKR." })}
+        ${field("checkout.shippingFee", "Delivery fee", "input", [], { help: "Number only, e.g. 250." })}
+        ${field("checkout.freeShippingFrom", "Free delivery from", "input", [], { help: "Order subtotal that unlocks free delivery. 0 = never." })}
+        ${field("checkout.whatsapp", "WhatsApp number for orders", "input", [], { placeholder: "923001234567", help: "Country code, no + or spaces. Adds a 'Send order on WhatsApp' button after checkout." })}
+      </div>
+      ${field("checkout.codNote", "Payment note shown at checkout", "textarea")}
+      <div class="grid">
+        ${field("checkout.cartButton", "Product button label")}
+        ${field("checkout.addedButton", "Label after adding")}
+      </div>
+      <p class="muted">Prices are read from each product's price field (digits only are used), so keep them numeric like <b>Rs 12,500</b>.</p>
+    </section>
+    <section class="card">
+      <h3>How it works</h3>
+      <ol class="muted" style="margin:0;padding-left:18px;line-height:1.8">
+        <li>Customer taps <b>${escapeHtml(c.cartButton || "Add to cart")}</b> on a product, then checks out with name, phone and address.</li>
+        <li>The order appears under <a href="#/orders">Orders</a> as <b>New</b>; you call/WhatsApp to confirm, then mark it Confirmed → Shipped → Delivered.</li>
+        <li>Payment is collected in cash by the courier.</li>
+      </ol>
+    </section>`;
+}
+
 /* ---------- router ---------- */
 
 const routes = {
   dashboard: { title: "Dashboard", render: renderDashboard },
+  orders: { title: "Orders", render: renderOrders, crumb: () => (state.params[0] === "view" ? state.params[1] : "") },
+  checkout: { title: "Checkout settings", render: renderCheckoutSettings },
   products: {
     title: "Products",
     render: () => (state.params[0] === "edit" ? renderProductEditor(Number(state.params[1])) : renderProductsList()),
@@ -709,6 +868,17 @@ function bindInputs() {
     render();
   }));
 
+  view.querySelectorAll("[data-order-save]").forEach((button) => button.addEventListener("click", () => saveOrder(button.dataset.orderSave).catch((error) => showToast(error.message, "error"))));
+  view.querySelectorAll("[data-order-delete]").forEach((button) => button.addEventListener("click", async () => {
+    if (!confirm(`Delete order ${button.dataset.orderDelete}? This cannot be undone.`)) return;
+    const response = await fetch(apiUrl(`/api/admin/orders/${button.dataset.orderDelete}`), { method: "DELETE", credentials: "include" });
+    if (!response.ok) return showToast("Could not delete the order", "error");
+    await loadOrders(true);
+    location.hash = "#/orders";
+    showToast("Order deleted.");
+  }));
+  view.querySelectorAll("[data-refresh-orders]").forEach((button) => button.addEventListener("click", () => loadOrders(true).then(render)));
+
   const search = view.querySelector("#search");
   if (search) {
     search.addEventListener("input", () => {
@@ -816,6 +986,7 @@ async function load() {
   settings = await response.json();
   markClean();
   render();
+  loadOrders().then(() => state.route === "dashboard" && render()).catch(() => {});
 }
 
 async function save() {

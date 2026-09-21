@@ -36,7 +36,8 @@ const collectionNames = {
   categories: process.env.MONGODB_CATEGORIES_COLLECTION || "categories",
   banners: process.env.MONGODB_BANNERS_COLLECTION || "banners",
   blogs: process.env.MONGODB_BLOGS_COLLECTION || "blogs",
-  pages: process.env.MONGODB_PAGES_COLLECTION || "pages"
+  pages: process.env.MONGODB_PAGES_COLLECTION || "pages",
+  orders: process.env.MONGODB_ORDERS_COLLECTION || "orders"
 };
 const settingsDocumentId = "storefront-settings";
 const sessions = new Map();
@@ -661,6 +662,17 @@ const contentGroups = [
 
 const defaultSettings = {
   content: { groups: contentGroups, values: {} },
+  checkout: {
+    currency: "Rs",
+    shippingFee: 250,
+    freeShippingFrom: 10000,
+    codEnabled: true,
+    codNote: "Pay in cash when your order arrives. Delivery across Pakistan in 3-5 working days.",
+    whatsapp: "",
+    notifyEmail: "",
+    cartButton: "Add to cart",
+    addedButton: "Added - view cart"
+  },
   brand: {
     name: "LeatherCulture",
     title: "LeatherCulture - Premium Leather Store",
@@ -1363,6 +1375,9 @@ async function connectDb() {
   collections.banners = db.collection(collectionNames.banners);
   collections.blogs = db.collection(collectionNames.blogs);
   collections.pages = db.collection(collectionNames.pages);
+  collections.orders = db.collection(collectionNames.orders);
+  await collections.orders.createIndex({ createdAt: -1 });
+  await collections.orders.createIndex({ id: 1 }, { unique: true });
 
   await Promise.all([
     collections.pages.createIndex({ path: 1 }, { unique: true }),
@@ -1413,7 +1428,7 @@ function setCorsHeaders(req, res) {
   if (allowedOrigins.has(origin) || allowedOrigins.has("*")) {
     res.setHeader("access-control-allow-origin", origin);
     res.setHeader("access-control-allow-credentials", "true");
-    res.setHeader("access-control-allow-methods", "GET,POST,PUT,OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.setHeader("access-control-allow-headers", "Content-Type");
     res.setHeader("vary", "Origin");
   }
@@ -1712,6 +1727,94 @@ function renderProductPage(product, settings, req) {
 </html>`;
 }
 
+/* ---------- orders (cash on delivery) ---------- */
+
+function parsePrice(value) {
+  const match = String(value || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
+function orderId() {
+  const stamp = Date.now().toString(36).toUpperCase().slice(-5);
+  const rand = crypto.randomBytes(2).toString("hex").toUpperCase();
+  return `LC-${stamp}${rand}`;
+}
+
+const orderAttempts = new Map();
+function orderRateLimited(req) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  const now = Date.now();
+  const recent = (orderAttempts.get(ip) || []).filter((time) => now - time < 60 * 60 * 1000);
+  recent.push(now);
+  orderAttempts.set(ip, recent);
+  return recent.length > 20;
+}
+
+function cleanText(value, max = 200) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+async function createOrder(body) {
+  const settings = await readSettings();
+  const checkout = settings.checkout || {};
+  const customer = {
+    name: cleanText(body.customer && body.customer.name, 80),
+    phone: cleanText(body.customer && body.customer.phone, 30),
+    email: cleanText(body.customer && body.customer.email, 120),
+    address: cleanText(body.customer && body.customer.address, 300),
+    city: cleanText(body.customer && body.customer.city, 60),
+    notes: cleanText(body.customer && body.customer.notes, 500)
+  };
+  if (customer.name.length < 2) throw Object.assign(new Error("Please enter your name."), { status: 400 });
+  if (!/\d{7,}/.test(customer.phone.replace(/[^\d]/g, ""))) throw Object.assign(new Error("Please enter a valid phone number."), { status: 400 });
+  if (customer.address.length < 6) throw Object.assign(new Error("Please enter your delivery address."), { status: 400 });
+  if (customer.city.length < 2) throw Object.assign(new Error("Please enter your city."), { status: 400 });
+  if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) throw Object.assign(new Error("Please enter a valid email address."), { status: 400 });
+
+  const requested = Array.isArray(body.items) ? body.items.slice(0, 30) : [];
+  if (!requested.length) throw Object.assign(new Error("Your cart is empty."), { status: 400 });
+  const items = [];
+  for (const line of requested) {
+    const slug = cleanText(line.slug, 120);
+    const product = (settings.products || []).find((item) => item.enabled !== false && (item.slug === slug || item.id === slug));
+    if (!product) continue;
+    const variant = (product.variants || []).find((item) => item.id === line.variantId || item.name === line.variantId);
+    const qty = Math.min(20, Math.max(1, Math.round(Number(line.qty) || 1)));
+    const unitPrice = parsePrice(product.price);
+    items.push({
+      slug: product.slug || product.id,
+      name: product.name,
+      variantId: variant ? variant.id : "",
+      variantName: variant ? variant.name : "",
+      sku: variant ? variant.sku || "" : "",
+      image: (variant && variant.image) || product.image || "",
+      qty,
+      unitPrice,
+      lineTotal: unitPrice * qty
+    });
+  }
+  if (!items.length) throw Object.assign(new Error("These products are no longer available."), { status: 400 });
+
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const freeFrom = Number(checkout.freeShippingFrom) || 0;
+  const shipping = freeFrom && subtotal >= freeFrom ? 0 : Number(checkout.shippingFee) || 0;
+  const order = {
+    id: orderId(),
+    status: "new",
+    payment: "cod",
+    currency: checkout.currency || "Rs",
+    customer,
+    items,
+    subtotal,
+    shipping,
+    total: subtotal + shipping,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  await collections.orders.insertOne(order);
+  return publicRecord(order);
+}
+
 function safeFileFor(urlPath) {
   let requestPath = decodeURIComponent(urlPath);
   if (requestPath === "/admin") requestPath = "/admin/";
@@ -1831,6 +1934,45 @@ async function requestHandler(req, res) {
     if (url.pathname === "/api/admin/me" && req.method === "GET") {
       await ensureDbReady();
       return writeJson(res, isAdmin(req) ? 200 : 401, { authenticated: isAdmin(req) });
+    }
+
+    if (url.pathname === "/api/orders" && req.method === "POST") {
+      await ensureDbReady();
+      if (orderRateLimited(req)) return writeJson(res, 429, { message: "Too many orders from this connection. Please try again later." });
+      try {
+        const body = JSON.parse(await readBody(req) || "{}");
+        return writeJson(res, 201, { ok: true, order: await createOrder(body) });
+      } catch (error) {
+        return writeJson(res, error.status || 500, { message: error.message || "Could not place the order." });
+      }
+    }
+
+    if (url.pathname === "/api/admin/orders" && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const orders = await collections.orders.find({}).sort({ createdAt: -1 }).limit(500).toArray();
+      return writeJson(res, 200, orders.map(publicRecord));
+    }
+
+    const orderMatch = url.pathname.match(/^\/api\/admin\/orders\/([A-Za-z0-9-]+)$/);
+    if (orderMatch && req.method === "PUT") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const body = JSON.parse(await readBody(req) || "{}");
+      const allowed = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+      const update = { updatedAt: new Date() };
+      if (allowed.includes(body.status)) update.status = body.status;
+      if (typeof body.adminNote === "string") update.adminNote = cleanText(body.adminNote, 1000);
+      await collections.orders.updateOne({ id: orderMatch[1] }, { $set: update });
+      const order = await collections.orders.findOne({ id: orderMatch[1] });
+      return writeJson(res, order ? 200 : 404, order ? publicRecord(order) : { message: "Order not found" });
+    }
+
+    if (orderMatch && req.method === "DELETE") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const result = await collections.orders.deleteOne({ id: orderMatch[1] });
+      return writeJson(res, result.deletedCount ? 200 : 404, { ok: Boolean(result.deletedCount) });
     }
 
     if (url.pathname === "/api/admin/upload" && req.method === "POST") {

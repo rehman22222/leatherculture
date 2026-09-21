@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /cart
+Disallow: /checkout
 Disallow: /shop/mini-denim-overalls
 Disallow: /shop/patterned-knit-sweater
 
