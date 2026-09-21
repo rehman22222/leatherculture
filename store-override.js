@@ -185,7 +185,7 @@
             }
           });
         },
-        { threshold: 0.55 }
+        { rootMargin: "360px 0px", threshold: 0.01 }
       );
     }
     videos.forEach((video) => {
@@ -1015,10 +1015,11 @@
       runLog.push({ error: String(error && error.stack || error).slice(0, 300) });
       console.error("LeatherCulture: store override failed", error);
     } finally {
-      // our own DOM writes trigger the observer; let that batch flush before listening again
-      setTimeout(() => {
+      // Our own DOM writes are delivered to the observer as a microtask queued before this one,
+      // so resetting here skips exactly that batch and nothing later (e.g. React's hydration commit).
+      queueMicrotask(() => {
         applying = false;
-      }, 0);
+      });
     }
   }
 
