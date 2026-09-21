@@ -158,10 +158,7 @@
       if (image.dataset.lcMediaOptimized || image.getAttribute("fetchpriority") === "high") return;
       const rect = image.getBoundingClientRect();
       const aboveFold = rect.width > 0 && rect.top + window.scrollY < fold;
-      if (!aboveFold) {
-        image.loading = "lazy";
-        image.fetchPriority = "low";
-      }
+      if (!aboveFold) image.loading = "lazy";
       image.dataset.lcMediaOptimized = "true";
     });
 
@@ -629,8 +626,8 @@
     const orderButton = Array.from(info.querySelectorAll("a[href]")).find((link) => /framer\.com/i.test(link.getAttribute("href") || "") || /^(order now|add to cart)/i.test(normalizeText(link.textContent)) || link.dataset.lcCartBound);
     if (orderButton && window.LeatherCultureCart) {
       window.LeatherCultureCart.bindProductButton(orderButton, product, () => {
-        const active = document.querySelector(".lc-variant-thumb.is-active");
-        const index = active ? Array.from(active.parentElement.children).indexOf(active) - 1 : -1;
+        const card = document.querySelector("[data-lc-active-media]");
+        const index = card ? Number(card.dataset.lcActiveMedia) - 1 : -1;
         const variants = (product.variants || []).filter((variant) => variant.enabled !== false);
         return index >= 0 ? variants[index] || null : variants[0] || null;
       });
@@ -648,42 +645,70 @@
     if (!product) return;
     setProductDetailFields(product);
     const mediaItems = productMediaItems(product);
-    if (mediaItems.length < 2) return;
+    if (!mediaItems.length) return;
 
     const mainImage = findMainProductImage(product);
     if (!mainImage) return;
-
     mainImage.classList.add("lc-product-main-image");
-    const first = mediaItems[0];
-    mainImage.removeAttribute("srcset");
-    mainImage.setAttribute("src", first.url);
-    mainImage.setAttribute("alt", first.alt);
 
-    let gallery = document.querySelector(".lc-variant-gallery");
-    if (!gallery) {
-      gallery = document.createElement("div");
-      gallery.className = "lc-variant-gallery";
-      gallery.setAttribute("aria-label", "Product variant images");
-      const imageBox = mainImage.closest("[data-framer-name='Image']") || mainImage.closest("[data-framer-background-image-wrapper]")?.parentElement || mainImage;
-      imageBox.insertAdjacentElement("afterend", gallery);
+    // Framer's product card has its own thumbnail strip ("Images wrapper"); feed it the store's images
+    const card = mainImage.closest("[data-framer-name='01'], [class*='-container']") || mainImage.parentElement;
+    const strip = (card && card.querySelector("[data-framer-name='Images wrapper']")) || (card && card.parentElement && card.parentElement.querySelector("[data-framer-name='Images wrapper']"));
+    const thumbs = strip ? Array.from(strip.querySelectorAll("img")).filter((img) => img.getClientRects().length) : [];
+    const current = Number(card && card.dataset.lcActiveMedia) || 0;
+    const show = mediaItems[current] || mediaItems[0];
+    if (!mainImage.dataset.lcLocked || mainImage.getAttribute("src") !== show.url) {
+      mainImage.removeAttribute("srcset");
+      mainImage.setAttribute("src", show.url);
+      mainImage.setAttribute("alt", show.alt);
+      mainImage.dataset.lcLocked = "true";
     }
 
-    gallery.innerHTML = "";
-    mediaItems.forEach((item, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `lc-variant-thumb${index === 0 ? " is-active" : ""}`;
-      button.setAttribute("aria-label", item.label);
-      button.innerHTML = `<img src="${item.url}" alt="${item.alt}" loading="lazy" decoding="async">`;
-      button.addEventListener("click", () => {
-        gallery.querySelectorAll(".lc-variant-thumb").forEach((node) => node.classList.remove("is-active"));
-        button.classList.add("is-active");
-        mainImage.removeAttribute("srcset");
-        mainImage.setAttribute("src", item.url);
-        mainImage.setAttribute("alt", item.alt);
-      });
-      gallery.appendChild(button);
+    thumbs.forEach((thumb, index) => {
+      const cell = thumb.closest("[data-framer-name='Active large'], [data-framer-name='Inactive'], [class*='-container']") || thumb;
+      const item = mediaItems[index];
+      if (!item) {
+        cell.style.display = "none";
+        return;
+      }
+      cell.style.display = "";
+      if (thumb.getAttribute("src") !== item.url) {
+        thumb.removeAttribute("srcset");
+        thumb.setAttribute("src", item.url);
+        thumb.setAttribute("alt", item.alt);
+      }
+      cell.classList.toggle("lc-thumb-active", index === current);
     });
+
+    if (strip && !strip.dataset.lcBound) {
+      strip.dataset.lcBound = "true";
+      strip.addEventListener(
+        "click",
+        (event) => {
+          const thumb = event.target instanceof Element ? event.target.closest("img") : null;
+          const list = Array.from(strip.querySelectorAll("img")).filter((img) => img.getClientRects().length);
+          const index = thumb ? list.indexOf(thumb) : -1;
+          if (index < 0 || !mediaItems[index]) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (card) card.dataset.lcActiveMedia = String(index);
+          mainImage.removeAttribute("srcset");
+          mainImage.setAttribute("src", mediaItems[index].url);
+          mainImage.setAttribute("alt", mediaItems[index].alt);
+          list.forEach((img, i) => {
+            const cell = img.closest("[data-framer-name='Active large'], [data-framer-name='Inactive'], [class*='-container']") || img;
+            cell.classList.toggle("lc-thumb-active", i === index);
+          });
+        },
+        true
+      );
+    }
+
+    if (strip) {
+      strip.style.display = mediaItems.length < 2 ? "none" : "";
+      strip.style.width = "auto";
+      strip.style.maxWidth = "calc(100% - 24px)";
+    }
   }
 
   function productLinks(product) {

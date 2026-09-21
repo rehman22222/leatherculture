@@ -104,6 +104,8 @@
     }
     pill.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg><span>Cart</span><b>${count}</b>`;
     pill.classList.toggle("is-empty", count === 0);
+    // on phones the product page's own button already says "view cart"; the pill would cover it
+    pill.classList.toggle("is-redundant", Boolean(document.querySelector("a[data-lc-cart-bound]")) && window.matchMedia("(max-width: 809px)").matches);
   }
 
   /* product page: turn the template's "Order Now" link into add-to-cart */
@@ -114,6 +116,7 @@
     const labels = button.querySelectorAll("p").length ? Array.from(button.querySelectorAll("p")) : [button];
     const setLabel = (text) => labels.forEach((node) => { node.textContent = text; });
     setLabel(checkout.cartButton || "Add to cart");
+    renderPill();
     button.addEventListener(
       "click",
       (event) => {
@@ -141,6 +144,7 @@
     .lc-cart-pill b{min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#fff;color:#000;display:grid;place-items:center;font-size:12px}
     .lc-cart-pill.is-empty{opacity:0;pointer-events:none;transform:translateY(12px)}
     .lc-cart-pill.is-bump{transform:scale(1.08)}
+    .lc-cart-pill.is-redundant{display:none}
     @media (max-width:809px){.lc-cart-pill{right:14px;bottom:14px;padding:11px 14px}}
   `;
   document.head.appendChild(style);

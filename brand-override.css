@@ -32,38 +32,10 @@ body,
   filter: none !important;
 }
 
-.lc-variant-gallery {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 10px !important;
-  margin-top: 14px !important;
-  max-width: min(100%, 560px) !important;
-  position: relative !important;
-  z-index: 4 !important;
-}
-
-.lc-variant-thumb {
-  appearance: none !important;
-  width: 72px !important;
-  height: 86px !important;
-  padding: 0 !important;
-  border: 2px solid rgba(0, 0, 0, 0.1) !important;
+.lc-thumb-active {
+  outline: 2px solid #050505 !important;
+  outline-offset: -2px !important;
   border-radius: 8px !important;
-  background: #f4f4f4 !important;
-  cursor: pointer !important;
-  overflow: hidden !important;
-}
-
-.lc-variant-thumb img {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  border-radius: 6px !important;
-}
-
-.lc-variant-thumb.is-active {
-  border-color: #050505 !important;
 }
 
 .framer-16gypsd,
@@ -184,6 +156,18 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Let the logo overflow its 38px box on phones too (the collapsible menu panel keeps its own overflow). */
+  .framer-149q19i-container nav,
+  .framer-149q19i-container nav > div,
+  .framer-149q19i-container [data-framer-name="Container"],
+  .framer-149q19i-container [data-framer-name="Content wrapper"],
+  .framer-16gypsd,
+  .framer-jt1lle-container,
+  .framer-16gypsd > *,
+  .framer-jt1lle-container > * {
+    overflow: visible !important;
+  }
+
   /* The phone menu is a light dropdown panel: always dark text inside it. */
   .framer-149q19i-container [data-framer-name="Links wrapper"] {
     background-color: rgba(250, 250, 250, 0.98) !important;
@@ -248,20 +232,6 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
     transform: none !important;
   }
 
-  .lc-variant-gallery {
-    flex-wrap: nowrap !important;
-    margin-top: 10px !important;
-    max-width: calc(100vw - 32px) !important;
-    overflow-x: auto !important;
-    padding-bottom: 4px !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .lc-variant-thumb {
-    flex: 0 0 auto !important;
-    width: 62px !important;
-    height: 76px !important;
-  }
 
 }
 
