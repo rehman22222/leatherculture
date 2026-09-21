@@ -706,8 +706,6 @@
 
     if (strip) {
       strip.style.display = mediaItems.length < 2 ? "none" : "";
-      strip.style.width = "auto";
-      strip.style.maxWidth = "calc(100% - 24px)";
     }
   }
 
