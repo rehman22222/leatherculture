@@ -410,11 +410,21 @@
       document.head.appendChild(link);
     }
     document
-      .querySelectorAll(".framer-16gypsd a, .framer-jt1lle-container a, .framer-f9mt9f-container a")
+      .querySelectorAll(".framer-16gypsd a, .framer-jt1lle-container a, .framer-f9mt9f-container a, .framer-agjbad-container a")
       .forEach((link) => {
         link.setAttribute("data-brand", brand);
         link.setAttribute("aria-label", brand);
+        if (!link.getAttribute("href")) link.setAttribute("href", "/");
       });
+
+    // template links the footer address to a hard-coded London map
+    const address = get("footer.address");
+    if (address) {
+      document.querySelectorAll("a[href*='google.com/maps']").forEach((link) => {
+        link.setAttribute("href", `https://www.google.com/maps/search/${encodeURIComponent(address)}`);
+        link.setAttribute("rel", "noopener");
+      });
+    }
     updateHeaderContrast();
   }
 
