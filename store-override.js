@@ -996,6 +996,15 @@
     });
   }
 
+  // Framer's components emit <h4> under <h2> sections (blog cards, newsletter), which skips a
+  // heading level. Hydration rebuilds them, so this runs on every pass, not just on the static HTML.
+  function enforceHeadingLevels() {
+    document.querySelectorAll("h4, h5, h6").forEach((heading) => {
+      const next = heading.tagName === "H4" ? "h3" : heading.tagName === "H5" ? "h4" : "h5";
+      retag(heading, next);
+    });
+  }
+
   function cleanVisibleBranding() {
     document.title = document.title.replace(/Wearix/gi, "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("iframe[id*='framer'], [class*='__framer-badge']").forEach((node) => node.remove());
@@ -1043,6 +1052,7 @@
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
       enforceSingleH1();
+      enforceHeadingLevels();
       applySettings();
     } catch (error) {
       runLog.push({ error: String(error && error.stack || error).slice(0, 300) });
