@@ -670,7 +670,11 @@ function renderOrderDetail(id) {
       <h3>Order ${escapeHtml(o.id)}</h3>
       <small>Placed ${escapeHtml(new Date(o.createdAt).toLocaleString("en-GB"))}</small>
       <label style="margin-top:14px">Status<select data-order-status="${escapeHtml(o.id)}">${ORDER_STATUSES.map((st) => `<option value="${st}" ${o.status === st ? "selected" : ""}>${st[0].toUpperCase() + st.slice(1)}</option>`).join("")}</select></label>
-      <label>Internal note<textarea data-order-note="${escapeHtml(o.id)}" placeholder="Courier, tracking number, call notes…">${escapeHtml(o.adminNote || "")}</textarea></label>
+      <label>Courier<input data-order-courier="${escapeHtml(o.id)}" value="${escapeHtml(o.courier || "")}" placeholder="TCS, Leopards, M&P…"></label>
+      <label>Tracking number<input data-order-tracking="${escapeHtml(o.id)}" value="${escapeHtml(o.trackingNumber || "")}" placeholder="Shown in the dispatch email"></label>
+      <label>Tracking link<input data-order-tracking-url="${escapeHtml(o.id)}" value="${escapeHtml(o.trackingUrl || "")}" placeholder="https://…"></label>
+      <label>Internal note<textarea data-order-note="${escapeHtml(o.id)}" placeholder="Call notes, anything the customer should not see…">${escapeHtml(o.adminNote || "")}</textarea></label>
+      <label class="check"><input type="checkbox" data-order-email="${escapeHtml(o.id)}" checked> Email the customer about this change</label>
       <button type="button" class="primary block" data-order-save="${escapeHtml(o.id)}">Update order</button>
       <button type="button" class="secondary block" onclick="window.print()">Print</button>
       <button type="button" class="link danger block" data-order-delete="${escapeHtml(o.id)}">Delete order</button>
@@ -680,9 +684,21 @@ function renderOrderDetail(id) {
 }
 
 async function saveOrder(id) {
-  const status = view.querySelector(`[data-order-status="${id}"]`).value;
-  const adminNote = view.querySelector(`[data-order-note="${id}"]`).value;
-  const response = await fetch(apiUrl(`/api/admin/orders/${id}`), { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ status, adminNote }) });
+  const value = (attribute) => {
+    const el = view.querySelector(`[${attribute}="${id}"]`);
+    return el ? el.value : "";
+  };
+  const emailBox = view.querySelector(`[data-order-email="${id}"]`);
+  const body = {
+    status: value("data-order-status"),
+    adminNote: value("data-order-note"),
+    courier: value("data-order-courier"),
+    trackingNumber: value("data-order-tracking"),
+    trackingUrl: value("data-order-tracking-url"),
+    sendEmail: emailBox ? emailBox.checked : true,
+  };
+  const status = body.status;
+  const response = await fetch(apiUrl(`/api/admin/orders/${id}`), { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   if (!response.ok) throw new Error((await response.json()).message || "Could not update the order");
   const updated = await response.json();
   orders = orders.map((o) => (o.id === id ? updated : o));
@@ -719,12 +735,285 @@ function renderCheckoutSettings() {
     </section>`;
 }
 
+/* ---------- emails ---------- */
+
+let mail = null;
+let mailLog = null;
+
+const MAIL_TEMPLATES = [
+  { id: "order_confirmation", label: "Order confirmation", who: "Customer", when: "As soon as the order is placed" },
+  { id: "order_admin", label: "New order alert", who: "You", when: "As soon as the order is placed" },
+  { id: "order_shipped", label: "Dispatched", who: "Customer", when: "When you mark the order Shipped" },
+  { id: "order_delivered", label: "Delivered", who: "Customer", when: "When you mark the order Delivered" },
+  { id: "order_review", label: "Review request", who: "Customer", when: "A few days after delivery" },
+  { id: "order_cancelled", label: "Cancelled", who: "Customer", when: "When you mark the order Cancelled" },
+];
+
+async function loadMail(force = false) {
+  if (mail && !force) return mail;
+  const response = await fetch(apiUrl("/api/admin/mail"), { cache: "no-store", credentials: "include" });
+  mail = response.ok ? await response.json() : { config: {}, health: {}, defaults: {} };
+  return mail;
+}
+
+async function loadMailLog(force = false) {
+  if (mailLog && !force) return mailLog;
+  const response = await fetch(apiUrl("/api/admin/mail/log"), { cache: "no-store", credentials: "include" });
+  mailLog = response.ok ? await response.json() : [];
+  return mailLog;
+}
+
+function mailValue(key) {
+  return key.split(".").reduce((node, part) => (node == null ? node : node[part]), mail.config);
+}
+
+function mailField(key, label, extra = {}) {
+  const value = mailValue(key);
+  const help = extra.help ? `<small>${escapeHtml(extra.help)}</small>` : "";
+  const placeholder = extra.placeholder ? ` placeholder="${escapeHtml(extra.placeholder)}"` : "";
+  const shown = Array.isArray(value) ? value.join(", ") : value == null ? "" : value;
+  return `<label>${label}<input data-mail="${key}" value="${escapeHtml(shown)}"${placeholder}>${help}</label>`;
+}
+
+function mailToggle(key, label) {
+  return `<label class="toggle"><span>${label}</span><input type="checkbox" data-mail="${key}" ${mailValue(key) !== false ? "checked" : ""}><i></i></label>`;
+}
+
+function renderEmails() {
+  if (!mail) {
+    loadMail().then(render);
+    return `<div class="empty">Loading email settings...</div>`;
+  }
+  const tab = state.params[0] || "sending";
+  const tabs = [
+    { id: "sending", label: "Sending" },
+    { id: "templates", label: "Templates" },
+    { id: "log", label: "Sent log" },
+  ];
+  const head = `<div class="tabs">${tabs
+    .map((t) => `<a class="tab ${t.id === tab ? "active" : ""}" href="#/emails/${t.id}">${t.label}</a>`)
+    .join("")}</div>`;
+
+  if (tab === "templates") return head + renderMailTemplates();
+  if (tab === "log") return head + renderMailLog();
+
+  const health = mail.health || {};
+  const statusLine = health.configured
+    ? `<span class="badge on">Ready</span> ${health.queued || 0} waiting &middot; ${health.sent || 0} sent &middot; ${health.failed || 0} failed`
+    : `<span class="badge danger">Not set up</span> Fill in the mailbox details and save.`;
+
+  return (
+    head +
+    `
+    <section class="card">
+      <div class="card-head"><h3>Mailbox</h3><span>${statusLine}</span></div>
+      <p class="hint">These come from your email provider. For a Hostinger mailbox the host is <b>smtp.hostinger.com</b> on port <b>465</b>, and the username is the full email address.</p>
+      <div class="grid">
+        ${mailField("host", "SMTP host", { placeholder: "smtp.hostinger.com" })}
+        ${mailField("port", "Port", { help: "465 for SSL (recommended), 587 for TLS." })}
+        ${mailField("user", "Username", { placeholder: "orders@leatherculture.shop", help: "The full mailbox address." })}
+        <label>Password<input type="password" data-mail="pass" placeholder="${mail.config.hasPassword ? "Saved - type a new one to replace it" : "Mailbox password"}" autocomplete="new-password"><small>Stored encrypted. It is never shown again or sent back to this page.</small></label>
+      </div>
+      <div class="grid">
+        ${mailField("fromName", "Sender name", { placeholder: "LeatherCulture", help: "What customers see in their inbox." })}
+        ${mailField("fromEmail", "Send from", { placeholder: "orders@leatherculture.shop" })}
+        ${mailField("replyTo", "Replies go to", { placeholder: "info@leatherculture.shop" })}
+        ${mailField("adminRecipients", "Order alerts to", { placeholder: "orders@leatherculture.shop, info@leatherculture.shop", help: "Comma separated. These get the new-order email." })}
+      </div>
+      <div class="btn-row">
+        <button type="button" class="primary" data-mail-save>Save email settings</button>
+        <button type="button" class="secondary" data-mail-verify>Test connection</button>
+        <button type="button" class="secondary" data-mail-test>Send me a test email</button>
+      </div>
+      <p class="hint" id="mail-result"></p>
+    </section>
+
+    <section class="card">
+      <h3>Which emails go out</h3>
+      <div class="stack">
+        ${mailToggle("enabled", "Send emails at all")}
+        ${MAIL_TEMPLATES.map((t) => mailToggle(`send.${t.id}`, `${t.label} - to ${t.who.toLowerCase()}, ${t.when.toLowerCase()}`)).join("")}
+      </div>
+      <div class="grid" style="margin-top:16px">
+        ${mailField("reviewDelayDays", "Send the review request after (days)", { help: "Counted from the day you mark the order delivered. 0 sends it straight away." })}
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Sending limits</h3>
+      <p class="hint">Emails go into a queue and are sent in the background, so a slow mail server never delays a customer's checkout. Failed sends retry on their own (1 min, 5 min, 15 min, 1 h, 3 h, 6 h).</p>
+      <div class="grid">
+        ${mailField("maxPerMinute", "Most emails per minute", { help: "Keep this under your provider's limit." })}
+        ${mailField("maxPerHour", "Most emails per hour", { help: "Hostinger mailboxes are usually capped near 100 an hour." })}
+        ${mailField("concurrency", "Connections at once", { help: "2 is right for shared hosting." })}
+        ${mailField("maxAttempts", "Retries before giving up")}
+      </div>
+    </section>`
+  );
+}
+
+function renderMailTemplates() {
+  const defaults = mail.defaults || {};
+  return `
+    <p class="hint">Every email uses your logo and the store's black-and-white styling. Change the wording here; leave a box empty to keep the default. <b>{{firstName}}</b>, <b>{{id}}</b>, <b>{{total}}</b>, <b>{{brand}}</b>, <b>{{city}}</b> and <b>{{date}}</b> are filled in automatically.</p>
+    ${MAIL_TEMPLATES.map((t) => {
+      const copy = (mail.config.copy && mail.config.copy[t.id]) || {};
+      const fallback = defaults[t.id] || {};
+      return `<section class="card">
+        <div class="card-head"><h3>${t.label}</h3><span class="muted">To ${t.who.toLowerCase()} &middot; ${t.when.toLowerCase()}</span></div>
+        <label>Subject<input data-mail="copy.${t.id}.subject" value="${escapeHtml(copy.subject || "")}" placeholder="${escapeHtml(fallback.subject || "")}"></label>
+        <label>Heading<input data-mail="copy.${t.id}.heading" value="${escapeHtml(copy.heading || "")}" placeholder="${escapeHtml(fallback.heading || "")}"></label>
+        <label>Opening paragraph<textarea data-mail="copy.${t.id}.intro" placeholder="${escapeHtml(fallback.intro || "")}">${escapeHtml(copy.intro || "")}</textarea></label>
+        <label>Closing paragraph<textarea data-mail="copy.${t.id}.outro" placeholder="${escapeHtml(fallback.outro || "")}">${escapeHtml(copy.outro || "")}</textarea></label>
+        <div class="btn-row"><a class="secondary" href="${escapeHtml(apiUrl("/api/admin/mail/preview/" + t.id))}" target="_blank" rel="noopener">Preview this email</a></div>
+      </section>`;
+    }).join("")}
+    <div class="btn-row"><button type="button" class="primary" data-mail-save>Save wording</button></div>`;
+}
+
+function renderMailLog() {
+  if (!mailLog) {
+    loadMailLog().then(render);
+    return `<div class="empty">Loading...</div>`;
+  }
+  const badge = { sent: "on", queued: "info", sending: "info", failed: "danger" };
+  return `
+    <div class="list-head">
+      <span class="muted">${mailLog.length} most recent</span>
+      <button type="button" class="secondary" data-mail-refresh>Refresh</button>
+    </div>
+    <div class="card table-card">
+      ${mailLog.length
+        ? `<table>
+            <thead><tr><th>When</th><th>Email</th><th>To</th><th>Status</th><th></th></tr></thead>
+            <tbody>${mailLog
+              .map((row) => {
+                const label = (MAIL_TEMPLATES.find((t) => t.id === row.template) || {}).label || row.template;
+                return `<tr>
+                  <td><b>${escapeHtml(new Date(row.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</b><small>${escapeHtml(row.orderId || "")}</small></td>
+                  <td>${escapeHtml(label)}</td>
+                  <td><small>${escapeHtml((row.to || []).join(", "))}</small></td>
+                  <td><span class="badge ${badge[row.status] || "off"}">${escapeHtml(row.status)}</span>${row.lastError ? `<small class="danger">${escapeHtml(row.lastError.slice(0, 90))}</small>` : ""}${row.attempts > 1 ? `<small>${row.attempts} attempts</small>` : ""}</td>
+                  <td class="row-actions"><button type="button" class="link" data-mail-retry="${escapeHtml(row.id)}">Send again</button></td>
+                </tr>`;
+              })
+              .join("")}</tbody>
+          </table>`
+        : `<div class="empty">Nothing sent yet.</div>`}
+    </div>`;
+}
+
+async function saveMail() {
+  const patch = { copy: JSON.parse(JSON.stringify(mail.config.copy || {})) };
+  view.querySelectorAll("[data-mail]").forEach((el) => {
+    const path = el.dataset.mail;
+    const value = el.type === "checkbox" ? el.checked : el.value;
+    if (path === "pass" && !String(value).trim()) return; // blank means "keep the saved one"
+    const parts = path.split(".");
+    let node = patch;
+    parts.slice(0, -1).forEach((part) => {
+      node[part] = node[part] || {};
+      node = node[part];
+    });
+    node[parts[parts.length - 1]] = value;
+  });
+  const response = await fetch(apiUrl("/api/admin/mail"), {
+    method: "PUT",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error((await response.json()).message || "Could not save the email settings");
+  await loadMail(true);
+  render();
+  showToast("Email settings saved.");
+}
+
+/* ---------- customer reviews ---------- */
+
+let reviews = null;
+
+async function loadReviews(force = false) {
+  if (reviews && !force) return reviews;
+  const response = await fetch(apiUrl("/api/admin/reviews"), { cache: "no-store", credentials: "include" });
+  reviews = response.ok ? await response.json() : [];
+  const waiting = reviews.filter((r) => r.status === "pending").length;
+  const badgeEl = document.getElementById("reviews-badge");
+  if (badgeEl) {
+    badgeEl.hidden = !waiting;
+    badgeEl.textContent = waiting;
+  }
+  return reviews;
+}
+
+function renderReviews() {
+  if (!reviews) {
+    loadReviews().then(render);
+    return `<div class="empty">Loading reviews...</div>`;
+  }
+  const filter = state.params[0] || "";
+  const rows = reviews.filter((r) => !filter || r.status === filter);
+  const count = (status) => reviews.filter((r) => !status || r.status === status).length;
+  const statuses = ["pending", "approved", "hidden"];
+  return `
+    <div class="tabs">
+      <a class="tab ${!filter ? "active" : ""}" href="#/reviews">All <span class="count">${count()}</span></a>
+      ${statuses.map((st) => `<a class="tab ${filter === st ? "active" : ""}" href="#/reviews/${st}">${st[0].toUpperCase() + st.slice(1)} <span class="count">${count(st)}</span></a>`).join("")}
+    </div>
+    <p class="hint">Reviews only arrive through the link emailed to a customer after their order is delivered, so every one is tied to a real order. Approve a review to show it on the home page.</p>
+    <div class="list-head"><span class="muted">${rows.length} review${rows.length === 1 ? "" : "s"}</span><button type="button" class="secondary" data-refresh-reviews>Refresh</button></div>
+    ${rows.length
+      ? rows
+          .map(
+            (r) => `<section class="card">
+        <div class="card-head">
+          <h3><span class="stars-read">${"&#9733;".repeat(r.rating)}</span><span class="muted">${"&#9733;".repeat(5 - r.rating)}</span></h3>
+          <span class="badge ${r.status === "approved" ? "on" : r.status === "hidden" ? "off" : "info"}">${escapeHtml(r.status)}</span>
+        </div>
+        <label>Review<textarea data-review-text="${escapeHtml(r.id)}">${escapeHtml(r.text)}</textarea></label>
+        <div class="grid">
+          <label>Name shown<input data-review-name="${escapeHtml(r.id)}" value="${escapeHtml(r.name)}"></label>
+          <label>City<input data-review-city="${escapeHtml(r.id)}" value="${escapeHtml(r.city)}"></label>
+        </div>
+        <p class="hint">Order <a href="#/orders/view/${escapeHtml(r.orderId)}">${escapeHtml(r.orderId)}</a>${r.product ? " &middot; " + escapeHtml(r.product) : ""} &middot; received ${escapeHtml(new Date(r.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</p>
+        <div class="btn-row">
+          <button type="button" class="primary" data-review-save="${escapeHtml(r.id)}" data-status="approved">Approve and show</button>
+          <button type="button" class="secondary" data-review-save="${escapeHtml(r.id)}" data-status="hidden">Hide</button>
+          <button type="button" class="link danger" data-review-delete="${escapeHtml(r.id)}">Delete</button>
+        </div>
+      </section>`
+          )
+          .join("")
+      : `<div class="card"><div class="empty">No reviews${filter ? " marked " + filter : " yet"}. They appear here once a customer replies to the review email.</div></div>`}`;
+}
+
+async function saveReview(id, status) {
+  const body = {
+    status,
+    text: view.querySelector(`[data-review-text="${id}"]`).value,
+    name: view.querySelector(`[data-review-name="${id}"]`).value,
+    city: view.querySelector(`[data-review-city="${id}"]`).value,
+  };
+  const response = await fetch(apiUrl(`/api/admin/reviews/${id}`), {
+    method: "PUT",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error((await response.json()).message || "Could not save the review");
+  await loadReviews(true);
+  render();
+  showToast(status === "approved" ? "Review approved - it is live on the home page." : "Review hidden.");
+}
+
 /* ---------- router ---------- */
 
 const routes = {
   dashboard: { title: "Dashboard", render: renderDashboard },
   orders: { title: "Orders", render: renderOrders, crumb: () => (state.params[0] === "view" ? state.params[1] : "") },
   checkout: { title: "Checkout settings", render: renderCheckoutSettings },
+  reviews: { title: "Customer reviews", render: renderReviews },
+  emails: { title: "Emails", render: renderEmails },
   products: {
     title: "Products",
     render: () => (state.params[0] === "edit" ? renderProductEditor(Number(state.params[1])) : renderProductsList()),
@@ -878,6 +1167,48 @@ function bindInputs() {
     showToast("Order deleted.");
   }));
   view.querySelectorAll("[data-refresh-orders]").forEach((button) => button.addEventListener("click", () => loadOrders(true).then(render)));
+
+  view.querySelectorAll("[data-mail-save]").forEach((button) => button.addEventListener("click", () => saveMail().catch((error) => showToast(error.message, "error"))));
+  view.querySelectorAll("[data-mail-refresh]").forEach((button) => button.addEventListener("click", () => loadMailLog(true).then(render)));
+  view.querySelectorAll("[data-refresh-reviews]").forEach((button) => button.addEventListener("click", () => loadReviews(true).then(render)));
+
+  view.querySelectorAll("[data-mail-verify]").forEach((button) => button.addEventListener("click", async () => {
+    const out = view.querySelector("#mail-result");
+    out.textContent = "Checking...";
+    const response = await fetch(apiUrl("/api/admin/mail/verify"), { method: "POST", credentials: "include" });
+    const data = await response.json();
+    out.innerHTML = `<b class="${data.ok ? "" : "danger"}">${data.ok ? "Connected." : "Could not connect."}</b> ${escapeHtml(data.message || "")}`;
+  }));
+
+  view.querySelectorAll("[data-mail-test]").forEach((button) => button.addEventListener("click", async () => {
+    const to = prompt("Send a test order confirmation to which address?", mail.config.replyTo || mail.config.fromEmail || "");
+    if (!to) return;
+    const out = view.querySelector("#mail-result");
+    out.textContent = "Sending...";
+    const response = await fetch(apiUrl("/api/admin/mail/test"), { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to }) });
+    const data = await response.json();
+    out.innerHTML = response.ok
+      ? `<b>Sent to ${escapeHtml(to)}.</b> Check the inbox, and the spam folder the first time.`
+      : `<b class="danger">Failed.</b> ${escapeHtml(data.message || "")}`;
+  }));
+
+  view.querySelectorAll("[data-mail-retry]").forEach((button) => button.addEventListener("click", async () => {
+    await fetch(apiUrl(`/api/admin/mail/${button.dataset.mailRetry}/retry`), { method: "POST", credentials: "include" });
+    await loadMailLog(true);
+    render();
+    showToast("Queued to send again.");
+  }));
+
+  view.querySelectorAll("[data-review-save]").forEach((button) => button.addEventListener("click", () =>
+    saveReview(button.dataset.reviewSave, button.dataset.status).catch((error) => showToast(error.message, "error"))));
+
+  view.querySelectorAll("[data-review-delete]").forEach((button) => button.addEventListener("click", async () => {
+    if (!confirm("Delete this review? This cannot be undone.")) return;
+    await fetch(apiUrl(`/api/admin/reviews/${button.dataset.reviewDelete}`), { method: "DELETE", credentials: "include" });
+    await loadReviews(true);
+    render();
+    showToast("Review deleted.");
+  }));
 
   const search = view.querySelector("#search");
   if (search) {

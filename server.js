@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
+const { createMailer } = require("./lib/mailer");
 const { URL } = require("url");
 const zlib = require("zlib");
 
@@ -37,7 +38,10 @@ const collectionNames = {
   banners: process.env.MONGODB_BANNERS_COLLECTION || "banners",
   blogs: process.env.MONGODB_BLOGS_COLLECTION || "blogs",
   pages: process.env.MONGODB_PAGES_COLLECTION || "pages",
-  orders: process.env.MONGODB_ORDERS_COLLECTION || "orders"
+  orders: process.env.MONGODB_ORDERS_COLLECTION || "orders",
+  mail: process.env.MONGODB_MAIL_COLLECTION || "mail",
+  mailConfig: process.env.MONGODB_MAIL_CONFIG_COLLECTION || "mail_config",
+  reviews: process.env.MONGODB_REVIEWS_COLLECTION || "reviews"
 };
 const settingsDocumentId = "storefront-settings";
 const sessions = new Map();
@@ -1376,8 +1380,21 @@ async function connectDb() {
   collections.blogs = db.collection(collectionNames.blogs);
   collections.pages = db.collection(collectionNames.pages);
   collections.orders = db.collection(collectionNames.orders);
+  collections.mail = db.collection(collectionNames.mail);
+  collections.mailConfig = db.collection(collectionNames.mailConfig);
+  collections.reviews = db.collection(collectionNames.reviews);
   await collections.orders.createIndex({ createdAt: -1 });
   await collections.orders.createIndex({ id: 1 }, { unique: true });
+  await Promise.all([
+    collections.mail.createIndex({ id: 1 }, { unique: true }),
+    // the outbox key is what stops a second "delivered" click sending a second email
+    collections.mail.createIndex({ dedupeKey: 1 }, { unique: true }),
+    collections.mail.createIndex({ status: 1, nextAttemptAt: 1 }),
+    collections.mail.createIndex({ createdAt: -1 }),
+    collections.reviews.createIndex({ id: 1 }, { unique: true }),
+    collections.reviews.createIndex({ orderId: 1 }, { unique: true, sparse: true }),
+    collections.reviews.createIndex({ status: 1, createdAt: -1 })
+  ]);
 
   await Promise.all([
     collections.pages.createIndex({ path: 1 }, { unique: true }),
@@ -1817,7 +1834,114 @@ async function createOrder(body) {
     updatedAt: new Date()
   };
   await collections.orders.insertOne(order);
+  // Queued, never awaited: a slow SMTP host must not hold up the customer's checkout.
+  queueOrderEmails(order).catch((error) => console.error("mail: order emails failed to queue", error && error.message));
   return publicOrder(order);
+}
+
+/* ---------- transactional email ---------- */
+
+function publicSiteUrl() {
+  return String(process.env.PUBLIC_SITE_URL || "https://www.leatherculture.shop").replace(/\/$/, "");
+}
+
+// getters, because the collections only exist once the Mongo connection is up
+const mailer = createMailer({
+  collection: {
+    get outbox() { return collections.mail; },
+    get config() { return collections.mailConfig; }
+  },
+  getSettings: () => readSettings(),
+  siteUrl: publicSiteUrl,
+  log: console
+});
+
+/** Confirmation to the customer and a heads-up to the shop. Never awaited by checkout. */
+async function queueOrderEmails(order) {
+  const config = await mailer.readConfig();
+  const jobs = [];
+  if (order.customer && order.customer.email) {
+    jobs.push(mailer.queue({ template: "order_confirmation", to: order.customer.email, order }));
+  }
+  const settings = await readSettings();
+  const admins = [...(config.adminRecipients || []), settings.checkout && settings.checkout.notifyEmail].filter(Boolean);
+  if (admins.length) jobs.push(mailer.queue({ template: "order_admin", to: admins, order }));
+  const results = await Promise.allSettled(jobs);
+  results.forEach((result) => {
+    if (result.status === "rejected") console.error("mail: could not queue order email", result.reason && result.reason.message);
+  });
+}
+
+const STATUS_TEMPLATE = { shipped: "order_shipped", delivered: "order_delivered", cancelled: "order_cancelled" };
+
+/** Fires when an admin moves an order forward. Delivered also schedules the review request. */
+async function queueStatusEmails(order, previousStatus) {
+  if (!order || order.status === previousStatus) return;
+  const email = order.customer && order.customer.email;
+  if (!email) return;
+  const template = STATUS_TEMPLATE[order.status];
+  try {
+    if (template) await mailer.queue({ template, to: email, order });
+    if (order.status === "delivered") {
+      const config = await mailer.readConfig();
+      const delayDays = Number(config.reviewDelayDays) || 0;
+      await mailer.queue({
+        template: "order_review",
+        to: email,
+        order,
+        sendAt: new Date(Date.now() + delayDays * 24 * 60 * 60 * 1000)
+      });
+    }
+  } catch (error) {
+    console.error("mail: could not queue status email", error && error.message);
+  }
+}
+
+/* ---------- customer reviews ---------- */
+
+function publicReview(document) {
+  const { _id, email, ip, token, ...review } = document || {};
+  return review;
+}
+
+async function createReview(body) {
+  const orderId = cleanText(body.order, 40);
+  const token = cleanText(body.token, 64);
+  if (!orderId || token !== mailer.reviewToken(orderId)) {
+    throw Object.assign(new Error("This review link is not valid. Please use the link from your email."), { status: 403 });
+  }
+  const order = await collections.orders.findOne({ id: orderId });
+  if (!order) throw Object.assign(new Error("We could not find that order."), { status: 404 });
+
+  const rating = Math.min(5, Math.max(1, Math.round(Number(body.rating) || 0)));
+  const text = cleanText(body.text, 1200);
+  if (!rating) throw Object.assign(new Error("Please choose a rating."), { status: 400 });
+  if (text.length < 15) throw Object.assign(new Error("Please write a few words about your order."), { status: 400 });
+
+  const customer = order.customer || {};
+  const review = {
+    id: `RV-${crypto.randomBytes(4).toString("hex").toUpperCase()}`,
+    orderId,
+    rating,
+    text,
+    name: cleanText(body.name, 60) || customer.name || "Customer",
+    city: cleanText(body.city, 60) || customer.city || "",
+    email: customer.email || "",
+    product: (order.items && order.items[0] && order.items[0].name) || "",
+    status: "pending",
+    verified: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  try {
+    await collections.reviews.insertOne(review);
+  } catch (error) {
+    if (error && error.code === 11000) {
+      throw Object.assign(new Error("Thanks - we already have your review for this order."), { status: 409 });
+    }
+    throw error;
+  }
+  return publicReview(review);
 }
 
 function safeFileFor(urlPath) {
@@ -1965,11 +2089,23 @@ async function requestHandler(req, res) {
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const body = JSON.parse(await readBody(req) || "{}");
       const allowed = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+      const previous = await collections.orders.findOne({ id: orderMatch[1] });
+      if (!previous) return writeJson(res, 404, { message: "Order not found" });
       const update = { updatedAt: new Date() };
       if (allowed.includes(body.status)) update.status = body.status;
       if (typeof body.adminNote === "string") update.adminNote = cleanText(body.adminNote, 1000);
+      if (typeof body.courier === "string") update.courier = cleanText(body.courier, 60);
+      if (typeof body.trackingNumber === "string") update.trackingNumber = cleanText(body.trackingNumber, 60);
+      if (typeof body.trackingUrl === "string") update.trackingUrl = cleanText(body.trackingUrl, 300);
+      if (typeof body.deliveryEstimate === "string") update.deliveryEstimate = cleanText(body.deliveryEstimate, 80);
+      if (update.status && update.status !== previous.status) {
+        update.history = [...(previous.history || []), { status: update.status, at: new Date() }].slice(-30);
+      }
       await collections.orders.updateOne({ id: orderMatch[1] }, { $set: update });
       const order = await collections.orders.findOne({ id: orderMatch[1] });
+      if (order && body.sendEmail !== false) {
+        queueStatusEmails(order, previous.status).catch((error) => console.error("mail: status email failed", error && error.message));
+      }
       return writeJson(res, order ? 200 : 404, order ? publicOrder(order) : { message: "Order not found" });
     }
 
@@ -1977,6 +2113,128 @@ async function requestHandler(req, res) {
       await ensureDbReady();
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const result = await collections.orders.deleteOne({ id: orderMatch[1] });
+      return writeJson(res, result.deletedCount ? 200 : 404, { ok: Boolean(result.deletedCount) });
+    }
+
+    /* ---------- email settings, outbox and previews ---------- */
+
+    if (url.pathname === "/api/admin/mail" && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      return writeJson(res, 200, {
+        config: mailer.publicConfig(await mailer.readConfig(true)),
+        health: await mailer.health(),
+        defaults: require("./lib/email-templates").DEFAULT_COPY
+      });
+    }
+
+    if (url.pathname === "/api/admin/mail" && req.method === "PUT") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const body = JSON.parse(await readBody(req) || "{}");
+      return writeJson(res, 200, { config: await mailer.writeConfig(body) });
+    }
+
+    if (url.pathname === "/api/admin/mail/verify" && req.method === "POST") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      return writeJson(res, 200, await mailer.verify());
+    }
+
+    if (url.pathname === "/api/admin/mail/test" && req.method === "POST") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const body = JSON.parse(await readBody(req) || "{}");
+      try {
+        return writeJson(res, 200, await mailer.sendTest(body.to));
+      } catch (error) {
+        return writeJson(res, error.status || 502, { message: error.message || "Could not send the test email." });
+      }
+    }
+
+    if (url.pathname === "/api/admin/mail/log" && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      return writeJson(res, 200, await mailer.list({ status: url.searchParams.get("status") || "", limit: 200 }));
+    }
+
+    const mailRetry = url.pathname.match(/^\/api\/admin\/mail\/([A-Za-z0-9-]+)\/retry$/);
+    if (mailRetry && req.method === "POST") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      return writeJson(res, 200, await mailer.retry(mailRetry[1]));
+    }
+
+    const mailPreview = url.pathname.match(/^\/api\/admin\/mail\/preview\/([a-z_]+)$/);
+    if (mailPreview && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const { html } = await mailer.preview(mailPreview[1]);
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      return res.end(html);
+    }
+
+    /* ---------- customer reviews ---------- */
+
+    if (url.pathname === "/api/reviews" && req.method === "POST") {
+      await ensureDbReady();
+      if (orderRateLimited(req)) return writeJson(res, 429, { message: "Too many attempts. Please try again later." });
+      try {
+        const body = JSON.parse(await readBody(req) || "{}");
+        return writeJson(res, 201, { ok: true, review: await createReview(body) });
+      } catch (error) {
+        return writeJson(res, error.status || 500, { message: error.message || "Could not save your review." });
+      }
+    }
+
+    const orderLookup = url.pathname.match(/^\/api\/orders\/([A-Za-z0-9-]+)$/);
+    if (orderLookup && req.method === "GET") {
+      await ensureDbReady();
+      const id = orderLookup[1];
+      // the emailed link carries a signature, so an order number alone reveals nothing
+      if (url.searchParams.get("t") !== mailer.orderToken(id)) {
+        return writeJson(res, 403, { message: "This link is not valid. Please use the link from your email." });
+      }
+      const order = await collections.orders.findOne({ id });
+      if (!order) return writeJson(res, 404, { message: "Order not found" });
+      const { adminNote, ...rest } = publicOrder(order);
+      return writeJson(res, 200, rest);
+    }
+
+    if (url.pathname === "/api/storefront/reviews" && req.method === "GET") {
+      await ensureDbReady();
+      const rows = await collections.reviews.find({ status: "approved" }).sort({ createdAt: -1 }).limit(24).toArray();
+      res.setHeader("cache-control", "public, max-age=120");
+      return writeJson(res, 200, rows.map(publicReview));
+    }
+
+    if (url.pathname === "/api/admin/reviews" && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const rows = await collections.reviews.find({}).sort({ createdAt: -1 }).limit(300).toArray();
+      return writeJson(res, 200, rows.map(publicReview));
+    }
+
+    const reviewMatch = url.pathname.match(/^\/api\/admin\/reviews\/([A-Za-z0-9-]+)$/);
+    if (reviewMatch && req.method === "PUT") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const body = JSON.parse(await readBody(req) || "{}");
+      const update = { updatedAt: new Date() };
+      if (["pending", "approved", "hidden"].includes(body.status)) update.status = body.status;
+      if (typeof body.text === "string") update.text = cleanText(body.text, 1200);
+      if (typeof body.name === "string") update.name = cleanText(body.name, 60);
+      if (typeof body.city === "string") update.city = cleanText(body.city, 60);
+      if (typeof body.featured === "boolean") update.featured = body.featured;
+      await collections.reviews.updateOne({ id: reviewMatch[1] }, { $set: update });
+      const review = await collections.reviews.findOne({ id: reviewMatch[1] });
+      return writeJson(res, review ? 200 : 404, review ? publicReview(review) : { message: "Review not found" });
+    }
+
+    if (reviewMatch && req.method === "DELETE") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const result = await collections.reviews.deleteOne({ id: reviewMatch[1] });
       return writeJson(res, result.deletedCount ? 200 : 404, { ok: Boolean(result.deletedCount) });
     }
 
@@ -2045,6 +2303,11 @@ async function requestHandler(req, res) {
 }
 
 startDbConnection();
+
+// The outbox worker only starts once Mongo is reachable, and stays idle until then.
+ensureDbReady()
+  .then(() => mailer.start())
+  .catch((error) => console.error("mail: worker not started -", error && error.message));
 
 if (process.env.VERCEL) {
   module.exports = requestHandler;

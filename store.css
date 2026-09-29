@@ -88,3 +88,19 @@ textarea { min-height: 90px; resize: vertical; }
   .line .price { grid-column: 2; text-align: left; }
   .grid2 { grid-template-columns: 1fr; }
 }
+
+/* Review form stars and the order progress track. */
+.stars { display: flex; gap: 6px; }
+.star { font-size: 30px; line-height: 1; background: none; border: 0; padding: 0 2px; cursor: pointer; color: #d5d5d5; transition: color .12s ease, transform .12s ease; }
+.star:hover { transform: scale(1.08); }
+.star.on { color: #ff7a1a; }
+
+.track { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 0; }
+.track li { position: relative; padding: 0 0 26px 30px; color: var(--muted); }
+.track li:last-child { padding-bottom: 0; }
+.track li span { position: absolute; left: 0; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d5d5d5; background: #fff; }
+.track li::before { content: ""; position: absolute; left: 6px; top: 18px; bottom: 0; width: 2px; background: #e6e6e6; }
+.track li:last-child::before { display: none; }
+.track li.done { color: var(--ink); font-weight: 500; }
+.track li.done span { border-color: var(--ink); background: var(--ink); }
+.track li.done::before { background: var(--ink); }

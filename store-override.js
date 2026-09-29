@@ -922,6 +922,46 @@
     setProductData();
     syncCatalogLinks();
     syncProductSchema();
+    applyCustomerReviews();
+  }
+
+  /* ---------- customer reviews ---------- */
+
+  // Reviews arrive only from the link emailed after a delivery, so anything shown
+  // here belongs to a real order. Until one is approved the section keeps the
+  // wording set in the admin.
+  let customerReviews = null;
+
+  async function loadCustomerReviews() {
+    if (customerReviews || !document.querySelector("[data-framer-name='Reviews']")) return;
+    try {
+      const response = await fetch(apiUrl("/api/storefront/reviews"), { cache: "no-store" });
+      if (!response.ok) return;
+      customerReviews = await response.json();
+      applyCustomerReviews();
+    } catch (error) {
+      /* the section keeps its admin copy */
+    }
+  }
+
+  function applyCustomerReviews() {
+    if (!Array.isArray(customerReviews) || !customerReviews.length) return;
+    const review = customerReviews.find((item) => item.featured) || customerReviews[0];
+    document.querySelectorAll("[data-framer-name='Reviews']").forEach((section) => {
+      const quote = section.querySelector("[data-framer-name='Test wrapper'] [data-framer-component-type='RichTextContainer'] p");
+      if (quote && quote.textContent.trim() !== review.text) quote.textContent = review.text;
+
+      const lines = section.querySelectorAll("[data-framer-name='Profile info'] [data-framer-name='Text wrapper'] p");
+      const where = review.city ? `Ordered from ${review.city}` : "Verified order";
+      if (lines[0] && lines[0].textContent.trim() !== review.name) lines[0].textContent = review.name;
+      if (lines[1] && lines[1].textContent.trim() !== where) lines[1].textContent = where;
+
+      const pill = section.querySelector("[data-framer-name='Rating'] [data-framer-component-type='RichTextContainer'] p");
+      const label = customerReviews.length > 1
+        ? `${customerReviews.length} verified customer reviews`
+        : "Verified customer review";
+      if (pill && pill.textContent.trim() !== label) pill.textContent = label;
+    });
   }
 
   async function loadSettings() {
@@ -931,6 +971,7 @@
       previousSettings = settings;
       settings = await response.json();
       apply();
+      loadCustomerReviews();
     } catch (error) {
       console.error("LeatherCulture: could not apply store settings", error);
       setLogoBrand();

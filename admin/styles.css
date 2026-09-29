@@ -989,3 +989,11 @@ td small {
 .stats { grid-template-columns: repeat(5, 1fr); }
 @media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 @media print { .sidebar, .topbar, .editor-side, .back { display: none !important; } body { grid-template-columns: 1fr; } }
+
+/* Emails and Reviews pages */
+.hint { color: var(--muted, #6b7280); font-size: 13px; line-height: 1.6; margin: 0 0 14px; }
+.hint b { color: inherit; }
+.hint .danger, small.danger { color: #c02626; }
+.stack { display: grid; gap: 10px; }
+.stars-read { letter-spacing: 2px; color: #ff7a1a; }
+.card-head .muted { font-size: 13px; }

@@ -5,5 +5,7 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /cart$
 Disallow: /checkout$
+Disallow: /review
+Disallow: /order
 
 Sitemap: https://www.leatherculture.shop/sitemap.xml
