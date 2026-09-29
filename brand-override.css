@@ -326,3 +326,21 @@ body.lc-light-header .framer-149q19i-container [data-framer-name="Search bar"] >
   color: #000 !important;
   --framer-text-color: #000 !important;
 }
+
+/* Reviews: hide the template's stock portrait and the logoipsum mark inside the card.
+   CSS does this before hydration so the photo never flashes in. */
+[data-framer-name="Profile info"] > div:not([data-framer-name]) {
+  display: none !important;
+}
+
+[data-framer-name="Logos wrapper"],
+[data-framer-name="Logos"],
+[data-framer-name="Logo"]:has(img) {
+  display: none !important;
+}
+
+/* The hidden logo strip used to close the review card, so restore its bottom padding. */
+[data-framer-name="Reviews"] [data-framer-name="01 - Desktop"],
+[data-framer-name="Reviews"] [data-framer-name="01 - Phone"] {
+  padding-bottom: 72px !important;
+}

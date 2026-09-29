@@ -1033,10 +1033,18 @@
   // The template ships a "trusted by" strip of placeholder logos (logoipsum); hide it until
   // there are real partner logos to show.
   function hidePlaceholderLogos() {
-    const logo = document.querySelector("[data-framer-name='Logo'] img");
-    if (!logo) return;
-    const strip = logo.closest("section, [data-framer-name='Marquee'], ul");
-    if (strip && strip !== document.body) strip.style.display = "none";
+    // The template ships logoipsum marquees. Hide the logo strip only -- never the
+    // section around it, because the reviews block carries one of those logos.
+    document.querySelectorAll("[data-framer-name='Logos wrapper'], [data-framer-name='Logos']").forEach((strip) => {
+      strip.style.display = "none";
+    });
+    document.querySelectorAll("[data-framer-name='Logo']").forEach((wrap) => {
+      if (wrap.querySelector("img")) wrap.style.display = "none";
+    });
+    // No stock portraits next to a customer review.
+    document.querySelectorAll("[data-framer-name='Profile info'] > div").forEach((node) => {
+      if (!node.hasAttribute("data-framer-name") && node.querySelector("img")) node.style.display = "none";
+    });
   }
 
   function cleanVisibleBranding() {
