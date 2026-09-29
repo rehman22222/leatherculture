@@ -5,48 +5,56 @@
     {
       "source": "/(.*)",
       "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), interest-cohort=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://leatherculture-backend.onrender.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
         }
       ]
     },
     {
       "source": "/(.*).css",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }]
     },
     {
       "source": "/(.*).js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ],
+  "redirects": [
+    { "source": "/shop/quilted-bomber-jacket", "destination": "/shop/structured-trench-coat", "permanent": true },
+    { "source": "/shop/cropped-boxy-blazer", "destination": "/shop/structured-trench-coat", "permanent": true },
+    { "source": "/shop/hooded-puffer-vest", "destination": "/shop/heavyweight-oversized-hoodie", "permanent": true },
+    { "source": "/shop/french-terry-shorts", "destination": "/shop/classic-boxy-tee", "permanent": true },
+    { "source": "/shop/v-neck-satin-cami", "destination": "/shop/stretch-jersey-tee", "permanent": true },
+    { "source": "/shop/vegan-leather-leggings", "destination": "/shop/pleated-smart-trousers", "permanent": true },
+    { "source": "/shop/high-waisted-palazzo", "destination": "/shop/pleated-smart-trousers", "permanent": true },
+    { "source": "/shop/relaxed-tapered-chinos", "destination": "/shop/urban-utility-cargo", "permanent": true },
+    { "source": "/shop/ribbed-knit-midi", "destination": "/shop/textured-knitted-shirt", "permanent": true },
+    { "source": "/shop/silk-slip-dress", "destination": "/shop/textured-knitted-shirt", "permanent": true },
+    { "source": "/shop/mini-denim-overalls", "destination": "/shop", "permanent": true },
+    { "source": "/shop/patterned-knit-sweater", "destination": "/shop", "permanent": true },
+    { "source": "/blog/how-to-master-the-art-of-minimal-street-style", "destination": "/blog/minimal-street-style", "permanent": true },
+    { "source": "/blog/elevate-everyday-outfits-using-modern-minimalist-styling", "destination": "/blog", "permanent": true },
+    { "source": "/blog/build-a-capsule-wardrobe-that-works-year-round", "destination": "/blog", "permanent": true },
+    { "source": "/blog/refine-casual-streetwear-with-thoughtful-styling-choices", "destination": "/blog", "permanent": true },
+    { "source": "/blog/style-outfits-confidently-using-seasonal-color-palettes", "destination": "/blog", "permanent": true },
+    { "source": "/blog/discover-timeless-essentials-that-shape-modern-wardrobes", "destination": "/blog", "permanent": true },
+    { "source": "/blog/build-a-strong-fashion-identity-through-consistency", "destination": "/blog", "permanent": true },
+    { "source": "/blog/design-intentional-outfits-that-feel-effortless-daily", "destination": "/blog", "permanent": true },
+    { "source": "/blog/use-texture-to-elevate-everyday-outfit-styling", "destination": "/blog", "permanent": true }
+  ],
   "rewrites": [
-    {
-      "source": "/blog/:slug",
-      "destination": "https://leatherculture-backend.onrender.com/blog/:slug"
-    },
-    {
-      "source": "/shop/:slug",
-      "destination": "https://leatherculture-backend.onrender.com/shop/:slug"
-    }
+    { "source": "/blog/:slug", "destination": "https://leatherculture-backend.onrender.com/blog/:slug" },
+    { "source": "/shop/:slug", "destination": "https://leatherculture-backend.onrender.com/shop/:slug" }
   ]
 }

@@ -1900,7 +1900,7 @@ async function requestHandler(req, res) {
       const settings = await readSettings();
       const post = (settings.blogPosts || []).find((item) => item.slug === slug && item.status === "published");
       if (post) {
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
         res.end(renderBlogPost(post, settings, req));
         return;
       }
@@ -1912,7 +1912,7 @@ async function requestHandler(req, res) {
       if (!fs.existsSync(staticPage)) await ensureDbReady();
       const product = !fs.existsSync(staticPage) && await collections.products.findOne({ slug, enabled: { $ne: false } });
       if (product) {
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
         res.end(renderProductPage(publicRecord(product), await readSettings(), req));
         return;
       }
@@ -2012,6 +2012,9 @@ async function requestHandler(req, res) {
       const cacheable = url.pathname.startsWith("/assets/") && ext !== ".html";
       const headers = {
         "content-type": mime[ext] || "application/octet-stream",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "referrer-policy": "strict-origin-when-cross-origin",
         "cache-control": cacheable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
         vary: "accept-encoding"
       };

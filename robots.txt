@@ -1,10 +1,9 @@
 User-agent: *
 Allow: /
+Allow: /cart.js
 Disallow: /admin
 Disallow: /api/
-Disallow: /cart
-Disallow: /checkout
-Disallow: /shop/mini-denim-overalls
-Disallow: /shop/patterned-knit-sweater
+Disallow: /cart$
+Disallow: /checkout$
 
 Sitemap: https://www.leatherculture.shop/sitemap.xml
