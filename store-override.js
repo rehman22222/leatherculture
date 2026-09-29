@@ -429,9 +429,16 @@
   }
 
   function setPageMeta() {
+    // Product and blog routes carry their own meta; only fall back to the brand defaults on the
+    // home page, never on a deeper page (that would stamp the home title onto every product).
+    const product = currentProductFromPath();
+    const post = currentBlogPostFromPath();
     const currentPage = currentPageSettings();
-    const title = currentPage?.metaTitle || get("brand.title") || `${get("brand.name") || "LeatherCulture"} - Premium Store`;
-    const description = currentPage?.metaDescription || get("brand.description");
+    const isHome = (location.pathname.replace(/\/$/, "") || "/") === "/";
+    const record = product || post || currentPage;
+    const fallbackTitle = isHome ? get("brand.title") || `${get("brand.name") || "LeatherCulture"} - Premium Store` : document.title;
+    const title = (record && record.metaTitle) || fallbackTitle;
+    const description = (record && record.metaDescription) || (record && record.excerpt) || (isHome ? get("brand.description") : null);
     document.title = title.replace(/Wearix/gi, get("brand.name") || "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("meta[name='description'], meta[property='og:description'], meta[name='twitter:description']").forEach((meta) => {
       if (description) meta.setAttribute("content", description);
@@ -442,17 +449,24 @@
       keywords.setAttribute("name", "keywords");
       document.head.appendChild(keywords);
     }
-    if (currentPage?.keywords) keywords.setAttribute("content", currentPage.keywords);
+    if (record && record.keywords) keywords.setAttribute("content", record.keywords);
     let canonical = document.querySelector("link[rel='canonical']");
     if (!canonical) {
       canonical = document.createElement("link");
       canonical.setAttribute("rel", "canonical");
       document.head.appendChild(canonical);
     }
-    canonical.setAttribute("href", new URL(currentPage?.canonicalPath || location.pathname || "/", location.origin).toString());
+    canonical.setAttribute("href", new URL((record && record.canonicalPath) || location.pathname || "/", location.origin).toString());
     document.querySelectorAll("meta[property='og:title'], meta[name='twitter:title']").forEach((meta) => {
       meta.setAttribute("content", title);
     });
+  }
+
+  function currentBlogPostFromPath() {
+    if (!settings || !settings.blogPosts) return null;
+    const parts = location.pathname.split("/").filter(Boolean);
+    if (parts[0] !== "blog" || !parts[1]) return null;
+    return settings.blogPosts.find((item) => item.slug === parts[1]) || null;
   }
 
   function currentPageSettings() {
