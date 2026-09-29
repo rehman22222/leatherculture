@@ -1019,6 +1019,17 @@
     });
   }
 
+  // The answer section is authored after Framer's React root so hydration can't drop it;
+  // with JS available we lift it above the footer where a FAQ belongs.
+  function placeAnswers() {
+    const section = document.querySelector(".lc-answers");
+    if (!section || section.dataset.lcPlaced) return;
+    const footer = document.querySelector("#main footer, footer");
+    if (!footer || footer.contains(section)) return;
+    footer.parentElement.insertBefore(section, footer);
+    section.dataset.lcPlaced = "true";
+  }
+
   function cleanVisibleBranding() {
     document.title = document.title.replace(/Wearix/gi, "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("iframe[id*='framer'], [class*='__framer-badge']").forEach((node) => node.remove());
@@ -1065,6 +1076,7 @@
       hideByText();
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
+      placeAnswers();
       enforceSingleH1();
       enforceHeadingLevels();
       applySettings();
