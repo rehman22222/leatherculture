@@ -1030,6 +1030,15 @@
     section.dataset.lcPlaced = "true";
   }
 
+  // The template ships a "trusted by" strip of placeholder logos (logoipsum); hide it until
+  // there are real partner logos to show.
+  function hidePlaceholderLogos() {
+    const logo = document.querySelector("[data-framer-name='Logo'] img");
+    if (!logo) return;
+    const strip = logo.closest("section, [data-framer-name='Marquee'], ul");
+    if (strip && strip !== document.body) strip.style.display = "none";
+  }
+
   function cleanVisibleBranding() {
     document.title = document.title.replace(/Wearix/gi, "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("iframe[id*='framer'], [class*='__framer-badge']").forEach((node) => node.remove());
@@ -1076,6 +1085,7 @@
       hideByText();
       moveVideoAfterBestSellers();
       cleanVisibleBranding();
+      hidePlaceholderLogos();
       placeAnswers();
       enforceSingleH1();
       enforceHeadingLevels();
