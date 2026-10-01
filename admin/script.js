@@ -719,6 +719,7 @@ function renderCheckoutSettings() {
         ${field("checkout.whatsapp", "WhatsApp number for orders", "input", [], { placeholder: "923001234567", help: "Country code, no + or spaces. Adds a 'Send order on WhatsApp' button after checkout." })}
       </div>
       ${field("checkout.codNote", "Payment note shown at checkout", "textarea")}
+      ${field("checkout.returnsPolicy", "Returns and exchange policy", "textarea", [], { help: "Your actual policy, including the period and conditions. Published on product pages and FAQs. Leave blank until confirmed." })}
       <div class="grid">
         ${field("checkout.cartButton", "Product button label")}
         ${field("checkout.addedButton", "Label after adding")}

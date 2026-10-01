@@ -1,6 +1,7 @@
 const fs = require("fs/promises");
 const path = require("path");
 const { renderBlogPost } = require("../lib/blog-renderer");
+const { buildStorefront } = require("./build-storefront");
 
 // Fetch only public content. Builds must fail instead of publishing empty articles.
 async function fetchJson(url) {
@@ -51,6 +52,7 @@ async function main() {
     await fs.writeFile(path.join(folder, "index.html"), "<!-- Generated blog snapshot -->\n" + renderBlogPost(post, settings, req));
     console.log(`Generated /blog/${post.slug}`);
   }
+  await buildStorefront(settings, published, site);
 }
 
 main().catch(error => {

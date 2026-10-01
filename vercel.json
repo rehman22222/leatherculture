@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
@@ -54,7 +55,5 @@
     { "source": "/blog/design-intentional-outfits-that-feel-effortless-daily", "destination": "/blog", "permanent": true },
     { "source": "/blog/use-texture-to-elevate-everyday-outfit-styling", "destination": "/blog", "permanent": true }
   ],
-  "rewrites": [
-    { "source": "/shop/:slug", "destination": "https://leatherculture-backend.onrender.com/shop/:slug" }
-  ]
+  "rewrites": []
 }

@@ -675,6 +675,7 @@ const defaultSettings = {
     codNote: "Pay in cash when your order arrives. Delivery across Pakistan in 3-5 working days.",
     whatsapp: "",
     notifyEmail: "",
+    returnsPolicy: "",
     cartButton: "Add to cart",
     addedButton: "Added - view cart"
   },

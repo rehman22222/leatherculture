@@ -120,3 +120,15 @@ keeping Vercel's previous successful deployment available.
 After publishing, editing, or unpublishing a blog post in admin, redeploy the
 Vercel frontend to refresh these snapshots. `BLOG_API_BASE` can override the
 backend URL and `SITE_URL` can override the canonical site URL during builds.
+
+Vercel's output directory is `dist/`. The same build generates storefront HTML
+from current public backend settings and products, with PKR prices and matching
+Product/FAQ structured data, plus an updated sitemap. Only public assets are
+copied; `.env`, server code and development files are excluded.
+
+Set your public phone in **Appearance → Footer → Phone** and your real policy
+in **Checkout → Returns and exchange policy**. Demo phone numbers are omitted.
+Until a policy is entered, customers are asked to contact the team before
+ordering; the site does not claim an unconfirmed 7-day or 30-day period.
+The browser refreshes these settings from the backend. Redeploy Vercel after
+content changes to update the initial HTML seen by crawlers as well.

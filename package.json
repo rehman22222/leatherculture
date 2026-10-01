@@ -5,12 +5,14 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "node scripts/build-blog.js"
+    "build": "node scripts/build-blog.js",
+    "verify:seo": "node scripts/verify-seo.js"
   },
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "mongodb": "^7.6.0",
     "nodemailer": "^10.0.12"

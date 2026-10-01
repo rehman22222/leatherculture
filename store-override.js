@@ -67,6 +67,7 @@
     "shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png",
   ];
   let settings = null;
+  try { settings = JSON.parse(document.getElementById("lc-build-settings")?.textContent || "null"); } catch (_) { /* legacy pages use the API */ }
   let previousSettings = null;
   const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
   const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -922,7 +923,54 @@
     setProductData();
     syncCatalogLinks();
     syncProductSchema();
+    syncBusinessDetails();
     applyCustomerReviews();
+  }
+
+  function syncBusinessDetails() {
+    const policy = settings.checkout?.returnsPolicy?.trim() || "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
+    const phone = settings.footer?.phone || "";
+    const placeholder = /234\s*567|123456789|3XX|XXXXX/i.test(phone);
+    document.querySelectorAll("[data-lc-phone]").forEach(node => {
+      const label = phone && !placeholder ? phone : "Email our team";
+      if (node.textContent !== label) node.textContent = label;
+      if (node.tagName === "A") node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : "mailto:info@leatherculture.shop";
+    });
+    if (!phone || placeholder) {
+      replaceText(["+001 234 567 890"], "Email our team");
+      document.querySelectorAll("a[href^='tel:']").forEach(link => {
+        link.href = "mailto:info@leatherculture.shop";
+        link.textContent = "Email our team";
+      });
+    }
+    const product = currentProductFromPath();
+    document.querySelectorAll("#faq details").forEach(detail => {
+      const question = detail.querySelector("summary")?.textContent || "";
+      const answer = detail.querySelector("p");
+      if (!answer) return;
+      let next = answer.textContent;
+      if (/exchange|return|guaranteed/i.test(question)) next = policy;
+      if (product && /care for/i.test(question)) next = product.care || "Contact our team for care instructions.";
+      if (product && /made of/i.test(question)) next = product.material || "Contact our team for material details.";
+      if (answer.textContent !== next) answer.textContent = next;
+    });
+    replaceText(["Change your mind? Return any item easily within thirty days.", "Wrong size? Exchange within 7 days of delivery, no questions asked.", "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.", previousSettings?.checkout?.returnsPolicy], policy);
+    document.querySelectorAll("script[type='application/ld+json']").forEach(script => {
+      try {
+        const data = JSON.parse(script.textContent);
+        const nodes = data["@graph"] || [data];
+        nodes.forEach(node => {
+          if (node["@type"] === "FAQPage") node.mainEntity = Array.from(document.querySelectorAll("#faq details")).map(detail => ({ "@type": "Question", name: detail.querySelector("summary")?.textContent.trim(), acceptedAnswer: { "@type": "Answer", text: detail.querySelector("p")?.textContent.trim() } }));
+          if (node["@type"] === "Product" && product) {
+            node.offers.price = String(product.price || "").replace(/[^0-9.]/g, "");
+            node.offers.priceCurrency = "PKR";
+            delete node.offers.hasMerchantReturnPolicy;
+          }
+        });
+        const updated = JSON.stringify(data);
+        if (script.textContent !== updated) script.textContent = updated;
+      } catch (_) { /* preserve unrecognized schema */ }
+    });
   }
 
   /* ---------- customer reviews ---------- */
