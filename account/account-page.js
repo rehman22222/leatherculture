@@ -3,7 +3,7 @@
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const money = (value, currency = "Rs") => `${esc(currency)} ${Number(value || 0).toLocaleString("en-PK")}`;
   let customer = null, tab = "orders", authMode = "login", orders = [], message = "";
-  let page = 0, hasMore = false, loadingOrders = null, refreshDelay = 60000;
+  let page = 0, hasMore = false, loadingOrders = null, loadingOwner = null, refreshDelay = 60000;
   const expanded = new Set();
   const date = value => value && !Number.isNaN(new Date(value).getTime()) ? new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
   const statusLabels = { new: "Order placed", confirmed: "Preparing your order", shipped: "On the way", delivered: "Delivered", cancelled: "Cancelled" };
@@ -52,9 +52,16 @@
     });
   }
   async function loadOrders(more = false) {
-    if (loadingOrders) return loadingOrders;
+    const owner = customer?.id;
+    if (loadingOrders) {
+      if (loadingOwner === owner) return loadingOrders;
+      await loadingOrders.catch(() => {});
+      return loadOrders(more);
+    }
+    loadingOwner = owner;
     const next = more ? page + 1 : 0;
     loadingOrders = api(`orders?page=${next}`).then(data => {
+      if (customer?.id !== owner) return;
       orders = more ? [...orders, ...data.orders.filter(order => !orders.some(existing => existing.id === order.id))] : data.orders;
       page = next; hasMore = data.hasMore; refreshDelay = 60000;
     }).finally(() => { loadingOrders = null; });
@@ -67,7 +74,7 @@
       <div class="account-tabs"><button data-tab="orders" class="${tab === "orders" ? "active" : ""}">My orders</button><button data-tab="profile" class="${tab === "profile" ? "active" : ""}">Profile &amp; delivery</button><button data-tab="password" class="${tab === "password" ? "active" : ""}">Password</button></div>
       ${tab === "orders" ? orderList() : tab === "profile" ? profile() : password()}`;
     root.querySelectorAll("[data-tab]").forEach(button => button.onclick = () => { tab = button.dataset.tab; message = ""; dashboard(); });
-    document.getElementById("logout").onclick = async () => { try { await api("logout", "POST", {}); customer = null; message = ""; auth(); } catch (e) { document.getElementById("account-message").textContent = e.message; } };
+    document.getElementById("logout").onclick = async () => { try { await api("logout", "POST", {}); customer = null; orders = []; page = 0; hasMore = false; expanded.clear(); message = ""; auth(); } catch (e) { document.getElementById("account-message").textContent = e.message; } };
     const resend = document.getElementById("resend");
     if (!customer.emailVerified) bindForm("verify-code", async body => { customer = (await api("verify-code", "POST", body)).customer; message = "Email verified. Your previous orders are now linked."; await loadOrders(); dashboard(); });
     if (resend) resend.onclick = async () => { resend.disabled = true; try { document.getElementById("account-message").textContent = (await api("resend-verification", "POST", {})).message; } catch(e) { document.getElementById("account-message").textContent = e.message; } finally { resend.disabled = false; } };
