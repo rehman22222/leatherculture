@@ -93,6 +93,14 @@
   /* floating cart pill (hidden on the cart/checkout pages themselves) */
   let pill = null;
   function renderPill() {
+    if (document.body && !document.getElementById("lc-account-link") && !/^\/account\/?$/.test(location.pathname)) {
+      const account = document.createElement("a");
+      account.id = "lc-account-link";
+      account.href = "/account";
+      account.textContent = "My account";
+      account.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:9999;background:#111;color:#fff;border:1px solid #555;border-radius:99px;padding:12px 18px;font:600 13px Arial,sans-serif;text-decoration:none;box-shadow:0 2px 12px #0002";
+      document.body.appendChild(account);
+    }
     if (/^\/(cart|checkout)\/?$/.test(location.pathname) || !document.body) return;
     const { count } = totals();
     if (!pill) {

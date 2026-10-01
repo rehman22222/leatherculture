@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 const { createMailer } = require("./lib/mailer");
 const { renderBlogPost } = require("./lib/blog-renderer");
+const { createCustomerAccounts } = require("./lib/customers");
 const { URL } = require("url");
 const zlib = require("zlib");
 
@@ -42,7 +43,10 @@ const collectionNames = {
   orders: process.env.MONGODB_ORDERS_COLLECTION || "orders",
   mail: process.env.MONGODB_MAIL_COLLECTION || "mail",
   mailConfig: process.env.MONGODB_MAIL_CONFIG_COLLECTION || "mail_config",
-  reviews: process.env.MONGODB_REVIEWS_COLLECTION || "reviews"
+  reviews: process.env.MONGODB_REVIEWS_COLLECTION || "reviews",
+  customers: "customers",
+  customerSessions: "customer_sessions",
+  customerRateLimits: "customer_rate_limits"
 };
 const settingsDocumentId = "storefront-settings";
 const sessions = new Map();
@@ -1385,6 +1389,10 @@ async function connectDb() {
   collections.mail = db.collection(collectionNames.mail);
   collections.mailConfig = db.collection(collectionNames.mailConfig);
   collections.reviews = db.collection(collectionNames.reviews);
+  collections.customers = db.collection(collectionNames.customers);
+  collections.customerSessions = db.collection(collectionNames.customerSessions);
+  collections.customerRateLimits = db.collection(collectionNames.customerRateLimits);
+  await customerAccounts.initialize();
   await collections.orders.createIndex({ createdAt: -1 });
   await collections.orders.createIndex({ id: 1 }, { unique: true });
   await Promise.all([
@@ -1461,12 +1469,12 @@ function writeJson(res, status, payload) {
   res.end(JSON.stringify(payload, null, 2));
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 15_000_000) {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 15_000_000) {
+      if (Buffer.byteLength(body, "utf8") > maxBytes) {
         req.destroy();
         reject(new Error("Body too large"));
       }
@@ -1737,13 +1745,13 @@ function cleanText(value, max = 200) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-async function createOrder(body) {
+async function createOrder(body, account = null) {
   const settings = await readSettings();
   const checkout = settings.checkout || {};
   const customer = {
     name: cleanText(body.customer && body.customer.name, 80),
     phone: cleanText(body.customer && body.customer.phone, 30),
-    email: cleanText(body.customer && body.customer.email, 120),
+    email: account ? account.email : cleanText(body.customer && body.customer.email, 120).toLowerCase(),
     address: cleanText(body.customer && body.customer.address, 300),
     city: cleanText(body.customer && body.customer.city, 60),
     notes: cleanText(body.customer && body.customer.notes, 500)
@@ -1782,6 +1790,7 @@ async function createOrder(body) {
   const freeFrom = Number(checkout.freeShippingFrom) || 0;
   const shipping = freeFrom && subtotal >= freeFrom ? 0 : Number(checkout.shippingFee) || 0;
   const order = {
+    ...(account ? { customerId: account.id } : {}),
     id: orderId(),
     status: "new",
     payment: "cod",
@@ -1816,6 +1825,8 @@ const mailer = createMailer({
   siteUrl: publicSiteUrl,
   log: console
 });
+
+const customerAccounts = createCustomerAccounts({ collections, readBody, json: writeJson, parseCookies, origins: allowedOrigins, siteUrl: publicSiteUrl, mailer });
 
 /** Confirmation to the customer and a heads-up to the shop. Never awaited by checkout. */
 async function queueOrderEmails(order) {
@@ -1927,6 +1938,11 @@ async function requestHandler(req, res) {
     }
 
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (url.pathname.startsWith("/api/account/")) {
+      await ensureDbReady();
+      await customerAccounts.handle(req, res, url);
+      return;
+    }
 
     if (url.pathname === "/health" && req.method === "GET") {
       return writeJson(res, 200, {
@@ -2027,11 +2043,13 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/api/orders" && req.method === "POST") {
+      if (req.headers.origin && !allowedOrigins.has(req.headers.origin)) return writeJson(res, 403, { message: "This request is not allowed." });
+      if (!String(req.headers["content-type"] || "").startsWith("application/json")) return writeJson(res, 415, { message: "Use a JSON request." });
       await ensureDbReady();
       if (orderRateLimited(req)) return writeJson(res, 429, { message: "Too many orders from this connection. Please try again later." });
       try {
         const body = JSON.parse(await readBody(req) || "{}");
-        return writeJson(res, 201, { ok: true, order: await createOrder(body) });
+        return writeJson(res, 201, { ok: true, order: await createOrder(body, await customerAccounts.authenticated(req)) });
       } catch (error) {
         return writeJson(res, error.status || 500, { message: error.message || "Could not place the order." });
       }
@@ -2042,6 +2060,12 @@ async function requestHandler(req, res) {
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
       const orders = await collections.orders.find({}).sort({ createdAt: -1 }).limit(500).toArray();
       return writeJson(res, 200, orders.map(publicOrder));
+    }
+    if (url.pathname === "/api/admin/customers" && req.method === "GET") {
+      await ensureDbReady();
+      if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
+      const customers = await collections.customers.find({}, { projection: { passwordHash: 0, verification: 0, reset: 0 } }).sort({ createdAt: -1 }).limit(500).toArray();
+      return writeJson(res, 200, customers.map(({ _id, ...customer }) => customer));
     }
 
     const orderMatch = url.pathname.match(/^\/api\/admin\/orders\/([A-Za-z0-9-]+)$/);

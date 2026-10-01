@@ -4,6 +4,8 @@
   const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
   const DRAFT_KEY = "lc_checkout_draft";
   let settings = null;
+  let accountCustomer = null;
+  let placingOrder = false, orderSubmitted = false;
 
   function esc(value) {
     return String(value ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -26,6 +28,7 @@
   }
 
   function renderSuccess(order) {
+    orderSubmitted = true;
     const wa = whatsappLink(order);
     root.innerHTML = `
       <div class="card success">
@@ -46,9 +49,10 @@
   }
 
   function render() {
+    if (placingOrder || orderSubmitted) return;
     const items = Cart.read();
     const t = Cart.totals(items);
-    const d = draft();
+    const d = { ...(accountCustomer || {}), ...draft() };
     if (!items.length) {
       root.innerHTML = `<div class="card empty"><h2>Your cart is empty</h2><p>Add a product before checking out.</p><a class="btn" style="max-width:280px;margin:14px auto 0" href="/shop">Shop the collection</a></div>`;
       return;
@@ -59,11 +63,12 @@
         <section>
           <div class="card">
             <h2>Delivery details</h2>
+            <p class="muted">${accountCustomer ? `Signed in as ${esc(accountCustomer.email)} · <a href="/account">My account</a>` : '<a href="/account">Sign in or create an account</a> to save your details and view orders. Guest checkout is also available.'}</p>
             <div class="grid2">
               <label>Full name<input name="name" required autocomplete="name" value="${esc(d.name)}"></label>
               <label>Phone (WhatsApp preferred)<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="03XX XXXXXXX" value="${esc(d.phone)}"></label>
             </div>
-            <label>Email (optional)<input name="email" type="email" autocomplete="email" value="${esc(d.email)}"></label>
+            <label>Email ${accountCustomer ? "" : "(optional)"}<input name="email" type="email" autocomplete="email" ${accountCustomer ? "readonly" : ""} value="${esc(accountCustomer?.email || d.email)}"></label>
             <label>Delivery address<textarea name="address" required autocomplete="street-address" placeholder="House, street, area">${esc(d.address)}</textarea></label>
             <div class="grid2">
               <label>City<input name="city" required autocomplete="address-level2" value="${esc(d.city)}"></label>
@@ -113,10 +118,12 @@
       }
       error.textContent = "";
       button.disabled = true;
+      placingOrder = true;
       button.textContent = "Placing order…";
       try {
-        const response = await fetch(`${apiBase}/api/orders`, {
+        const response = await fetch("/api/orders", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ customer, items: Cart.read().map((item) => ({ slug: item.slug, variantId: item.variantId, qty: item.qty })) })
         });
@@ -130,6 +137,7 @@
         }
         renderSuccess(payload.order);
       } catch (err) {
+        placingOrder = false;
         error.textContent = err.message;
         button.disabled = false;
         button.textContent = `Place order · ${Cart.money(t.total)}`;
@@ -138,6 +146,10 @@
   }
 
   render();
+  fetch("/api/account/me", { credentials: "same-origin" })
+    .then(response => response.ok ? response.json() : null)
+    .then(data => { if (data?.customer) { accountCustomer = data.customer; render(); } })
+    .catch(() => {});
   fetch(`${apiBase}/api/storefront/settings`, { credentials: "include" })
     .then((response) => (response.ok ? response.json() : null))
     .then((data) => {

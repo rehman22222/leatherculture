@@ -1009,7 +1009,23 @@ async function saveReview(id, status) {
 
 /* ---------- router ---------- */
 
+let customerAccountsList = null;
+function renderCustomers() {
+  if (!customerAccountsList) {
+    fetch(apiUrl("/api/admin/customers"), { credentials: "include" })
+      .then(async response => { if (!response.ok) throw new Error("Could not load customers"); return response.json(); })
+      .then(data => { customerAccountsList = data; render(); })
+      .catch(error => { customerAccountsList = []; showToast(error.message); render(); });
+    return '<div class="empty">Loading customer accounts…</div>';
+  }
+  return `<div class="list-head"><p>${customerAccountsList.length} customer accounts</p><button class="secondary" type="button" data-refresh-customers>Refresh</button></div><div class="card table-card"><table><thead><tr><th>Name</th><th>Email</th><th>Verified</th><th>Phone</th><th>City</th></tr></thead><tbody>${customerAccountsList.map(customer => `<tr><td>${escapeHtml(customer.name)}</td><td>${escapeHtml(customer.email)}</td><td>${customer.emailVerified ? "Yes" : "Pending"}</td><td>${escapeHtml(customer.phone || "—")}</td><td>${escapeHtml(customer.city || "—")}</td></tr>`).join("") || '<tr><td colspan="5">No customer accounts yet.</td></tr>'}</tbody></table></div>`;
+}
+document.addEventListener("click", event => {
+  if (event.target.closest("[data-refresh-customers]")) { customerAccountsList = null; render(); }
+});
+
 const routes = {
+  customers: { title: "Customer accounts", render: renderCustomers },
   dashboard: { title: "Dashboard", render: renderDashboard },
   orders: { title: "Orders", render: renderOrders, crumb: () => (state.params[0] === "view" ? state.params[1] : "") },
   checkout: { title: "Checkout settings", render: renderCheckoutSettings },

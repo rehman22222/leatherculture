@@ -140,6 +140,7 @@ function materialize(html, settings, pathname, bindings, site) {
     $(element).text(JSON.stringify(data).replace(/</g, "\\u003c"));
   });
   $("#lc-business-contact").remove();
+  if (pathname !== "/account") $("body").append('<a id="lc-account-link" href="/account" style="position:fixed;left:16px;bottom:16px;z-index:9999;background:#111;color:#fff;border:1px solid #555;border-radius:99px;padding:12px 18px;font:600 13px Arial,sans-serif;text-decoration:none;box-shadow:0 2px 12px #0002">My account</a>');
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px Arial,sans-serif">Customer enquiries: <a href="mailto:info@leatherculture.shop">info@leatherculture.shop</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a></div>`);
   $("head").append(`<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`);
   return $.html();
@@ -157,7 +158,7 @@ async function buildStorefront(settings, posts, site) {
   await fs.mkdir(output, { recursive: true });
   const source = await fs.readFile(path.join(root, "store-override.js"), "utf8");
   const bindings = JSON.parse(source.match(/const textBindings = (\[[\s\S]*?\n  \]);/)[1].replace(/,\s*]/g, "]"));
-  const publicDirectories = ["assets", "about", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
+  const publicDirectories = ["assets", "about", "account", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
   for (const name of publicDirectories) await fs.cp(path.join(root, name), path.join(output, name), { recursive: true });
   // New products without a restored template use the backend's product renderer.
   for (const product of (settings.products || []).filter(p => p.enabled !== false)) {

@@ -55,5 +55,8 @@
     { "source": "/blog/design-intentional-outfits-that-feel-effortless-daily", "destination": "/blog", "permanent": true },
     { "source": "/blog/use-texture-to-elevate-everyday-outfit-styling", "destination": "/blog", "permanent": true }
   ],
-  "rewrites": []
+  "rewrites": [
+    { "source": "/api/account/:path*", "destination": "https://leatherculture-backend.onrender.com/api/account/:path*" },
+    { "source": "/api/orders", "destination": "https://leatherculture-backend.onrender.com/api/orders" }
+  ]
 }

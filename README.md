@@ -132,3 +132,25 @@ Until a policy is entered, customers are asked to contact the team before
 ordering; the site does not claim an unconfirmed 7-day or 30-day period.
 The browser refreshes these settings from the backend. Redeploy Vercel after
 content changes to update the initial HTML seen by crawlers as well.
+
+## Customer accounts
+
+Customers can open `/account` from the **My account** link, create an account,
+sign in, save delivery details, change/reset a password and view their orders.
+Guest checkout remains available. Signed-in checkout attaches orders to the
+authenticated customer, using the account email rather than trusting the form.
+Previous guest orders are linked only after the customer verifies that email.
+Admin → Customers lists accounts without exposing password hashes or tokens.
+
+Verification and reset messages use the existing branded email outbox and the
+SMTP settings in Admin → Emails. Signup works before SMTP is configured, but
+verification and password recovery require email delivery to be enabled.
+
+Vercel proxies `/api/account/*` and order creation to Render so customer login
+uses a first-party HttpOnly cookie. Passwords use salted asynchronous scrypt;
+MongoDB stores hashed sessions and expiring single-use email tokens. Sessions
+and rate-limit records have TTL indexes. Password changes revoke other sessions.
+Account pages are noindex and are excluded from the sitemap.
+
+Run `node scripts/test-customers.js` for account security/flow checks and
+`npm run verify:seo` after building to check storefront metadata/content.
