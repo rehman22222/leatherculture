@@ -11,6 +11,7 @@ const fallbackPolicy = "Contact info@leatherculture.shop for the current returns
 
 function materialize(html, settings, pathname, bindings, site) {
   const $ = cheerio.load(html);
+  $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
   const product = settings.products?.find(item => pathname === `/shop/${item.slug}`);
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
   const phone = publicPhone(settings.footer?.phone);
@@ -173,11 +174,8 @@ async function buildStorefront(settings, posts, site) {
     const folder = path.join(output, "shop", product.slug);
     try { await fs.access(path.join(folder, "index.html")); }
     catch {
-      const api = process.env.BLOG_API_BASE || "https://leatherculture-backend.onrender.com";
-      const response = await fetch(`${api}/shop/${product.slug}`, { signal: AbortSignal.timeout(60000) });
-      if (!response.ok) throw new Error(`Product page ${product.slug}: HTTP ${response.status}`);
       await fs.mkdir(folder, { recursive: true });
-      await fs.writeFile(path.join(folder, "index.html"), await response.text());
+      await fs.writeFile(path.join(folder, "index.html"), require("../lib/product-renderer").renderProductPage(product, settings));
     }
   }
   for (const name of ["index.html", "404.html", "brand-override.css", "store.css", "store-override.js", "cart.js", "site-config.js", "robots.txt", "sitemap.xml", "llms.txt"]) {

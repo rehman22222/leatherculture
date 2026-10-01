@@ -1,0 +1,8 @@
+/* Shared by static Framer pages and customer/store pages. */
+.lc-account-nav-container{display:flex!important;align-items:center!important;flex:0 0 auto!important;min-width:max-content}
+a.lc-account-nav{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:8px!important;box-sizing:border-box!important;min-height:42px;padding:10px 15px!important;border:1px solid currentColor;border-radius:999px;color:inherit!important;text-decoration:none!important;white-space:nowrap!important;font:500 14px/1 Inter,Arial,sans-serif!important;transition:background .18s ease,opacity .18s ease}
+a.lc-account-nav span{display:block!important;white-space:nowrap!important;font:inherit!important;color:inherit!important;line-height:1!important;margin:0!important}
+a.lc-account-nav svg{display:block!important;flex:0 0 18px!important;width:18px!important;height:18px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+a.lc-account-nav:hover{background:rgba(128,128,128,.12)!important;opacity:.85}
+a.lc-account-nav:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+@media(max-width:809px){.framer-149q19i-container .lc-account-nav-container{width:100%}.framer-149q19i-container a.lc-account-nav{min-height:44px;width:100%;justify-content:flex-start!important}}

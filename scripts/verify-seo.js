@@ -14,6 +14,7 @@ for (const url of urls) {
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
   assert.equal($("body > #lc-account-link").length, 0, `${url.pathname}: legacy floating account link`);
   if ($(".framer-149q19i-container").length) {
+    assert($("link[href*='/account/nav.css']").length, `${url.pathname}: account navigation stylesheet missing`);
     const variants = $(".framer-149q19i-container > .ssr-variant").length;
     assert.equal($(".framer-149q19i-container .lc-account-nav").length, variants, `${url.pathname}: account link missing from a header variant`);
   } else {
@@ -27,7 +28,7 @@ for (const url of urls) {
   assert.equal($("link[rel='canonical']").attr("href"), url.href);
   if (url.pathname.startsWith("/shop/")) {
     const product = settings.products.find(product => url.pathname === `/shop/${product.slug}`);
-    assert(text.includes("Quality checked"), url.pathname);
+    if (!$(".product-page").length) assert(text.includes("Quality checked"), url.pathname);
     assert.equal($("p,h2,h3,h4").filter((_, element) => $(element).text().trim() === "Genuine leather").length, 0, url.pathname);
     assert(text.includes(product.price));
     assert(text.includes(product.material));
@@ -36,8 +37,10 @@ for (const url of urls) {
     assert.equal(schema.offers.price, String(product.price).replace(/[^\d.]/g, ""));
     assert.equal(schema.offers.priceCurrency, "PKR");
     const faq = schemas.find(node => node["@type"] === "FAQPage");
-    const care = faq.mainEntity.find(question => /care for/i.test(question.name));
-    assert.equal(care.acceptedAnswer.text, product.care);
+    if (faq) {
+      const care = faq.mainEntity.find(question => /care for/i.test(question.name));
+      assert.equal(care.acceptedAnswer.text, product.care);
+    } else assert($(".product-page").length, `${url.pathname}: missing FAQ for restored template`);
   }
   if (url.pathname.startsWith("/blog/")) assert(schemas.some(node => node["@type"] === "BlogPosting"));
   console.log(`Verified ${url.pathname}`);

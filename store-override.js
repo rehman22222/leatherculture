@@ -523,6 +523,11 @@
   }
 
   function ensureAccountNavigation() {
+    if (!document.querySelector('link[href*="/account/nav.css"]')) {
+      const style = document.createElement("link");
+      style.rel = "stylesheet"; style.href = "/account/nav.css?v=2";
+      document.head.appendChild(style);
+    }
     // Framer outputs separate desktop, tablet and mobile header variants. Add the
     // link inside each variant so it follows the existing responsive menu.
     document.querySelectorAll(".framer-149q19i-container [data-framer-name='Links wrapper']").forEach((wrapper) => {
