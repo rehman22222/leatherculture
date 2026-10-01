@@ -140,7 +140,14 @@ function materialize(html, settings, pathname, bindings, site) {
     $(element).text(JSON.stringify(data).replace(/</g, "\\u003c"));
   });
   $("#lc-business-contact").remove();
-  if (pathname !== "/account") $("body").append('<a id="lc-account-link" href="/account" style="position:fixed;left:16px;bottom:16px;z-index:9999;background:#111;color:#fff;border:1px solid #555;border-radius:99px;padding:12px 18px;font:600 13px Arial,sans-serif;text-decoration:none;box-shadow:0 2px 12px #0002">My account</a>');
+  $("#lc-account-link").remove();
+  const accountMarkup = '<a class="lc-account-nav" href="/account" aria-label="My account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span></a>';
+  $(".framer-149q19i-container [data-framer-name='Links wrapper']").each((_, element) => {
+    if (!$(element).find(".lc-account-nav").length) $(element).append(`<div class="lc-account-nav-container">${accountMarkup}</div>`);
+  });
+  $(".site-header nav").each((_, element) => {
+    if (!$(element).find(".lc-account-nav").length) $(element).append(accountMarkup);
+  });
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px Arial,sans-serif">Customer enquiries: <a href="mailto:info@leatherculture.shop">info@leatherculture.shop</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a></div>`);
   $("head").append(`<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`);
   return $.html();

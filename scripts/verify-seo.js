@@ -12,6 +12,13 @@ for (const url of urls) {
   const $ = cheerio.load(html);
   const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
+  assert.equal($("body > #lc-account-link").length, 0, `${url.pathname}: legacy floating account link`);
+  if ($(".framer-149q19i-container").length) {
+    const variants = $(".framer-149q19i-container > .ssr-variant").length;
+    assert.equal($(".framer-149q19i-container .lc-account-nav").length, variants, `${url.pathname}: account link missing from a header variant`);
+  } else {
+    assert($("header .lc-account-nav, header a[href='/account']").length > 0, `${url.pathname}: account link missing from header`);
+  }
   assert.equal($("input[placeholder='test@gmail.com'],input[placeholder='+123 456 789 00']").length, 0, url.pathname);
   $("script,style").remove();
   const text = $("body").text();

@@ -482,6 +482,8 @@
   function setLinksAndInputs() {
     if (!settings) return;
 
+    ensureAccountNavigation();
+
     const nav = get("header.nav") || [];
     nav.forEach((item, index) => {
       const oldHref = ["./", "./about", "./shop", "./blog", "./contact"][index];
@@ -509,6 +511,32 @@
       const label = (link.textContent || "").trim();
       if (socialLinks[label]) link.setAttribute("href", socialLinks[label]);
     });
+  }
+
+  function accountLink() {
+    const link = document.createElement("a");
+    link.className = "lc-account-nav";
+    link.href = "/account";
+    link.setAttribute("aria-label", "My account");
+    link.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span>';
+    return link;
+  }
+
+  function ensureAccountNavigation() {
+    // Framer outputs separate desktop, tablet and mobile header variants. Add the
+    // link inside each variant so it follows the existing responsive menu.
+    document.querySelectorAll(".framer-149q19i-container [data-framer-name='Links wrapper']").forEach((wrapper) => {
+      if (wrapper.querySelector(".lc-account-nav")) return;
+      const holder = document.createElement("div");
+      holder.className = "lc-account-nav-container";
+      holder.appendChild(accountLink());
+      wrapper.appendChild(holder);
+    });
+    document.querySelectorAll(".site-header nav").forEach((nav) => {
+      if (!nav.querySelector(".lc-account-nav")) nav.appendChild(accountLink());
+    });
+    // Clean up the temporary fixed link used before the account was integrated.
+    document.querySelectorAll("body > #lc-account-link").forEach((link) => link.remove());
   }
 
   function basename(value) {
@@ -1262,6 +1290,7 @@
     setTimeout(startFramerRuntime, 1500);
     optimizeMedia();
     setLogoBrand();
+    ensureAccountNavigation();
     loadSettings();
     apply();
     scheduleHeaderContrast();
