@@ -1,0 +1,41 @@
+"use strict";
+// SMTP is stubbed: this test never opens a network connection or sends email.
+const assert = require("assert/strict");
+const nodemailer = require("nodemailer");
+const { MemoryCollection } = require("./test-customers");
+const sent = [], connections = [];
+nodemailer.createTransport = options => { connections.push(options); return { sendMail: async mail => { sent.push(mail); return { messageId: "test" }; }, close() {} }; };
+process.env.MAIL_SECRET = "unit-test-only-secret";
+process.env.ACCOUNTS_SMTP_PASS = "unit-test-mailbox-password";
+process.env.ACCOUNTS_SMTP_USER = "accounts@leatherculture.shop";
+delete process.env.SMTP_USER; delete process.env.SMTP_PASS; delete process.env.SMTP_FROM;
+const { createMailer } = require("../lib/mailer");
+async function main() {
+  const outbox = new MemoryCollection(), config = new MemoryCollection();
+  const mailer = createMailer({ collection: { outbox, config }, siteUrl: () => "https://www.leatherculture.shop", getSettings: async () => ({ footer: { email: "info@leatherculture.shop" } }) });
+  assert(mailer.isAccountConfigured());
+  await mailer.queue({ template: "account_verify", to: "customer@example.com", order: { id: "customer-1", customer: { name: "<Customer>" }, accountCode: "123456" }, dedupeKey: "test-code" });
+  assert(!JSON.stringify(outbox.rows).includes("123456"));
+  await mailer.tick();
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].from, /accounts@leatherculture\.shop/);
+  assert.match(sent[0].html, /123456/);
+  assert(!sent[0].html.includes("Hi <Customer>"));
+  assert.equal(connections[0].auth.user, "accounts@leatherculture.shop");
+  assert.equal(outbox.rows[0].status, "sent");
+  await mailer.queue({ template: "account_reset", to: "customer@example.com", order: { id: "customer-1", accountUrl: "https://www.leatherculture.shop/account?reset=secret-token" }, dedupeKey: "test-reset" });
+  assert(!JSON.stringify(outbox.rows).includes("secret-token"));
+  await mailer.tick();
+  assert.equal(sent.length, 2); assert.match(sent[1].html, /reset=secret-token/);
+  await mailer.queue({ template: "account_verify", to: "customer@example.com", order: { id: "customer-1", accountCode: "654321" }, dedupeKey: "expired" });
+  outbox.rows.at(-1).expiresAt = new Date(0);
+  await mailer.tick();
+  assert.equal(sent.length, 2); assert.equal(outbox.rows.at(-1).status, "expired");
+  await mailer.queue({ template: "order_confirmation", to: "customer@example.com", order: { id: "LC-1" }, dedupeKey: "order-no-smtp" });
+  await mailer.tick();
+  assert.equal(sent.length, 2); assert.equal(outbox.rows.at(-1).status, "queued");
+  const health = await mailer.health(); assert(health.accountsConfigured); assert(!JSON.stringify(health).includes("password"));
+  mailer.stop();
+  console.log("Account mail tests passed: separate sender, account-only SMTP, encrypted outbox, escaping, reset link, expiry and no fallback to account sender for orders.");
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

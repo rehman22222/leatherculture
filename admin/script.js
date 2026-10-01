@@ -282,6 +282,7 @@ function renderProductEditor(index) {
         ${itemField(`${base}.compareAtPrice`, "Compare-at price", product.compareAtPrice, "input", [], { placeholder: "Rs 15,000", help: "Shown struck through. Leave empty to hide." })}
       </div>
       ${itemField(`${base}.description`, "Description", product.description, "textarea")}
+      ${product.launchNotes ? `<p class="muted">${escapeHtml(product.launchNotes)}</p>` : ""}
       <div class="grid three">
         ${itemField(`${base}.material`, "Material", product.material)}
         ${itemField(`${base}.care`, "Care", product.care)}
@@ -827,6 +828,13 @@ function renderEmails() {
         <button type="button" class="secondary" data-mail-test>Send me a test email</button>
       </div>
       <p class="hint" id="mail-result"></p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>Account verification &amp; password resets</h3><span class="badge ${health.accountsConfigured ? "on" : "danger"}">${health.accountsConfigured ? "Credentials configured" : "Setup required"}</span></div>
+      <p>These emails use <b>accounts@leatherculture.shop</b>. Add <code>ACCOUNTS_SMTP_USER</code> and <code>ACCOUNTS_SMTP_PASS</code> in your Render backend environment. Host and port default to <code>smtp.hostinger.com:465</code>; override them with <code>ACCOUNTS_SMTP_HOST</code> and <code>ACCOUNTS_SMTP_PORT</code> if needed.</p>
+      <p class="hint">Verification codes expire after 10 minutes. Reset links expire after one hour. Credentials configured means the settings are present; confirm delivery with your own account after deployment.</p>
+      <p class="hint">Render Free blocks SMTP ports. Mailbox/password sending needs a paid backend instance; a free backend needs an HTTPS email API integration.</p>
     </section>
 
     <section class="card">

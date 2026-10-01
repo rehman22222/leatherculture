@@ -1365,7 +1365,7 @@ async function publicRecords(name, filter = {}) {
 async function connectDb() {
   if (!mongoUri) throw new Error("MONGODB_URI is missing in .env");
 
-  const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 15000 });
+  const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 15000, maxPoolSize: 20, maxConnecting: 2, waitQueueTimeoutMS: 5000 });
   let lastError = null;
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     try {
@@ -1420,6 +1420,7 @@ async function connectDb() {
   const existing = await collections.settings.findOne({ _id: settingsDocumentId });
   if (!existing) {
     await writeSettings(defaultSettings);
+    await ensureDefaultRecords("products", require("./lib/jacket-collection"));
     return;
   }
 
@@ -1442,6 +1443,7 @@ async function connectDb() {
     ensureDefaultRecords("banners", defaultSettings.banners),
     ensureDefaultRecords("categories", defaultSettings.categories),
     ensureDefaultRecords("products", defaultSettings.products),
+    ensureDefaultRecords("products", require("./lib/jacket-collection")),
     ensureDefaultRecords("blogs", defaultSettings.blogPosts)
   ]);
 
@@ -1772,6 +1774,8 @@ async function createOrder(body, account = null) {
     const variant = (product.variants || []).find((item) => item.id === line.variantId || item.name === line.variantId);
     const qty = Math.min(20, Math.max(1, Math.round(Number(line.qty) || 1)));
     const unitPrice = parsePrice(product.price);
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw Object.assign(new Error("This product is not ready to order yet."), { status: 400 });
+    if ((product.variants || []).length && (!variant || variant.enabled === false)) throw Object.assign(new Error("Please choose an available product option."), { status: 400 });
     items.push({
       slug: product.slug || product.id,
       name: product.name,
