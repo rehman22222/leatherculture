@@ -913,6 +913,7 @@
   }
 
   function applySettings() {
+    if (settings.content?.values) settings.content.values["6f2c3442a7"] = "Quality checked";
     if (window.LeatherCultureCart) window.LeatherCultureCart.configure(settings);
     setLogoBrand();
     setPageMeta();
@@ -928,6 +929,12 @@
   }
 
   function syncBusinessDetails() {
+    if (currentProductFromPath()) replaceText(["Trusted Quality", "Genuine leather"], "Quality checked");
+    const placeholders = { "test@gmail.com": "you@example.com", "+123 456 789 00": "Enter your phone number", "Nasir": "Your first name", "Nawaz": "Your last name", "Enquiry ....": "What can we help you with?" };
+    document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach(node => {
+      const value = placeholders[node.getAttribute("placeholder")];
+      if (value) node.setAttribute("placeholder", value);
+    });
     const policy = settings.checkout?.returnsPolicy?.trim() || "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
     const phone = settings.footer?.phone || "";
     const placeholder = /234\s*567|123456789|3XX|XXXXX/i.test(phone);

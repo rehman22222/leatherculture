@@ -29,6 +29,7 @@ function materialize(html, settings, pathname, bindings, site) {
   replacements.set("test@gmail.com", settings.footer?.email || "info@leatherculture.shop");
   replacements.set("Change your mind? Return any item easily within thirty days.", policy);
   replacements.set("Easy Returns", "Returns and exchanges");
+  replacements.set("Trusted Quality", "Quality checked");
   replacements.set("Secure Payments", "Cash on delivery");
   replacements.set("Shop confidently with our secure, encrypted checkout.", settings.checkout?.codNote || "Pay in cash when your order arrives.");
   if (pathname === "/") replacements.set("Premium wear for modern living", "Premium Leather Jackets Made in Pakistan");
@@ -40,6 +41,11 @@ function materialize(html, settings, pathname, bindings, site) {
     if (typeof value === "string" && value) node.text(value);
   });
   $("a[href^='mailto:']").attr("href", `mailto:${settings.footer?.email || "info@leatherculture.shop"}`);
+  const placeholders = { "test@gmail.com": "you@example.com", "+123 456 789 00": "Enter your phone number", "Nasir": "Your first name", "Nawaz": "Your last name", "Enquiry ....": "What can we help you with?" };
+  $("input[placeholder],textarea[placeholder]").each((_, element) => {
+    const node = $(element), value = placeholders[node.attr("placeholder")];
+    if (value) node.attr("placeholder", value);
+  });
   $("a[href^='tel:']").each((_, element) => {
     const node = $(element);
     node.attr("data-lc-phone", "true");
@@ -144,6 +150,7 @@ async function buildStorefront(settings, posts, site) {
   settings.footer.phone = publicPhone(settings.footer.phone);
   settings.checkout.returnsPolicy = settings.checkout.returnsPolicy?.trim() || fallbackPolicy;
   settings.content.values.a496f4bd68 = settings.checkout.returnsPolicy;
+  settings.content.values["6f2c3442a7"] = "Quality checked";
   const output = path.join(root, "dist");
   if (path.dirname(output) !== root || path.basename(output) !== "dist") throw new Error("Invalid output path");
   await fs.rm(output, { recursive: true, force: true });

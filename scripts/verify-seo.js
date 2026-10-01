@@ -12,6 +12,7 @@ for (const url of urls) {
   const $ = cheerio.load(html);
   const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
+  assert.equal($("input[placeholder='test@gmail.com'],input[placeholder='+123 456 789 00']").length, 0, url.pathname);
   $("script,style").remove();
   const text = $("body").text();
   assert(!/test@gmail|London, England|England, London|234 567|thirty days|USD\s*\$|\$\d[\d,.]*/.test(text), url.pathname);
@@ -19,6 +20,8 @@ for (const url of urls) {
   assert.equal($("link[rel='canonical']").attr("href"), url.href);
   if (url.pathname.startsWith("/shop/")) {
     const product = settings.products.find(product => url.pathname === `/shop/${product.slug}`);
+    assert(text.includes("Quality checked"), url.pathname);
+    assert.equal($("p,h2,h3,h4").filter((_, element) => $(element).text().trim() === "Genuine leather").length, 0, url.pathname);
     assert(text.includes(product.price));
     assert(text.includes(product.material));
     assert(text.includes(product.care));
