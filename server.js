@@ -6,6 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 const { createMailer } = require("./lib/mailer");
+const { renderBlogPost } = require("./lib/blog-renderer");
 const { URL } = require("url");
 const zlib = require("zlib");
 
@@ -1619,47 +1620,6 @@ function injectStaticMeta(html, page, req) {
     .replace(/<head>/i, `<head>${meta}`);
 }
 
-function renderBlogPost(post, settings, req) {
-  const brand = settings.brand?.name || "LeatherCulture";
-  const title = post.metaTitle || `${post.title} - ${brand}`;
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${escapeHtml(title)}</title>
-    <link href="/assets/brand/leather-culture-mark.png" rel="icon" type="image/png">
-    ${metaTags({ title, description: post.metaDescription || post.excerpt || settings.brand?.description, keywords: post.keywords, canonicalPath: `/blog/${post.slug}`, image: post.coverImage }, req)}
-    <style>
-      body{margin:0;background:#f8f8f8;color:#080808;font-family:Inter,Arial,sans-serif}
-      header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:24px clamp(18px,5vw,72px);background:#050505;color:#fff}
-      header a{color:inherit;text-decoration:none;font-weight:800}
-      nav{display:flex;gap:26px}
-      main{max-width:920px;margin:0 auto;padding:56px 20px 90px}
-      .cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:#e8e8e8}
-      .meta{margin:28px 0 12px;color:#666;font-weight:800}
-      h1{margin:0 0 18px;font-size:clamp(42px,7vw,84px);line-height:.95;letter-spacing:0}
-      .excerpt{font-size:20px;line-height:1.55;color:#555}
-      article{margin-top:36px;font-size:18px;line-height:1.75}
-      article img{max-width:100%;border-radius:8px}
-    </style>
-  </head>
-  <body>
-    <header>
-      <a href="/" aria-label="${escapeHtml(brand)}"><img src="/assets/brand/leather-culture-logo-white.png" alt="${escapeHtml(brand)}" style="height:44px;width:auto;display:block"></a>
-      <nav>${(settings.header?.nav || []).map((item) => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join("")}</nav>
-    </header>
-    <main>
-      ${post.coverImage ? `<img class="cover" src="${escapeHtml(post.coverImage)}" alt="${escapeHtml(post.coverAlt || post.title)}">` : ""}
-      <p class="meta">${escapeHtml(post.author || brand)} / ${escapeHtml(post.date || "")}</p>
-      <h1>${escapeHtml(post.title)}</h1>
-      <p class="excerpt">${escapeHtml(post.excerpt || "")}</p>
-      <article>${post.body || ""}</article>
-      <p style="margin-top:48px"><a href="/blog" style="color:#080808;font-weight:800">&larr; Back to the journal</a></p>
-    </main>
-  </body>
-</html>`;
-}
 
 function renderProductPage(product, settings, req) {
   const brand = settings.brand?.name || "LeatherCulture";

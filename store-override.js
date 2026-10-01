@@ -798,9 +798,9 @@
     const live = (settings.products || []).filter((item) => item.enabled !== false && (item.slug || item.id));
     const products = new Set(live.flatMap((item) => [item.slug, item.id]).filter(Boolean));
     // Read all layout first (one reflow), then write.
-    const cards = Array.from(document.querySelectorAll("a[href*='/shop/']"))
+    const cards = Array.from(document.querySelectorAll("a[href*='/shop/'], a[data-lc-template-slug][href='/shop']"))
       .map((link) => {
-        const slug = (linkPath(link).match(/^\/shop\/([^/]+)$/) || [])[1];
+        const slug = link.dataset.lcTemplateSlug || (linkPath(link).match(/^\/shop\/([^/]+)$/) || [])[1];
         const rendered = link.getClientRects().length > 0;
         const images = Array.from(link.querySelectorAll("img")).map((img) => {
           const width = img.getBoundingClientRect().width;
@@ -831,10 +831,10 @@
 
     const posts = (settings.blogPosts || []).filter((post) => post.status === "published" && post.slug);
     const order = [];
-    document.querySelectorAll("a[href*='/blog/']").forEach((link) => {
+    document.querySelectorAll("a[href*='/blog/'], a[data-lc-template-slug][href='/blog']").forEach((link) => {
       const match = linkPath(link).match(/^\/blog\/([^/]+)$/);
-      if (!match) return;
-      const slug = match[1];
+      const slug = link.dataset.lcTemplateSlug || (match && match[1]);
+      if (!slug) return;
       if (posts.some((post) => post.slug === slug)) return;
       if (!order.includes(slug)) order.push(slug);
       const post = posts[order.indexOf(slug)];

@@ -108,3 +108,15 @@ window.LEATHERCULTURE_API_BASE = "https://your-render-service.onrender.com";
 ```
 
 Then push that change and import/deploy the repo on Vercel. Keep `CORS_ORIGINS` on Render updated with the final Vercel domain.
+
+### Blog availability
+
+Vercel runs `npm run build` to generate complete HTML pages from published blog
+posts, including article text and SEO metadata. These pages are served directly
+by Vercel, so a sleeping or unavailable Render backend cannot cause blog 503s.
+The build retries public API requests and fails if content cannot be fetched,
+keeping Vercel's previous successful deployment available.
+
+After publishing, editing, or unpublishing a blog post in admin, redeploy the
+Vercel frontend to refresh these snapshots. `BLOG_API_BASE` can override the
+backend URL and `SITE_URL` can override the canonical site URL during builds.
