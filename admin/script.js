@@ -282,6 +282,7 @@ function renderProductEditor(index) {
         ${itemField(`${base}.compareAtPrice`, "Compare-at price", product.compareAtPrice, "input", [], { placeholder: "Rs 15,000", help: "Shown struck through. Leave empty to hide." })}
       </div>
       ${itemField(`${base}.description`, "Description", product.description, "textarea")}
+      ${(product.gallery || []).length ? `<details><summary>Product photo gallery (${product.gallery.length})</summary>${product.gallery.map((photo, g) => imageField(`${base}.gallery.${g}.image`, `${base}.gallery.${g}.alt`, photo.image, photo.alt, photo.label || "Product photo")).join("")}</details>` : ""}
       ${product.launchNotes ? `<p class="muted">${escapeHtml(product.launchNotes)}</p>` : ""}
       <div class="grid three">
         ${itemField(`${base}.material`, "Material", product.material)}

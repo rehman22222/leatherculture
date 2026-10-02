@@ -1,5 +1,9 @@
 (function () {
   const data = JSON.parse(document.getElementById("lc-product-data").textContent);
+  document.querySelectorAll("[data-gallery-target]").forEach(button => button.addEventListener("click", () => {
+    document.querySelectorAll("[data-gallery-panel]").forEach(panel => { panel.hidden = panel.id !== button.dataset.galleryTarget; });
+    document.querySelectorAll("[data-gallery-target]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+  }));
   const cart = window.LeatherCultureCart;
   const select = document.getElementById("product-variant"), add = document.getElementById("product-add"), status = document.getElementById("product-message");
   const variants = data.product.variants.filter(v => v.enabled !== false);

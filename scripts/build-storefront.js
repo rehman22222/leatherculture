@@ -120,7 +120,7 @@ function materialize(html, settings, pathname, bindings, site) {
       if (node["@type"] === "Product" && product) {
         node.name = product.name;
         node.description = product.description;
-        node.image = [new URL(product.image, site).href];
+        node.image = [...new Set([product.image, ...(product.gallery || []).map(image => image.image)].filter(Boolean))].map(image => new URL(image, site).href);
         node.material = product.material;
         node.offers.price = String(product.price).replace(/[^\d.]/g, "");
         node.offers.priceCurrency = "PKR";

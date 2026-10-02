@@ -30,6 +30,8 @@ Order history is paginated in batches of 20 using a customer/date/id index. Quie
 
 # Five jacket listings
 
-The Blade, Heritage, Vibe, Nomad and Rune are published with the owner's confirmed price of PKR 15,000, size L and initial stock of 5 each. Each includes a unique slug, design image, description, SEO title/description and alt text. The supplied complete JPG reference sheets are used unchanged; some contain multiple designs.
+The Blade, Heritage, Vibe, Nomad and Rune are published with the owner's confirmed price of PKR 15,000, size L and initial stock of 5 each. The October 2 replacement archive supplies 18 original PNG images: front, back/side and detail views for all five jackets, plus three Heritage lookbooks. Images use descriptive filenames, individual alt text and product gallery/schema references. `scripts/update-jacket-images.js --apply` updates media and SEO copy without resetting price, size or stock. It replaces the previous JPG design sheets.
+
+Image metadata follows [Google's image SEO guidance](https://developers.google.com/search/docs/appearance/google-images): describe the pictured product and view, avoid repetitive location keywords in alt text, and provide Pakistan context in relevant product copy and metadata. This does not guarantee a particular Google ranking.
 
 Future edits belong in **Admin → Products**. Keep each size/colour SKU distinct and confirm material or performance claims before adding them. Rebuild the Vercel frontend after publishing changes so static pages and the sitemap update. Normal backend restarts do not overwrite existing prices or stock. `scripts/publish-jackets.js --apply` is the explicit one-off launch migration: do not rerun it after sales, because it resets these five stocks to 5.

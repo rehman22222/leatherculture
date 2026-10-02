@@ -33,6 +33,11 @@
     }
   ],
   "redirects": [
+    { "source": "/assets/jackets/the-blade-design.jpg", "destination": "/assets/jackets/the-blade-black-hooded-jacket-front.png", "permanent": true },
+    { "source": "/assets/jackets/the-heritage-design.jpg", "destination": "/assets/jackets/the-heritage-brown-collared-jacket-front.png", "permanent": true },
+    { "source": "/assets/jackets/the-vibe-design.jpg", "destination": "/assets/jackets/the-vibe-black-white-contrast-jacket-front.png", "permanent": true },
+    { "source": "/assets/jackets/the-nomad-design.jpg", "destination": "/assets/jackets/the-nomad-olive-stand-collar-jacket-front.png", "permanent": true },
+    { "source": "/assets/jackets/the-rune-design.jpg", "destination": "/assets/jackets/the-rune-black-asymmetric-jacket-front.png", "permanent": true },
     { "source": "/shop/quilted-bomber-jacket", "destination": "/shop/structured-trench-coat", "permanent": true },
     { "source": "/shop/cropped-boxy-blazer", "destination": "/shop/structured-trench-coat", "permanent": true },
     { "source": "/shop/hooded-puffer-vest", "destination": "/shop/heavyweight-oversized-hoodie", "permanent": true },
