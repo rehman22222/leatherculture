@@ -19,6 +19,7 @@
 - [Contact](https://www.leatherculture.shop/contact): Need help with sizing or a new order?
 - [Privacy Policy](https://www.leatherculture.shop/privacy-policy)
 - [Terms & Conditions](https://www.leatherculture.shop/terms)
+- [Full reference for AI assistants](https://www.leatherculture.shop/llms-full.txt): every product, policy and journal article in plain text
 
 ## Products
 - [Structured Trench Coat](https://www.leatherculture.shop/shop/structured-trench-coat): Rs 24,900. A refined structured trench coat for premium everyday layering in Pakistan.

@@ -1,9 +1,11 @@
 const fs = require("fs/promises");
 const path = require("path");
+const crypto = require("crypto");
 const cheerio = require("cheerio");
 const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, legalLinks } = require("../lib/seo");
 const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
 const { renderProductPage, shippingFor } = require("../lib/product-renderer");
+const { sourcesFor } = require("../lib/citations");
 
 const root = path.resolve(__dirname, "..");
 const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
@@ -24,7 +26,7 @@ const collectionCards = [
 // Order, review and password-reset links carry private tokens in the URL, so analytics stays off there.
 const privatePage = pathname => /^\/(account|order|review)(\/|$)/.test(pathname);
 
-function materialize(html, settings, pathname, bindings, site, imageAlts = {}) {
+function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
   site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
   if (!$("link[href*='/account/nav.css']").length) $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
@@ -232,12 +234,78 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}) {
     const label = link.attr("aria-label") || link.attr("data-brand") || normalize(link.find("h1,h2,h3,h4,h5,h6").first().text());
     if (label) img.attr("alt", label);
   });
-  $("head").append(`<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`);
+  if (["/", "/shop", "/contact"].includes(pathname)) $(".lc-answers .lc-lede").first().after(factsTable(settings));
+  addCareHowTo($);
+  frontLoad($, settings, assets);
   return $.html();
+}
+
+// Ordering facts as a table, from the same checkout settings the cart uses.
+function factsTable(settings) {
+  const checkout = settings.checkout || {};
+  const currency = checkout.currency || "Rs";
+  const money = value => `${currency} ${Number(value).toLocaleString("en-PK")}`;
+  const fee = Number(checkout.shippingFee) || 0, free = Number(checkout.freeShippingFrom) || 0;
+  const days = (String(checkout.codNote || "").match(/\d+\s*[-–]\s*\d+\s*working days/i) || [])[0];
+  const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
+  const rows = [
+    ["Delivery area", "Anywhere in Pakistan"],
+    days && ["Delivery time", days],
+    ["Delivery fee", fee ? `${money(fee)}${free ? `, free on orders of ${money(free)} or more` : ""}` : "Free"],
+    checkout.codEnabled !== false && ["Payment", "Cash on delivery"],
+    prices.length && ["Prices", `${money(Math.min(...prices))} to ${money(Math.max(...prices))}`],
+    ["Returns and exchanges", String(checkout.returnsPolicy || "").trim() || fallbackPolicy]
+  ].filter(Boolean);
+  return `<table class="lc-facts"><caption>Ordering from LeatherCulture at a glance</caption><tbody>${rows.map(([label, value]) => `<tr><th scope="row">${escape(label)}</th><td>${escape(value)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+// The care answer lists its steps; describe them as a HowTo when the page has none yet.
+function addCareHowTo($) {
+  const steps = $(".lc-answers details").filter((_, element) => /care for a leather jacket/i.test($(element).find("summary").text())).find("ol > li");
+  const hasHowTo = $("script[type='application/ld+json']").toArray().some(element => /"HowTo"/.test($(element).text()));
+  if (steps.length < 2 || hasHowTo) return;
+  const howTo = {
+    "@context": "https://schema.org", "@type": "HowTo", name: "How to care for a leather jacket",
+    step: steps.map((index, element) => ({ "@type": "HowToStep", position: index + 1, name: normalize($(element).find("b").first().text()).replace(/\.$/, ""), text: normalize($(element).text()) })).get()
+  };
+  $("head").append(`<script type="application/ld+json">${JSON.stringify(howTo).replace(/</g, "\\u003c")}</script>`);
+}
+
+// Crawlers and AI tools that read only the start of a page should still reach the content:
+// structured data goes right after the title, Framer's 200 KB stylesheet becomes a cached file,
+// the answers section leads the body (CSS keeps it below the page content and store-override.js
+// moves it above the footer), and the settings blob goes to the end, next to the script that reads it.
+function frontLoad($, settings, assets) {
+  const title = $("head > title").first();
+  const jsonLd = $("script[type='application/ld+json']");
+  if (title.length) title.after(jsonLd);
+  const ssr = $("style[data-framer-css-ssr-minified]").first();
+  if (assets && ssr.length && ssr.text().length > 20000) {
+    const css = ssr.text();
+    const file = `/assets/css/framer-${crypto.createHash("sha256").update(css).digest("hex").slice(0, 16)}.css`;
+    assets.set(file, css);
+    ssr.before(`<link rel="stylesheet" href="${file}">`);
+    // Framer's runtime only reads data-framer-components from this tag, to skip CSS that is already present.
+    ssr.text("");
+  }
+  const answers = $("body > .lc-answers").first();
+  if (answers.length && $("body > #main").length) {
+    $("body").prepend(answers);
+    $("head").append('<style data-lc-order>body{display:flex;flex-direction:column}body>.lc-answers{order:1}body>#lc-business-contact{order:2}</style>');
+  }
+  const overrideScript = $("script[src*='store-override.js']").first();
+  if (!overrideScript.length) return;
+  const settingsScript = `<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`;
+  const firstScript = $("body script[src*='site-config.js']").first();
+  (firstScript.length ? firstScript : overrideScript).before(settingsScript);
 }
 
 async function buildStorefront(settings, posts, site) {
   settings = structuredClone(settings);
+  // The page text groups are defined in server.js: use the version being deployed, not whichever version
+  // the backend happens to run while this build fetches its data.
+  const serverSource = await fs.readFile(path.join(root, "server.js"), "utf8");
+  settings.content.groups = JSON.parse(serverSource.match(/const contentGroups = (\[[\s\S]*?\n\]);/)[1]);
   settings.footer.phone = publicPhone(settings.footer.phone);
   settings.checkout.returnsPolicy = settings.checkout.returnsPolicy?.trim() || fallbackPolicy;
   settings.content.values.a496f4bd68 = settings.checkout.returnsPolicy;
@@ -273,11 +341,16 @@ async function buildStorefront(settings, posts, site) {
         const pathname = relative ? `/${relative}` : "/";
         if (pathname.startsWith("/blog/")) continue;
         const html = await fs.readFile(file, "utf8");
-        await fs.writeFile(file, materialize(html, settings, pathname, bindings, site, imageAlts));
+        await fs.writeFile(file, materialize(html, settings, pathname, bindings, site, imageAlts, assets));
       }
     }
   }
+  const assets = new Map();
   await transform(output);
+  for (const [file, css] of assets) {
+    await fs.mkdir(path.join(output, path.dirname(file)), { recursive: true });
+    await fs.writeFile(path.join(output, file), css);
+  }
   for (const [kind, pathname] of Object.entries(policyPaths)) {
     await fs.mkdir(path.join(output, pathname.slice(1)), { recursive: true });
     await fs.writeFile(path.join(output, pathname.slice(1), "index.html"), renderPolicyPage(kind, settings));
@@ -288,8 +361,104 @@ async function buildStorefront(settings, posts, site) {
   const entries = [...pages.map(p => [p]), ...products.map(p => [`/shop/${p.slug}`]), ...posts.map(p => [`/blog/${p.slug}`, p.dateModified || p.date]), ...Object.values(policyPaths).map(p => [p, POLICY_UPDATED])];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map(([p, date]) => `  <url><loc>${escape(new URL(p, site).href)}</loc>${/^\d{4}-\d{2}-\d{2}$/.test(date || "") ? `<lastmod>${date}</lastmod>` : ""}</url>`).join("\n")}\n</urlset>\n`;
   await fs.writeFile(path.join(output, "sitemap.xml"), xml);
-  await fs.writeFile(path.join(output, "llms.txt"), llmsText(settings, products, posts, site));
-  console.log("Generated storefront HTML, policies, sitemap and llms.txt in dist/");
+  const brief = llmsText(settings, products, posts, site);
+  await fs.writeFile(path.join(output, "llms.txt"), brief);
+  await fs.writeFile(path.join(output, "llms-small.txt"), llmsSmall(settings, site));
+  const home = cheerio.load(await fs.readFile(path.join(output, "index.html"), "utf8"));
+  await fs.writeFile(path.join(output, "llms-full.txt"), llmsFull(brief, settings, products, posts, site, home));
+  await fs.mkdir(path.join(output, ".well-known"), { recursive: true });
+  await fs.writeFile(path.join(output, ".well-known", "ai.txt"), aiText(site));
+  console.log("Generated storefront HTML, policies, sitemap and AI guidance files in dist/");
+}
+
+// The short version of llms.txt: who the store is and where to look.
+function llmsSmall(settings, site) {
+  const url = pathname => new URL(pathname, site).href;
+  const checkout = settings.checkout || {};
+  return [
+    `# ${settings.brand?.name || "LeatherCulture"}`,
+    "",
+    `> ${settings.footer?.description || settings.brand?.description || ""} Payment is cash on delivery.`,
+    "",
+    `- Shop: ${url("/shop")}`,
+    `- Delivery and payment: ${checkout.codNote || "Cash on delivery across Pakistan."}`,
+    `- Contact: ${url("/contact")} or ${settings.footer?.email || "info@leatherculture.shop"}`,
+    `- Full reference: ${url("/llms-full.txt")}`,
+    ""
+  ].join("\n");
+}
+
+// Everything an assistant needs to answer questions about the store, as plain text.
+function llmsFull(brief, settings, products, posts, site, home) {
+  const url = pathname => new URL(pathname, site).href;
+  const categoryName = id => (settings.categories || []).find(item => item.id === id || item.slug === id)?.name || "";
+  const text = html => {
+    const $ = cheerio.load(`<div id="lc-root">${html}</div>`);
+    return $("#lc-root").find("h2,h3,h4,p,li").toArray().map(element => {
+      const value = normalize($(element).text());
+      if (!value || (element.tagName === "p" && $(element).parent().is("li"))) return "";
+      return element.tagName === "li" ? `- ${value}` : /^h/.test(element.tagName) ? `\n#### ${value}` : value;
+    }).filter(Boolean).join("\n");
+  };
+  const faq = home(".lc-answers details").toArray().map(element => {
+    const node = home(element);
+    const steps = node.find("ol > li").toArray().map(item => `- ${normalize(home(item).text())}`);
+    return [`### ${normalize(node.find("summary").text())}`, normalize(node.children("p").first().text()), ...steps].join("\n");
+  });
+  const policies = Object.entries(policyPaths).map(([kind, pathname]) => {
+    const page = cheerio.load(renderPolicyPage(kind, settings));
+    page("main .crumbs").remove();
+    return `### ${normalize(page("h1").text())} (${url(pathname)})\n${text(page("main").html())}`;
+  });
+  return [
+    brief.replace(/^# (.*)$/m, "# $1: full reference"),
+    "## Frequently asked questions",
+    ...faq.map(entry => `${entry}\n`),
+    "## Product details",
+    ...products.map(p => [
+      `### ${p.name}`,
+      `- Price: ${p.price}`,
+      categoryName(p.category) && `- Category: ${categoryName(p.category)}`,
+      (p.variants || []).length && `- Options: ${(p.variants || []).filter(v => v.enabled !== false).map(v => `${v.name}${Number(v.stock) > 0 ? "" : " (sold out)"}`).join(", ")}`,
+      p.material && `- Material: ${p.material}`,
+      p.care && `- Care: ${p.care}`,
+      `- Link: ${url(`/shop/${p.slug}`)}`,
+      normalize(p.description),
+      ""
+    ].filter(Boolean).join("\n")),
+    "## Policies",
+    ...policies.map(entry => `${entry}\n`),
+    "## Journal articles",
+    ...posts.map(post => [
+      `### ${post.title}`,
+      `${url(`/blog/${post.slug}`)}${post.date ? ` (published ${post.date})` : ""}`,
+      post.excerpt || "",
+      text(post.body),
+      ...sourcesFor(post).map(source => `- Source: ${source.title}${source.publisher ? `, ${source.publisher}` : ""} (${source.url})`),
+      ""
+    ].filter(Boolean).join("\n"))
+  ].join("\n");
+}
+
+// Matches robots.txt: AI assistants may read and cite the public pages.
+function aiText(site) {
+  const url = pathname => new URL(pathname, site).href;
+  return [
+    `# ai.txt for ${url("/")}`,
+    "# LeatherCulture allows AI assistants and search engines to read, summarise and cite its public pages.",
+    "# Please link to the page you quote. Private customer pages are excluded.",
+    `# Summary for AI systems: ${url("/llms.txt")} (full version: ${url("/llms-full.txt")})`,
+    "User-Agent: *",
+    "Allow: /",
+    "Disallow: /admin",
+    "Disallow: /api/",
+    "Disallow: /account",
+    "Disallow: /cart",
+    "Disallow: /checkout",
+    "Disallow: /order",
+    "Disallow: /review",
+    ""
+  ].join("\n");
 }
 
 // A plain-text brief for AI assistants, built from the same live data as the pages.
@@ -319,6 +488,7 @@ function llmsText(settings, products, posts, site) {
     "## Pages",
     ...[["/", "Home"], ["/shop", "Shop"], ["/about", "About"], ["/blog", "Journal"], ["/contact", "Contact"]].map(([pathname, label]) => `- [${label}](${url(pathname)})${pageInfo[pathname] ? `: ${firstSentence(pageInfo[pathname])}` : ""}`),
     ...legalLinks.map(link => `- [${link.label}](${url(link.href)})`),
+    `- [Full reference for AI assistants](${url("/llms-full.txt")}): every product, policy and journal article in plain text`,
     "",
     "## Products",
     ...products.map(p => `- [${p.name}](${url(`/shop/${p.slug}`)}): ${p.price}. ${firstSentence(p.description || p.metaDescription)}`),

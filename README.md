@@ -173,6 +173,13 @@ there are redirected (301) to `PUBLIC_SITE_URL` (default
 `https://www.leatherculture.shop`) so search engines index only the storefront;
 the admin, API and uploads are not redirected.
 
+For crawlers and AI tools that read only the start of a page, the build puts
+the structured data right after the `<title>`, moves Framer's large stylesheet
+to a cached file in `/assets/css/`, and places the answers section first in the
+body (CSS keeps it below the page content until the browser moves it above the
+footer). It also writes `llms.txt`, `llms-small.txt`, `llms-full.txt` (every
+product, policy and journal article as plain text) and `/.well-known/ai.txt`.
+
 Large jacket photos in `assets/jackets/` have lighter renditions beside them:
 `name.webp` (pages), `name-card.webp` (cards and thumbnails) and `name.jpg`
 (link previews, front views only). Pages fall back to the original when a

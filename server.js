@@ -302,7 +302,7 @@ const contentGroups = [
       },
       {
         "key": "90e9aee824",
-        "original": "Wearix Voice"
+        "original": "LeatherCulture Voice"
       },
       {
         "key": "3a5c25d6f6",
@@ -368,7 +368,7 @@ const contentGroups = [
     "items": [
       {
         "key": "1278166ebd",
-        "original": "Know about Wearix"
+        "original": "Know about LeatherCulture"
       },
       {
         "key": "bbbe6da011",
@@ -396,11 +396,11 @@ const contentGroups = [
       },
       {
         "key": "a3a0349bb9",
-        "original": "About Wearix"
+        "original": "About LeatherCulture"
       },
       {
         "key": "6fdef98b49",
-        "original": "More than fashion, Wearix is a commitment to intentional design. Our curated collections focus on sleek silhouettes, empowering your unique and personal journey with modern ease."
+        "original": "More than fashion, LeatherCulture is a commitment to intentional design. Our curated collections focus on sleek silhouettes, empowering your unique and personal journey with modern ease."
       },
       {
         "key": "5f3940e0d1",
@@ -534,7 +534,7 @@ const contentGroups = [
       },
       {
         "key": "ce876a6ea1",
-        "original": "Contact us today for refined service designed for our discerning Wearix fashion community."
+        "original": "Contact us today for refined service designed for our discerning LeatherCulture fashion community."
       },
       {
         "key": "0b9e9037d5",

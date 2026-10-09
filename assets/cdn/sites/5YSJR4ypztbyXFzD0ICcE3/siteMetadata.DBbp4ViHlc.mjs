@@ -1,0 +1,2 @@
+import{t as e}from"./rolldown-runtime.CXBuSdYp.mjs";function t(e,t){return{description:`Shop premium leather jackets and modern wear from LeatherCulture, made in Pakistan and delivered nationwide with cash on delivery.`,favicon:`/assets/brand/leather-culture-mark.png`,robots:`max-image-preview:large`,socialImage:`/assets/images/premium-wear-for-modern-living-3.jpg`,title:`LeatherCulture - Premium Leather Jackets in Pakistan`}}var n=e((()=>{}));export{t as n,n as t};
+//# sourceMappingURL=siteMetadata.DBbp4ViHlc.mjs.map

@@ -3,7 +3,6 @@
     ["Black friday sale 50% off", "announcement.text"],
     ["Shop all items", "header.shopButton"],
     ["Soft", "hero.tag"],
-    ["Wearix", "hero.tag"],
     ["Warm Winter Layers", "hero.eyebrow"],
     ["Premium wear for modern living", "hero.title"],
     ["Discover our new range of soft clothes made for your daily look and your best days with the finest fabrics.", "hero.subtitle"],
@@ -34,7 +33,6 @@
     ["Subscribe", "footer.newsletterButton"],
     ["A sophisticated e-commerce template designed for modern and minimalist brands.", "footer.description"],
     ["Contact LeatherCulture", "footer.contactButton"],
-    ["Contact Wearix", "footer.contactButton"],
     ["Quick Links", "footer.quickLinksTitle"],
     ["Follow us:", "footer.followTitle"],
     ["Get in touch", "footer.getInTouchTitle"],
@@ -69,8 +67,6 @@
   // Alt text for the template's own images, keyed by Framer asset id. Framer's client render drops the
   // alt text of these images, and some template alts were misspelt. The build applies the same map.
   const imageAlts = {
-    "k3mQgskzRmcKKsc3Urx85y2azU": "LeatherCulture",
-    "MpMl7pUW5TtaHQQEzzhrioJmA": "LeatherCulture",
     "g813yVl0fq2gEobS7kOZx537SY": "Man in an oversized black double-breasted leather jacket, white T-shirt and blue jeans",
     "HaLbFMQL3UBYnLDE5V1KjUjLbU": "Man in a black hooded zip jacket with white piping on the sleeves",
     "UqbagK5Zf6G91yyijIvdScOQDI": "Man in a navy hooded puffer jacket, grey roll-neck and blue beanie",
@@ -522,7 +518,7 @@
     const fallbackTitle = isHome ? get("brand.title") || `${get("brand.name") || "LeatherCulture"} - Premium Store` : document.title;
     const title = (record && record.metaTitle) || fallbackTitle;
     const description = (record && record.metaDescription) || (record && record.excerpt) || (isHome ? get("brand.description") : null);
-    document.title = title.replace(/Wearix/gi, get("brand.name") || "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
+    document.title = title.replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("meta[name='description'], meta[property='og:description'], meta[name='twitter:description']").forEach((meta) => {
       if (description) meta.setAttribute("content", description);
     });
@@ -733,9 +729,12 @@
   // Every image gets alt text: the curated text for the template's assets, else the alt the static HTML
   // carried before Framer re-rendered it, else the label of the link or card around it.
   function applyImageAlts() {
+    const brand = get("brand.name") || "LeatherCulture";
     document.querySelectorAll("img").forEach((img) => {
-      const id = assetId(img.getAttribute("src"));
-      const alt = (id && imageAlts[id]) || ((img.getAttribute("alt") || "").trim() ? "" : (id && staticAlts.get(id)) || contextAlt(img));
+      const src = img.getAttribute("src") || "";
+      const id = assetId(src);
+      const curated = (id && imageAlts[id]) || (src.includes("/assets/brand/leather-culture-logo") ? brand : "");
+      const alt = curated || ((img.getAttribute("alt") || "").trim() ? "" : (id && staticAlts.get(id)) || contextAlt(img));
       if (alt && img.getAttribute("alt") !== alt) img.setAttribute("alt", alt);
     });
   }
@@ -1391,7 +1390,7 @@
   }
 
   function cleanVisibleBranding() {
-    document.title = document.title.replace(/Wearix/gi, "LeatherCulture").replace(/Framer Template/gi, "Premium Store");
+    document.title = document.title.replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("iframe[id*='framer'], [class*='__framer-badge']").forEach((node) => node.remove());
   }
 

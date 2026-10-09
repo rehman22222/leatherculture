@@ -14,7 +14,18 @@ for (const url of urls) {
   const $ = cheerio.load(html);
   const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
+  const productData = $("#lc-product-data").length ? JSON.parse($("#lc-product-data").text()).product : null;
   assert.equal($("body > #lc-account-link").length, 0, `${url.pathname}: legacy floating account link`);
+  // Tools and crawlers that read only the start of a page must reach the structured data and the answers.
+  const structuredAt = html.indexOf("application/ld+json");
+  if (structuredAt >= 0) assert(structuredAt < 20000, `${url.pathname}: structured data starts at byte ${structuredAt}`);
+  if ($("body > #main").length) {
+    const answersAt = html.indexOf('class="lc-answers"');
+    assert(answersAt > 0 && answersAt < 100000, `${url.pathname}: answers section starts at byte ${answersAt}`);
+    assert.equal($("style[data-framer-css-ssr-minified]").text(), "", `${url.pathname}: Framer CSS is still inline`);
+    const sheet = $("link[rel='stylesheet'][href^='/assets/css/framer-']").attr("href");
+    assert(sheet && fs.existsSync(path.join(output, sheet)), `${url.pathname}: Framer stylesheet missing`);
+  }
   if ($(".framer-149q19i-container").length) {
     assert($("link[href*='/account/nav.css']").length, `${url.pathname}: account navigation stylesheet missing`);
     const variants = $(".framer-149q19i-container > .ssr-variant").length;
@@ -39,7 +50,7 @@ for (const url of urls) {
   assert.equal($("h1").length, 1, url.pathname);
   assert.equal($("link[rel='canonical']").attr("href"), url.href);
   if (url.pathname.startsWith("/shop/")) {
-    const product = settings.products.find(product => url.pathname === `/shop/${product.slug}`);
+    const product = productData || settings.products.find(product => url.pathname === `/shop/${product.slug}`);
     if (!$(".product-page").length) assert(text.includes("Quality checked"), url.pathname);
     assert.equal($("p,h2,h3,h4").filter((_, element) => $(element).text().trim() === "Genuine leather").length, 0, url.pathname);
     assert(text.includes(product.price));
@@ -60,6 +71,10 @@ for (const url of urls) {
 for (const link of legalLinks) assert(urls.some(url => url.pathname === link.href), `sitemap.xml: ${link.href} missing`);
 const llms = fs.readFileSync(path.join(output, "llms.txt"), "utf8");
 for (const url of urls.filter(url => url.pathname.startsWith("/shop/"))) assert(llms.includes(url.href), `llms.txt: ${url.pathname} missing`);
+const llmsFull = fs.readFileSync(path.join(output, "llms-full.txt"), "utf8");
+for (const url of urls.filter(url => /^\/(shop|blog)\//.test(url.pathname))) assert(llmsFull.includes(url.href), `llms-full.txt: ${url.pathname} missing`);
+assert(fs.readFileSync(path.join(output, "llms-small.txt"), "utf8").includes("llms-full.txt"), "llms-small.txt: no link to the full reference");
+assert(/^User-Agent: \*$/m.test(fs.readFileSync(path.join(output, ".well-known", "ai.txt"), "utf8")), ".well-known/ai.txt missing");
 for (const name of [".env", "server.js", "package.json", ".git", ".kilo"]) assert(!fs.existsSync(path.join(output, name)));
 assert.equal(publicPhone("+001 234 567 890"), "");
 assert.equal(publicPhone("+92 300 9876543"), "+92 300 9876543");

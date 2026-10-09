@@ -84,7 +84,7 @@ body:not(.lc-light-header) .framer-jt1lle-container a::before {
   filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 0.65px #fff) !important;
 }
 
-/* Footer: small brand wordmark (replaces the template's WEARIX mark). */
+/* Footer: small brand wordmark (replaces the template wordmark). */
 .framer-agjbad-container {
   aspect-ratio: auto !important;
   width: 190px !important;
