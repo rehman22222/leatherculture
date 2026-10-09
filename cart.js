@@ -38,8 +38,23 @@
     if (!value) return value;
     if (/^(https?:|data:|blob:)/i.test(value)) return value;
     if (apiBase && value.startsWith("/assets/uploads/")) return `${apiBase}${value}`;
+    // Thumbnails: the jacket photos are 1-3 MB PNGs; each has a small card rendition beside it.
+    if (/^\/assets\/jackets\/[a-z0-9-]+\.png$/.test(value)) return value.replace(/\.png$/, "-card.webp");
     return value;
   }
+
+  // A photo without a card rendition falls back to the original (image errors only reach capture listeners).
+  document.addEventListener(
+    "error",
+    (event) => {
+      const img = event.target;
+      const src = (img && img.tagName === "IMG" && img.getAttribute("src")) || "";
+      if (!/^\/assets\/jackets\/[a-z0-9-]+-card\.webp$/.test(src) || img.dataset.lcFallback) return;
+      img.dataset.lcFallback = "true";
+      img.setAttribute("src", src.replace(/-card\.webp$/, ".png"));
+    },
+    true
+  );
 
   function key(item) {
     return `${item.slug}::${item.variantId || ""}`;

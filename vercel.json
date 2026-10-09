@@ -15,7 +15,7 @@
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://leatherculture-backend.onrender.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://leatherculture-backend.onrender.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
         }
       ]
     },
@@ -50,6 +50,9 @@
     { "source": "/shop/silk-slip-dress", "destination": "/shop/textured-knitted-shirt", "permanent": true },
     { "source": "/shop/mini-denim-overalls", "destination": "/shop", "permanent": true },
     { "source": "/shop/patterned-knit-sweater", "destination": "/shop", "permanent": true },
+    { "source": "/privacy", "destination": "/privacy-policy", "permanent": true },
+    { "source": "/terms-and-conditions", "destination": "/terms", "permanent": true },
+    { "source": "/terms-of-service", "destination": "/terms", "permanent": true },
     { "source": "/blog/how-to-master-the-art-of-minimal-street-style", "destination": "/blog/minimal-street-style", "permanent": true },
     { "source": "/blog/elevate-everyday-outfits-using-modern-minimalist-styling", "destination": "/blog", "permanent": true },
     { "source": "/blog/build-a-capsule-wardrobe-that-works-year-round", "destination": "/blog", "permanent": true },

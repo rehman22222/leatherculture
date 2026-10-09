@@ -154,3 +154,26 @@ Account pages are noindex and are excluded from the sitemap.
 
 Run `node scripts/test-customers.js` for account security/flow checks and
 `npm run verify:seo` after building to check storefront metadata/content.
+
+## SEO, analytics and policies
+
+Admin → Appearance → **SEO & analytics** holds the Google Analytics 4
+measurement ID, the Google Search Console and Bing verification codes, and any
+extra official profile links. Footer social links appear only when they point
+to a real profile (not `https://instagram.com`); together with the extra links
+they become the `sameAs` profiles in the Organization schema. Redeploy Vercel
+after changing these so the built pages pick them up.
+
+`/privacy-policy` and `/terms` are generated from the checkout settings
+(delivery fee, free-delivery threshold, returns policy) and linked from every
+page. Review their wording before relying on them.
+
+On Render the backend also answers on its `onrender.com` hostname. Page requests
+there are redirected (301) to `PUBLIC_SITE_URL` (default
+`https://www.leatherculture.shop`) so search engines index only the storefront;
+the admin, API and uploads are not redirected.
+
+Large jacket photos in `assets/jackets/` have lighter renditions beside them:
+`name.webp` (pages), `name-card.webp` (cards and thumbnails) and `name.jpg`
+(link previews, front views only). Pages fall back to the original when a
+rendition is missing.

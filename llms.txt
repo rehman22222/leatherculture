@@ -1,34 +1,44 @@
 # LeatherCulture
 
-> LeatherCulture is a Pakistani leather brand selling genuine leather jackets, coats, hoodies, shirts and
-> trousers for men and women. Every piece is cut and finished by hand in Pakistan. Orders are paid
-> cash on delivery and arrive anywhere in Pakistan in 3-5 working days.
+> Genuine leather jackets and modern wear, handcrafted in Pakistan and delivered nationwide. Orders are placed online and paid cash on delivery.
 
 ## Key facts
-- Country: Pakistan. Ships nationwide.
+- Country: Pakistan. Delivers nationwide.
 - Payment: cash on delivery only.
-- Delivery: Rs 250, free over Rs 10,000. 3-5 working days.
-- Exchanges: within 7 days of delivery, unworn with tags.
+- Delivery: Rs 250, free on orders of Rs 10,000 or more. Pay in cash when your order arrives. Delivery across Pakistan in 3-5 working days.
+- Returns and exchanges: Contact info@leatherculture.shop for the current returns and exchange policy before ordering.
 - Price range: Rs 3,400 to Rs 24,900.
 - Currency: PKR.
+- Contact: info@leatherculture.shop
 
 ## Pages
-- [Home](https://www.leatherculture.shop/): brand overview, best sellers and FAQ.
-- [Shop](https://www.leatherculture.shop/shop): the full collection.
-- [About](https://www.leatherculture.shop/about): who makes the clothes and how.
-- [Journal](https://www.leatherculture.shop/blog): leather care and styling guides.
-- [Contact](https://www.leatherculture.shop/contact): sizing help and order support.
+- [Home](https://www.leatherculture.shop/): Shop the best new leather jackets and coats, made in Pakistan.
+- [Shop](https://www.leatherculture.shop/shop): Browse the best new leather jackets, coats and premium shirts, made in Pakistan.
+- [About](https://www.leatherculture.shop/about): Meet the people behind LeatherCulture, a premium leather brand made in Pakistan.
+- [Journal](https://www.leatherculture.shop/blog): Read the best new leather care tips and premium style guides, made in Pakistan.
+- [Contact](https://www.leatherculture.shop/contact): Need help with sizing or a new order?
+- [Privacy Policy](https://www.leatherculture.shop/privacy-policy)
+- [Terms & Conditions](https://www.leatherculture.shop/terms)
 
 ## Products
 - [Structured Trench Coat](https://www.leatherculture.shop/shop/structured-trench-coat): Rs 24,900. A refined structured trench coat for premium everyday layering in Pakistan.
+- [The Blade Hooded Jacket](https://www.leatherculture.shop/shop/the-blade): Rs 15,000. The Blade pairs a black hooded silhouette with angular chest panels, a full zip and practical side pockets.
 - [Heavyweight Oversized Hoodie](https://www.leatherculture.shop/shop/heavyweight-oversized-hoodie): Rs 8,900. A heavyweight oversized hoodie with a premium relaxed silhouette.
+- [The Heritage Collared Jacket](https://www.leatherculture.shop/shop/the-heritage): Rs 15,000. The Heritage brings a warm chocolate-brown colour to a classic collared silhouette.
 - [Riviera Collar Shirt](https://www.leatherculture.shop/shop/riviera-collar-shirt): Rs 5,900. A riviera collar shirt with soft texture and refined casual styling.
+- [The Vibe Contrast Panel Jacket](https://www.leatherculture.shop/shop/the-vibe): Rs 15,000. The Vibe combines a black base with white shoulder and sleeve panels for a distinctive monochrome look.
 - [Classic Boxy Tee](https://www.leatherculture.shop/shop/classic-boxy-tee): Rs 3,900. A clean classic boxy tee made for effortless daily wear.
+- [The Nomad Stand Collar Jacket](https://www.leatherculture.shop/shop/the-nomad): Rs 15,000. The Nomad brings an olive-green colour to a clean stand collar design.
 - [Pleated Smart Trousers](https://www.leatherculture.shop/shop/pleated-smart-trousers): Rs 6,900. Pleated smart trousers with clean tailoring for daily styling.
+- [The Rune Asymmetric Jacket](https://www.leatherculture.shop/shop/the-rune): Rs 15,000. The Rune places an asymmetric front closure at the centre of a minimal black design.
 - [Stretch Jersey Tee](https://www.leatherculture.shop/shop/stretch-jersey-tee): Rs 3,400. A soft stretch jersey tee for comfortable daily movement.
 - [Urban Utility Cargo](https://www.leatherculture.shop/shop/urban-utility-cargo): Rs 7,400. Utility cargo styling with a modern relaxed fit.
 - [Textured Knitted Shirt](https://www.leatherculture.shop/shop/textured-knitted-shirt): Rs 5,400. A textured knitted shirt with a soft hand feel and easy styling.
 
-## Contact
-- Support: https://www.leatherculture.shop/contact
-- Last updated: 2026-09-30
+## Journal
+- [How to build a simple wardrobe around one leather jacket](https://www.leatherculture.shop/blog/minimal-street-style): You do not need ten jackets. One good leather jacket and a few basics will carry you through most of the year here.
+- [How to look after a leather jacket in Pakistan](https://www.leatherculture.shop/blog/leather-jacket-care-pakistan): Karachi humidity, Lahore smog and months of heat are hard on leather. Here is what actually keeps a jacket in shape here.
+- [Leather jacket sizing: how to get it right the first time](https://www.leatherculture.shop/blog/leather-jacket-size-guide): Leather does not stretch like a t-shirt. Take four measurements before you order and you will not need an exchange.
+- [Real leather or not? Four checks before you pay](https://www.leatherculture.shop/blog/real-leather-vs-faux-leather): Plenty of jackets in the market are sold as genuine leather when they are coated fabric. You can tell in about a minute.
+
+Last updated: 2026-10-09

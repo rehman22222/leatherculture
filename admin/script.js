@@ -236,6 +236,8 @@ function renderDashboard() {
         ${checkItem(!products.some((p) => /^\$/.test(p.price || "")), "Prices entered in PKR (no $ prices)", "#/products")}
         ${checkItem(!/^https:\/\/(instagram|facebook|youtube)\.com\/?$|^https:\/\/x\.com\/?$/.test(settings.footer?.socials?.instagram || "") && settings.footer?.socials?.instagram, "Social links point to your profiles", "#/appearance/footer")}
         ${checkItem(posts.some((p) => p.status === "published"), "At least one published blog post", "#/blog")}
+        ${checkItem(/^G-[A-Z0-9]{4,20}$/i.test(String(settings.seo?.googleAnalyticsId || "").trim()), "Google Analytics measurement ID added", "#/appearance/seo")}
+        ${checkItem(Boolean(String(settings.seo?.googleSiteVerification || "").trim()), "Google Search Console code added (skip if you verified by DNS)", "#/appearance/seo")}
       </ul>
     </section>
   `;
@@ -427,7 +429,7 @@ function renderBlogEditor(index) {
     ${backLink("#/blog", "All posts")}
     <section class="card">
       ${itemField(`${base}.title`, "Title", post.title)}
-      ${itemField(`${base}.excerpt`, "Excerpt", post.excerpt, "textarea", [], { help: "Shown on blog cards and in search results." })}
+      ${itemField(`${base}.excerpt`, "Excerpt", post.excerpt, "textarea", [], { help: "Shown on blog cards and as the \"In short\" answer at the top of the post." })}
       <label>Body
         <div class="rich-toolbar">
           <button type="button" data-command="bold"><b>B</b></button>
@@ -440,6 +442,7 @@ function renderBlogEditor(index) {
         </div>
         <div class="rich-editor" contenteditable="true" data-rich="${base}.body">${post.body || ""}</div>
       </label>
+      ${itemField(`${base}.sources`, "Sources", typeof post.sources === "string" ? post.sources : "", "textarea", [], { placeholder: "Title | https://example.org/page | Publisher", help: "One source per line, shown as citations under the post. Leave empty to keep the built-in sources for the original guides." })}
     </section>
   `;
   const side = `
@@ -547,11 +550,16 @@ const appearanceTabs = [
     ["footer.quickLinksTitle", "Quick links title"], ["footer.followTitle", "Follow title"], ["footer.getInTouchTitle", "Get in touch title"],
     ["footer.email", "Email"], ["footer.phone", "Phone"], ["footer.address", "Address"],
     ["footer.socials.instagram", "Instagram URL"], ["footer.socials.facebook", "Facebook URL"], ["footer.socials.twitter", "Twitter / X URL"], ["footer.socials.youtube", "YouTube URL"]] },
+  { id: "seo", label: "SEO & analytics", fields: [
+    ["seo.googleAnalyticsId", "Google Analytics 4 measurement ID", "input", { placeholder: "G-XXXXXXXXXX", help: "From Google Analytics: Admin → Data streams → your website. Leave empty to turn analytics off." }],
+    ["seo.googleSiteVerification", "Google Search Console verification", "input", { placeholder: "Code or the whole <meta> tag", help: "Search Console → Add property → URL prefix → HTML tag. Paste the code or the full tag." }],
+    ["seo.bingSiteVerification", "Bing Webmaster Tools verification", "input", { placeholder: "Code or the whole <meta> tag", help: "Bing Webmaster Tools → Add site → HTML meta tag." }],
+    ["seo.sameAs", "Other official profiles", "textarea", { placeholder: "https://www.tiktok.com/@yourbrand", help: "One link per line: TikTok, Google Business Profile, LinkedIn and so on. Together with the footer social links, these tell Google which profiles belong to the store." }]] },
 ];
 
 function renderAppearance() {
   const current = appearanceTabs.find((t) => t.id === state.params[0]) || appearanceTabs[0];
-  const fields = current.fields.map(([path, label, type]) => field(path, label, type)).join("");
+  const fields = current.fields.map(([path, label, type, extra]) => field(path, label, type, [], extra)).join("");
   const nav = current.nav
     ? `<h3>Navigation</h3>${(settings.header?.nav || []).map((item, i) => `<div class="grid"><label>Label<input data-path="header.nav.${i}.label" value="${escapeHtml(item.label)}"></label><label>Link<input data-path="header.nav.${i}.href" value="${escapeHtml(item.href)}"></label></div>`).join("")}`
     : "";

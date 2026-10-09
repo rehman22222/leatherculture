@@ -66,6 +66,88 @@
     "man-having-tatto-on-neck.png",
     "shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png",
   ];
+  // Alt text for the template's own images, keyed by Framer asset id. Framer's client render drops the
+  // alt text of these images, and some template alts were misspelt. The build applies the same map.
+  const imageAlts = {
+    "k3mQgskzRmcKKsc3Urx85y2azU": "LeatherCulture",
+    "MpMl7pUW5TtaHQQEzzhrioJmA": "LeatherCulture",
+    "g813yVl0fq2gEobS7kOZx537SY": "Man in an oversized black double-breasted leather jacket, white T-shirt and blue jeans",
+    "HaLbFMQL3UBYnLDE5V1KjUjLbU": "Man in a black hooded zip jacket with white piping on the sleeves",
+    "UqbagK5Zf6G91yyijIvdScOQDI": "Man in a navy hooded puffer jacket, grey roll-neck and blue beanie",
+    "7dwU69CcPP5QPRAcGcQvWaJXm3c": "Man in a black ribbed polo shirt, black beanie and sunglasses",
+    "xXRw7s77WdhR0P4zOTGGkDW2qs": "Back view of a man in a tan trucker jacket and dark brown beanie",
+    "IWKuR2oZjCwRSiCZeEvdAMXZEg": "Olive crew-neck sweatshirt on a wooden hanger against a sunlit wall",
+    "8sl32ni8KnyCp50kGqlisQGcL8I": "Price tag icon",
+    "gpBvWinM7Lbkx2EDFzBtxqeHQ4": "Email icon",
+    "iwbukaHQ1fljde6iYf5LtwGIUzw": "Phone icon",
+    "YAj4FvLQ9fP1GagGQLTVIn971nw": "Location pin icon",
+    "tR2xGFKMU6c8PPl8Kqup0m7DMEE": "Arrow icon",
+    "JYIP0HLZZxRd5iwMgkfmFfUMAA": "Decorative logo",
+    "xAiRUK2vLf9i9TqFrO0b1wRHy4c": "Decorative logo",
+    "jJeX9lBksyAiRkW6RsfnlDJ4D4": "Decorative logo",
+    "f8csSGuYaUBfDwfLFOysGffSY": "Decorative logo",
+    "HAfe1jEmy3pyzyc9lampV2qADY": "Decorative logo",
+    "DYCoyDe8REkqHEgecYVsQLUGfg": "Decorative logo",
+    "4I0nUFgLGKqAqwEE0S5l6yrCXzQ": "Decorative logo",
+    "K7N7aNahky7BhBGyGdXp7oSDc": "Decorative logo",
+    "UsU6TSwGi1GYzawTJkBdu5BNeqg": "Decorative logo",
+    "Qifbcz2UjIveHTCuImUZcqT9kZg": "Decorative logo",
+    "6QEz8kJbwqWFzbNDcgcMwaBk7Jk": "Decorative logo",
+    "xjBP37MgaLIT2MdXe0Kl896XmbM": "Portrait of a smiling man in an olive shirt in a workshop",
+    "V6kvRnK4tvwVKtnM3SDW7g4T9I": "Portrait of a woman in a white collared shirt",
+    "8Y1Vd6ysDPyE3ONSfgw125SCPw": "Portrait of a smiling woman in a sage T-shirt",
+    "qL5xOqMFC6yF35qSRHaAWJGZQKU": "Portrait of a smiling man in glasses and a purple T-shirt",
+    "G8RDO1PQndTWIrwwR6NkSGjho": "Portrait of a smiling woman in a tan jacket",
+    "Or4CSjqekPU2Ug6V0zSDTbgtg": "Woman in a green shirt",
+    "YI6OX1Ix0QFPJHufS272fscYaI": "Woman in a blue leather jacket",
+    "UDfLjRvzk0xpuvTb0EisZ50R4B8": "Man with a neck tattoo",
+    "ATHsoTzpbKxwwKkISL2Qfi2BQ2U": "Cyberpunk-style fashion pose",
+    "o8BbZ7Bmf99hekDMhLBtBkxBoY": "Minimalist fashion look",
+    "h5mjcigkuGzHUrDKNZj4VOiAg": "White sweatshirt on a clothesline",
+    "3pzhLnz4BOm15P19zWPl47fJ0Mo": "White sweatshirt on a clothesline",
+    "UVxenUklVk5C5hRgP2zTRqEdMPk": "Low-angle shot of a woman in a black dress",
+    "UdKyQkva2vLQZ0vNuYpmKAdtzw": "Woman in a grey blazer",
+    "v4WTQ9WoN7RxeC3vNiZP9SvQcQ": "Colourful shirts hanging in a wardrobe",
+    "3BJsJKp6d3GMb73lMFLvun3bVxE": "Woman in a dark green dress",
+    "Q2qaxWvHcpcMDMRF6r6oA7jcK9Q": "Child sitting on a stool in a stylish pose",
+    "jz6J8tN19rBotBJ08ib9LED2s8": "Woman in a white and red dress",
+    "U7CtuDK0AXUNTwGdENumrlmdyk": "Low-angle shot of a man in a white shirt",
+    "PhQ0ou5z6Mj6gzpcsLLi5rS6E0": "Woman in dark glasses and a grey dress",
+    "IEB9QLOzy0qlnSdGfn5jQsBFFVo": "Boy in a black hoodie",
+    "FFAlreqmltBbtn7iNy9lIQTMI": "Person in a black suit",
+    "6nknFZTNUtU9BA1FnqLy7dPrtmE": "Young man in a black double-breasted leather jacket and jeans",
+    "XY7DXjHvJ7qxI2SulzDqvBiRbvw": "Young man in a black double-breasted leather jacket and jeans by a white wall",
+    "DKGh82SyvtbMKZ4jbKtsf3cq42c": "Young man in a black double-breasted leather jacket and jeans",
+    "Uv4VM4rvpvfRnmB5e1YXaDJXQ": "Young man in a black double-breasted leather jacket and jeans",
+    "HdE6FLCHJd2VT91mYyisz2G77g8": "Young man in a black double-breasted leather jacket and jeans",
+    "VW4VJmmdCt9WP6FoBGWnqDq6VS8": "Woman in a green blazer and black glasses",
+    "liIxg0opfCsW1pRixs56aS3Aj4": "Woman in a black jacket standing beside white clothes",
+    "imHLb05OBp3rVa7DL12JicfwlE": "Woman in a black jacket",
+    "4zsYQkMwe0g61iw8T3MZGzvhak": "Woman holding a dark green bag",
+    "cWQhDyWBhK2dbOvMbEutN5jO0s": "Child with curly hair in a black jacket",
+    "Mpbd0iQ2COOMJArbHqRZMQoFRA": "Smartly dressed child in a black jacket",
+    "FNS875X1XnR0GJd4UpTh1Zms": "Child with brown hair in a black jacket",
+    "E6tqcNcNIbkMCzBYvnABQBtwcM": "Child in a black jacket",
+    "MLJe7H4csZkBunu5nEk84enCjM": "Child in a green blazer and black glasses",
+    "k4gwIeU3rPPXIyxSMgWszrewfy8": "Group of young men in casual streetwear",
+    "gXeXEdJCGwcyaYKiWNSbF2Wf5Yg": "Woman in a stylish dress",
+    "35jbjH7zEBW0GXGMbgGlejxpwB0": "Woman in a stylish pose",
+    "Rgl552fnphzXIpke91z265iosU": "Close-up of a person's legs in brown trousers",
+    "YRHt9c7e9X3xKQWj3EtnUpPEdcY": "Woman in a red dress posing",
+    "bfKnYz5PM2SU3fPvsCyVCnuFsY": "T-shirts hanging in a wardrobe",
+    "VjeS4g3bothn3ykWlAjDWS5giK0": "Woman in a stylish black dress",
+    "gWNl9J30vKv4SW0ITunuKmvtfW0": "Young man in a black blazer and white high-neck top",
+    "ySVxzwG1Y66iKkI0QESKXxQk8Jw": "Woman in a patterned coat",
+    "qQSMjW83F8jPIOKDIIevJNTWs": "Woman in a black shirt looking back against a blue sky"
+  };
+  const assetId = (src) => (/\/assets\/cdn\/images\/([A-Za-z0-9]+)-[0-9a-f]{8}\./.exec(src || "") || [])[1] || "";
+  // Remember the alt text the static HTML carries, before Framer's runtime re-renders the images.
+  const staticAlts = new Map();
+  document.querySelectorAll("img[alt]").forEach((img) => {
+    const id = assetId(img.getAttribute("src"));
+    const alt = (img.getAttribute("alt") || "").trim();
+    if (id && alt && !staticAlts.has(id)) staticAlts.set(id, alt);
+  });
   let settings = null;
   try { settings = JSON.parse(document.getElementById("lc-build-settings")?.textContent || "null"); } catch (_) { /* legacy pages use the API */ }
   let previousSettings = null;
@@ -501,16 +583,55 @@
     if (email) document.querySelectorAll("a[href^='mailto:']").forEach((link) => link.setAttribute("href", `mailto:${email}`));
     if (phone) document.querySelectorAll("a[href^='tel:']").forEach((link) => link.setAttribute("href", `tel:${phone}`));
 
+    // Placeholder addresses such as https://instagram.com are hidden until a real profile is saved.
     const socialLinks = {
-      Instagram: get("footer.socials.instagram"),
-      Facebook: get("footer.socials.facebook"),
-      Twitter: get("footer.socials.twitter"),
-      Youtube: get("footer.socials.youtube"),
+      Instagram: profileUrl(get("footer.socials.instagram")),
+      Facebook: profileUrl(get("footer.socials.facebook")),
+      Twitter: profileUrl(get("footer.socials.twitter")),
+      Youtube: profileUrl(get("footer.socials.youtube")),
+      Dribbble: "",
     };
+    const groups = new Set();
     document.querySelectorAll("a").forEach((link) => {
-      const label = (link.textContent || "").trim();
-      if (socialLinks[label]) link.setAttribute("href", socialLinks[label]);
+      const label = normalizeText(link.textContent);
+      if (!(label in socialLinks)) return;
+      const url = socialLinks[label];
+      const holder = link.parentElement && link.parentElement.childElementCount === 1 ? link.parentElement : link;
+      const previous = holder.previousElementSibling && holder.previousElementSibling.querySelector("a");
+      const duplicate = url && previous && previous.getAttribute("href") === url;
+      if (url && !duplicate) {
+        link.setAttribute("href", url);
+        link.setAttribute("rel", "noopener me");
+      }
+      setHidden(holder, !url || duplicate);
+      if (holder.parentElement) groups.add(holder.parentElement);
     });
+    // With no profiles at all, the "Follow us" heading goes too.
+    groups.forEach((list) => {
+      const empty = Array.from(list.children).every((child) => child.style.display === "none");
+      const title = list.previousElementSibling;
+      if (title && !title.querySelector("a")) setHidden(title, empty);
+    });
+  }
+
+  // Hide an element, and only ever undo a hide made here (Framer's own inline styles stay untouched).
+  function setHidden(element, hidden) {
+    if (hidden) {
+      element.style.display = "none";
+      element.dataset.lcHidden = "true";
+    } else if (element.dataset.lcHidden) {
+      element.style.display = "";
+      delete element.dataset.lcHidden;
+    }
+  }
+
+  function profileUrl(value) {
+    try {
+      const url = new URL(String(value || "").trim());
+      return /^https?:$/.test(url.protocol) && url.pathname.replace(/\/+$/, "") ? url.href : "";
+    } catch (error) {
+      return "";
+    }
   }
 
   function accountLink() {
@@ -542,6 +663,14 @@
     });
     // Clean up the temporary fixed link used before the account was integrated.
     document.querySelectorAll("body > #lc-account-link").forEach((link) => link.remove());
+  }
+
+  // Small renditions sit next to the originals: name-card.webp beside /assets/images/name.webp and beside
+  // the large jacket photos (/assets/jackets/name.png). A missing file falls back via onerror.
+  function cardImage(url) {
+    if (/^\/assets\/images\/.+\.webp$/.test(url || "") && !/-card\.webp$/.test(url)) return url.replace(/\.webp$/, "-card.webp");
+    if (/^\/assets\/jackets\/[a-z0-9-]+\.png$/.test(url || "")) return url.replace(/\.png$/, "-card.webp");
+    return url;
   }
 
   function basename(value) {
@@ -599,6 +728,73 @@
       img.setAttribute("src", mediaUrl(item.image));
       img.setAttribute("alt", item.alt || item.label || "");
     });
+  }
+
+  // Every image gets alt text: the curated text for the template's assets, else the alt the static HTML
+  // carried before Framer re-rendered it, else the label of the link or card around it.
+  function applyImageAlts() {
+    document.querySelectorAll("img").forEach((img) => {
+      const id = assetId(img.getAttribute("src"));
+      const alt = (id && imageAlts[id]) || ((img.getAttribute("alt") || "").trim() ? "" : (id && staticAlts.get(id)) || contextAlt(img));
+      if (alt && img.getAttribute("alt") !== alt) img.setAttribute("alt", alt);
+    });
+  }
+
+  function contextAlt(img) {
+    const link = img.closest("a");
+    const label = link && (link.getAttribute("aria-label") || link.getAttribute("data-brand"));
+    if (label) return label;
+    const heading = link && link.querySelector("h1, h2, h3, h4, h5, h6");
+    return heading ? normalizeText(heading.textContent) : "";
+  }
+
+  function parsePrice(value) {
+    const match = String(value || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : 0;
+  }
+
+  // The collection cards ship template prices ("$45.00"); show the live range of each collection instead.
+  // The template's "Children's wear" card is used as a winter jackets card, so it covers jackets and coats.
+  const collectionCards = [
+    ["Men's wear", (product) => product.category === "men"],
+    ["Women's wear", (product) => product.category === "women"],
+    ["Children's wear", (product) => /jacket|coat/i.test(product.name || "")],
+  ];
+
+  function syncCollectionPrices() {
+    if (!settings || !settings.products) return;
+    const currency = get("checkout.currency") || "Rs";
+    collectionCards.forEach(([name, includes]) => {
+      const prices = settings.products
+        .filter((product) => product.enabled !== false && includes(product))
+        .map((product) => parsePrice(product.price))
+        .filter(Boolean);
+      if (!prices.length) return;
+      const low = Math.min(...prices);
+      const high = Math.max(...prices);
+      document.querySelectorAll(`[data-framer-name="${name}"]`).forEach((card) => {
+        if (name === "Children's wear" && !/jacket|coat/i.test(card.textContent || "")) return;
+        const pricing = card.querySelector("[data-framer-name='Pricing']");
+        if (!pricing) return;
+        const [first, second] = pricing.querySelectorAll("p");
+        const line = pricing.querySelector("[data-framer-name='Line']");
+        const lowText = `${currency} ${low.toLocaleString("en-PK")}`;
+        const highText = `${currency} ${high.toLocaleString("en-PK")}`;
+        if (first && first.textContent !== lowText) first.textContent = lowText;
+        if (second && second.textContent !== highText) second.textContent = highText;
+        if (second) (second.closest("[data-framer-component-type='RichTextContainer']") || second).style.display = low === high ? "none" : "";
+        if (line) line.style.display = low === high ? "none" : "";
+      });
+    });
+  }
+
+  // Privacy and terms links sit in the contact strip at the very bottom of every page (the build adds
+  // them; this covers pages served without the build, such as local development).
+  function ensureLegalLinks() {
+    if (!document.body || document.querySelector("a[href='/privacy-policy']")) return;
+    const strip = document.getElementById("lc-business-contact") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "lc-business-contact" }));
+    strip.style.cssText = strip.style.cssText || "padding:20px;text-align:center;font:14px Arial,sans-serif";
+    strip.insertAdjacentHTML("beforeend", `${strip.childNodes.length ? " · " : ""}<a href="/privacy-policy">Privacy Policy</a> · <a href="/terms">Terms &amp; Conditions</a>`);
   }
 
   function productById(source, id) {
@@ -803,20 +999,32 @@
     const images = imageInfo || Array.from(link.querySelectorAll("img")).map((img) => [img, true]);
     const variants = (product.variants || []).filter((variant) => variant.enabled !== false && variant.image);
     let swatch = 0;
-    const cardImage = (url) => (/^\/assets\/images\/.+\.webp$/.test(url || "") && !/-card\.webp$/.test(url) ? url.replace(/\.webp$/, "-card.webp") : url);
     images.forEach(([img, large]) => {
-      const source = cardImage(large ? product.image : (variants[swatch++] || {}).image);
+      const original = large ? product.image : (variants[swatch++] || {}).image;
       const holder = img.closest("[data-framer-background-image-wrapper]") || img;
-      if (!source) {
+      if (!original) {
         if (!large) (holder.parentElement || holder).style.display = "none";
         return;
       }
       img.removeAttribute("srcset");
-      const original = large ? product.image : source.replace(/-card\.webp$/, ".webp");
-      if (source !== original) img.onerror = () => { img.onerror = null; img.setAttribute("src", mediaUrl(original)); };
-      img.setAttribute("src", mediaUrl(source));
+      setCardImage(img, original);
       img.setAttribute("alt", product.alt || product.name || "");
     });
+  }
+
+  // Point an image at the card rendition; if that file is missing, fall back to the original for good
+  // (every apply pass re-runs this, so the failure is remembered instead of retried).
+  function setCardImage(img, original) {
+    const card = cardImage(original);
+    const source = card === original || img.dataset.lcCardFailed === original ? original : card;
+    if (source !== original) {
+      img.onerror = () => {
+        img.onerror = null;
+        img.dataset.lcCardFailed = original;
+        img.setAttribute("src", mediaUrl(original));
+      };
+    }
+    if (img.getAttribute("src") !== mediaUrl(source)) img.setAttribute("src", mediaUrl(source));
   }
 
   function formatDate(value) {
@@ -908,7 +1116,7 @@
         const card = link.closest("a[href*='/shop/'], article, [data-framer-name*='Card'], [class*='container']") || link;
         if (card) {
           card.querySelectorAll("img").forEach((img) => {
-            if (product.image) img.setAttribute("src", mediaUrl(product.image));
+            if (product.image) setCardImage(img, product.image);
             img.setAttribute("alt", product.alt || product.name || "");
           });
         }
@@ -946,6 +1154,7 @@
   }
 
   function applySettings() {
+    if (!settings) return;
     if (settings.content?.values) settings.content.values["6f2c3442a7"] = "Quality checked";
     if (window.LeatherCultureCart) window.LeatherCultureCart.configure(settings);
     setLogoBrand();
@@ -956,6 +1165,7 @@
     setImageData();
     setProductData();
     syncCatalogLinks();
+    syncCollectionPrices();
     syncProductSchema();
     syncBusinessDetails();
     applyCustomerReviews();
@@ -1149,14 +1359,18 @@
   }
 
   // The answer section is authored after Framer's React root so hydration can't drop it;
-  // with JS available we lift it above the footer where a FAQ belongs.
+  // with JS available we lift it above the footer where a FAQ belongs. Framer's recovery render
+  // detaches it from there again, so every pass puts the same node back if it has gone.
+  const answersSection = document.querySelector(".lc-answers");
   function placeAnswers() {
-    const section = document.querySelector(".lc-answers");
-    if (!section || section.dataset.lcPlaced) return;
-    const footer = document.querySelector("#main footer, footer");
-    if (!footer || footer.contains(section)) return;
-    footer.parentElement.insertBefore(section, footer);
-    section.dataset.lcPlaced = "true";
+    if (!answersSection) return;
+    const footer = document.querySelector("#main footer") || document.querySelector("footer");
+    if (!footer || !footer.parentElement) {
+      if (!answersSection.isConnected && document.body) document.body.appendChild(answersSection);
+      return;
+    }
+    if (footer.contains(answersSection) || (answersSection.isConnected && answersSection.nextElementSibling === footer)) return;
+    footer.parentElement.insertBefore(answersSection, footer);
   }
 
   // The template ships a "trusted by" strip of placeholder logos (logoipsum); hide it until
@@ -1227,6 +1441,8 @@
       enforceSingleH1();
       enforceHeadingLevels();
       applySettings();
+      applyImageAlts();
+      ensureLegalLinks();
     } catch (error) {
       runLog.push({ error: String(error && error.stack || error).slice(0, 300) });
       console.error("LeatherCulture: store override failed", error);

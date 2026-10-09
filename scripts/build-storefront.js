@@ -1,6 +1,9 @@
 const fs = require("fs/promises");
 const path = require("path");
 const cheerio = require("cheerio");
+const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, legalLinks } = require("../lib/seo");
+const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
+const { renderProductPage, shippingFor } = require("../lib/product-renderer");
 
 const root = path.resolve(__dirname, "..");
 const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
@@ -9,9 +12,26 @@ const escape = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": 
 const publicPhone = value => /234\s*567|123456789|3XX|XXXXX/i.test(value || "") ? "" : String(value || "").trim();
 const fallbackPolicy = "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
 
-function materialize(html, settings, pathname, bindings, site) {
+const assetId = src => (/\/assets\/cdn\/images\/([A-Za-z0-9]+)-[0-9a-f]{8}\./.exec(src || "") || [])[1] || "";
+const priceValue = value => { const match = String(value || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/); return match ? Number(match[0]) : 0; };
+// The homepage collection cards and the products each one covers. The store repurposed the template's
+// "Children's wear" card as a winter jackets card, so it lists jackets and coats while its text says so.
+const collectionCards = [
+  ["Men's wear", item => item.category === "men"],
+  ["Women's wear", item => item.category === "women"],
+  ["Children's wear", item => /jacket|coat/i.test(item.name || "")]
+];
+// Order, review and password-reset links carry private tokens in the URL, so analytics stays off there.
+const privatePage = pathname => /^\/(account|order|review)(\/|$)/.test(pathname);
+
+function materialize(html, settings, pathname, bindings, site, imageAlts = {}) {
+  site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
-  $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
+  if (!$("link[href*='/account/nav.css']").length) $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
+  // Pages from the product renderer already carry these tags.
+  if (!$("meta[name='author']").length) $("head").append(`<meta name="author" content="${escape(settings.brand?.name || "LeatherCulture")}">`);
+  if (!$("meta[name='google-site-verification'],meta[name='msvalidate.01']").length) $("head").append(verificationTags(settings));
+  if (!privatePage(pathname) && !$("script[src*='googletagmanager.com/gtag/js']").length) $("head").append(analyticsTags(settings));
   const product = settings.products?.find(item => pathname === `/shop/${item.slug}`);
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
   const phone = publicPhone(settings.footer?.phone);
@@ -75,7 +95,7 @@ function materialize(html, settings, pathname, bindings, site) {
         else $(p).remove();
       }
     });
-    node.find("img").attr("src", item.image).attr("alt", item.alt || item.name).removeAttr("srcset");
+    node.find("img").attr("src", cardImage(item.image)).attr("alt", item.alt || item.name).removeAttr("srcset");
   });
   if (pathname === "/shop") $("h1").text("Leather Jackets and Modern Wear in Pakistan");
   if (product) {
@@ -103,14 +123,33 @@ function materialize(html, settings, pathname, bindings, site) {
     node.find("h2,h3,h4").first().text(post.title);
     node.find("img").attr("src", post.coverImage).attr("alt", post.coverAlt || post.title).removeAttr("srcset");
   });
+  // Collection cards carry template prices ("$45.00"); show the live price range of each collection.
+  const currency = settings.checkout?.currency || "Rs";
+  for (const [name, includes] of collectionCards) {
+    const card = $(`[data-framer-name="${name}"]`);
+    if (!card.length || (name === "Children's wear" && !/jacket|coat/i.test(card.text()))) continue;
+    const prices = (settings.products || []).filter(item => item.enabled !== false && includes(item)).map(item => priceValue(item.price)).filter(Boolean);
+    if (!prices.length) continue;
+    const low = Math.min(...prices), high = Math.max(...prices);
+    card.find("[data-framer-name='Pricing']").each((_, element) => {
+      const texts = $(element).find("p");
+      texts.eq(0).text(`${currency} ${low.toLocaleString("en-PK")}`);
+      texts.eq(1).text(`${currency} ${high.toLocaleString("en-PK")}`);
+      if (low === high) {
+        texts.eq(1).css("display", "none");
+        $(element).find("[data-framer-name='Line']").css("display", "none");
+      }
+    });
+  }
   $("p").each((_, element) => {
     if (/^(?:USD\s*)?\$[\d,.]+$/.test(normalize($(element).text()))) $(element).text("View current prices in our shop");
   });
+  // The first paragraph is the answer; quotations and further-reading links can follow it.
   $("#faq details").each((_, element) => {
-    const node = $(element), question = normalize(node.find("summary").text());
-    if (/exchange|return|guaranteed/i.test(question)) node.find("p").text(policy);
-    if (product && /care for/i.test(question)) node.find("p").text(product.care || "Contact our team for care instructions.");
-    if (product && /made of/i.test(question)) node.find("p").text(product.material || "Contact our team for material details.");
+    const node = $(element), question = normalize(node.find("summary").text()), answer = node.children("p").first();
+    if (/exchange|return|guaranteed/i.test(question)) answer.text(policy);
+    if (product && /care for/i.test(question)) answer.text(product.care || "Contact our team for care instructions.");
+    if (product && /made of/i.test(question)) answer.text(product.material || "Contact our team for material details.");
   });
   // Match structured data to the HTML and the current public product record.
   $("script[type='application/ld+json']").each((_, element) => {
@@ -120,26 +159,59 @@ function materialize(html, settings, pathname, bindings, site) {
       if (node["@type"] === "Product" && product) {
         node.name = product.name;
         node.description = product.description;
-        node.image = [...new Set([product.image, ...(product.gallery || []).map(image => image.image)].filter(Boolean))].map(image => new URL(image, site).href);
-        node.material = product.material;
-        node.offers.price = String(product.price).replace(/[^\d.]/g, "");
+        node.image = [...new Set([product.image, ...(product.gallery || []).map(image => image.image)].filter(Boolean))].map(image => new URL(displayImage(image), site).href);
+        if (product.material) node.material = product.material;
+        else delete node.material;
+        node.offers.price = String(priceValue(product.price));
         node.offers.priceCurrency = "PKR";
         delete node.offers.hasMerchantReturnPolicy;
         node.offers.availability = !(product.variants || []).length || product.variants.some(v => v.enabled !== false && Number(v.stock) > 0)
           ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
-        if (node.offers.shippingDetails?.shippingRate) node.offers.shippingDetails.shippingRate.value = Number(settings.checkout?.shippingFee) || 0;
+        if (node.offers.shippingDetails?.shippingRate) node.offers.shippingDetails.shippingRate.value = shippingFor(priceValue(product.price), settings.checkout || {});
       }
       if (node["@type"] === "FAQPage") {
-        node.mainEntity = $("#faq details").map((_, el) => ({ "@type": "Question", name: normalize($(el).find("summary").text()), acceptedAnswer: { "@type": "Answer", text: normalize($(el).find("p").text()) } })).get();
+        node.mainEntity = $("#faq details").map((_, el) => ({ "@type": "Question", name: normalize($(el).find("summary").text()), acceptedAnswer: { "@type": "Answer", text: normalize($(el).children("p").first().text()) } })).get();
       }
-      if ([].concat(node["@type"] || []).includes("Organization")) {
-        node.email = settings.footer?.email || "info@leatherculture.shop";
+      const types = [].concat(node["@type"] || []);
+      if (types.includes("Organization")) {
+        const brand = organization(settings, site);
+        node.email = brand.email;
+        if (brand.sameAs) node.sameAs = brand.sameAs;
+        else delete node.sameAs;
         if (phone) node.telephone = phone;
         else delete node.telephone;
+        for (const point of [].concat(node.contactPoint || [])) {
+          point.email = brand.email;
+          if (phone) point.telephone = phone;
+          else delete point.telephone;
+        }
       }
+      // There is no search results page to point a SearchAction at.
+      if (types.includes("WebSite")) delete node.potentialAction;
+      // Dated pages name their author: the LeatherCulture team (the Organization node).
+      if (types.some(type => /Page$/.test(type)) && (node.datePublished || node.dateModified) && !node.author) node.author = { "@id": `${site}/#organization` };
     }
     $(element).text(JSON.stringify(data).replace(/</g, "\\u003c"));
   });
+  // Footer social links: real profiles only. The template's placeholders (https://instagram.com) are hidden.
+  const socials = { Instagram: profileUrl(settings.footer?.socials?.instagram), Facebook: profileUrl(settings.footer?.socials?.facebook), Twitter: profileUrl(settings.footer?.socials?.twitter), Youtube: profileUrl(settings.footer?.socials?.youtube), Dribbble: "" };
+  const socialLists = new Set();
+  $("a").each((_, element) => {
+    const link = $(element), label = normalize(link.text());
+    if (!(label in socials)) return;
+    const holder = link.parent().children().length === 1 ? link.parent() : link;
+    const url = socials[label];
+    const duplicate = url && holder.prev().find("a").first().attr("href") === url;
+    if (url && !duplicate) link.attr("href", url).attr("rel", "noopener me");
+    else holder.css("display", "none");
+    socialLists.add(holder.parent().get(0));
+  });
+  for (const list of socialLists) {
+    const title = $(list).prev();
+    const empty = $(list).children().toArray().every(child => $(child).css("display") === "none");
+    if (empty && title.length && !title.find("a").length) title.css("display", "none");
+  }
+  $(".lc-answers .lc-meta a[href='/about']").attr("rel", "author");
   $("#lc-business-contact").remove();
   $("#lc-account-link").remove();
   const accountMarkup = '<a class="lc-account-nav" href="/account" aria-label="My account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span></a>';
@@ -149,7 +221,17 @@ function materialize(html, settings, pathname, bindings, site) {
   $(".site-header nav").each((_, element) => {
     if (!$(element).find(".lc-account-nav").length) $(element).append(accountMarkup);
   });
-  $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px Arial,sans-serif">Customer enquiries: <a href="mailto:info@leatherculture.shop">info@leatherculture.shop</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a></div>`);
+  const email = escape(settings.footer?.email || "info@leatherculture.shop");
+  $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px/1.8 Arial,sans-serif">Customer enquiries: <a href="mailto:${email}">${email}</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a> · ${legalLinks.map(link => `<a href="${link.href}">${escape(link.label)}</a>`).join(" · ")}</div>`);
+  // Every image needs alt text: curated text for the template's assets, else the label of its link.
+  $("img").each((_, element) => {
+    const img = $(element), curated = imageAlts[assetId(img.attr("src"))];
+    if (curated) return void img.attr("alt", curated);
+    if (normalize(img.attr("alt"))) return;
+    const link = img.closest("a");
+    const label = link.attr("aria-label") || link.attr("data-brand") || normalize(link.find("h1,h2,h3,h4,h5,h6").first().text());
+    if (label) img.attr("alt", label);
+  });
   $("head").append(`<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`);
   return $.html();
 }
@@ -166,6 +248,7 @@ async function buildStorefront(settings, posts, site) {
   await fs.mkdir(output, { recursive: true });
   const source = await fs.readFile(path.join(root, "store-override.js"), "utf8");
   const bindings = JSON.parse(source.match(/const textBindings = (\[[\s\S]*?\n  \]);/)[1].replace(/,\s*]/g, "]"));
+  const imageAlts = JSON.parse(source.match(/const imageAlts = (\{[\s\S]*?\n  \});/)[1].replace(/,\s*}/g, "}"));
   const publicDirectories = ["assets", "about", "account", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
   for (const name of publicDirectories) await fs.cp(path.join(root, name), path.join(output, name), { recursive: true });
   // New products without a restored template use the backend's product renderer.
@@ -175,7 +258,7 @@ async function buildStorefront(settings, posts, site) {
     try { await fs.access(path.join(folder, "index.html")); }
     catch {
       await fs.mkdir(folder, { recursive: true });
-      await fs.writeFile(path.join(folder, "index.html"), require("../lib/product-renderer").renderProductPage(product, settings));
+      await fs.writeFile(path.join(folder, "index.html"), renderProductPage(product, settings));
     }
   }
   for (const name of ["index.html", "404.html", "brand-override.css", "store.css", "store-override.js", "cart.js", "site-config.js", "robots.txt", "sitemap.xml", "llms.txt"]) {
@@ -190,16 +273,62 @@ async function buildStorefront(settings, posts, site) {
         const pathname = relative ? `/${relative}` : "/";
         if (pathname.startsWith("/blog/")) continue;
         const html = await fs.readFile(file, "utf8");
-        await fs.writeFile(file, materialize(html, settings, pathname, bindings, site));
+        await fs.writeFile(file, materialize(html, settings, pathname, bindings, site, imageAlts));
       }
     }
   }
   await transform(output);
+  for (const [kind, pathname] of Object.entries(policyPaths)) {
+    await fs.mkdir(path.join(output, pathname.slice(1)), { recursive: true });
+    await fs.writeFile(path.join(output, pathname.slice(1), "index.html"), renderPolicyPage(kind, settings));
+  }
+  const products = (settings.products || []).filter(p => p.enabled !== false);
   const pages = ["/", "/about", "/shop", "/blog", "/contact"];
-  const urls = [...pages, ...(settings.products || []).filter(p => p.enabled !== false).map(p => `/shop/${p.slug}`), ...posts.map(p => `/blog/${p.slug}`)];
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(p => `  <url><loc>${escape(new URL(p, site).href)}</loc></url>`).join("\n")}\n</urlset>\n`;
+  // lastmod only where the date is known: journal posts and the policies.
+  const entries = [...pages.map(p => [p]), ...products.map(p => [`/shop/${p.slug}`]), ...posts.map(p => [`/blog/${p.slug}`, p.dateModified || p.date]), ...Object.values(policyPaths).map(p => [p, POLICY_UPDATED])];
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map(([p, date]) => `  <url><loc>${escape(new URL(p, site).href)}</loc>${/^\d{4}-\d{2}-\d{2}$/.test(date || "") ? `<lastmod>${date}</lastmod>` : ""}</url>`).join("\n")}\n</urlset>\n`;
   await fs.writeFile(path.join(output, "sitemap.xml"), xml);
-  console.log("Generated storefront HTML and sitemap in dist/");
+  await fs.writeFile(path.join(output, "llms.txt"), llmsText(settings, products, posts, site));
+  console.log("Generated storefront HTML, policies, sitemap and llms.txt in dist/");
+}
+
+// A plain-text brief for AI assistants, built from the same live data as the pages.
+function llmsText(settings, products, posts, site) {
+  const url = pathname => new URL(pathname, site).href;
+  const checkout = settings.checkout || {};
+  const currency = checkout.currency || "Rs";
+  const money = value => `${currency} ${Number(value || 0).toLocaleString("en-US")}`;
+  const firstSentence = text => (String(text || "").replace(/\s+/g, " ").trim().match(/^.*?[.!?](?=\s|$)/) || [String(text || "").trim()])[0];
+  const prices = products.map(p => priceValue(p.price)).filter(Boolean);
+  const pageInfo = Object.fromEntries((settings.pages || []).map(page => [page.path, page.metaDescription || page.excerpt || ""]));
+  const fee = Number(checkout.shippingFee) || 0, free = Number(checkout.freeShippingFrom) || 0;
+  return [
+    `# ${settings.brand?.name || "LeatherCulture"}`,
+    "",
+    `> ${firstSentence(settings.footer?.description || settings.brand?.description)} Orders are placed online and paid cash on delivery.`,
+    "",
+    "## Key facts",
+    "- Country: Pakistan. Delivers nationwide.",
+    "- Payment: cash on delivery only.",
+    `- Delivery: ${fee ? `${money(fee)}, free on orders of ${money(free)} or more` : "free"}. ${checkout.codNote || ""}`.trim(),
+    `- Returns and exchanges: ${checkout.returnsPolicy || fallbackPolicy}`,
+    ...(prices.length ? [`- Price range: ${money(Math.min(...prices))} to ${money(Math.max(...prices))}.`] : []),
+    "- Currency: PKR.",
+    `- Contact: ${settings.footer?.email || "info@leatherculture.shop"}`,
+    "",
+    "## Pages",
+    ...[["/", "Home"], ["/shop", "Shop"], ["/about", "About"], ["/blog", "Journal"], ["/contact", "Contact"]].map(([pathname, label]) => `- [${label}](${url(pathname)})${pageInfo[pathname] ? `: ${firstSentence(pageInfo[pathname])}` : ""}`),
+    ...legalLinks.map(link => `- [${link.label}](${url(link.href)})`),
+    "",
+    "## Products",
+    ...products.map(p => `- [${p.name}](${url(`/shop/${p.slug}`)}): ${p.price}. ${firstSentence(p.description || p.metaDescription)}`),
+    "",
+    "## Journal",
+    ...posts.map(p => `- [${p.title}](${url(`/blog/${p.slug}`)}): ${p.excerpt || ""}`.trim()),
+    "",
+    `Last updated: ${new Date().toISOString().slice(0, 10)}`,
+    ""
+  ].join("\n");
 }
 
 module.exports = { buildStorefront, materialize, publicPhone, fallbackPolicy };

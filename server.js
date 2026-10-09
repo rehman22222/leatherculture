@@ -7,6 +7,8 @@ const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 const { createMailer } = require("./lib/mailer");
 const { renderBlogPost } = require("./lib/blog-renderer");
+const { renderPolicyPage, policyPaths } = require("./lib/policy-pages");
+const { siteUrl: canonicalSite } = require("./lib/seo");
 const { createCustomerAccounts } = require("./lib/customers");
 const { URL } = require("url");
 const zlib = require("zlib");
@@ -816,6 +818,12 @@ const defaultSettings = {
       youtube: "https://youtube.com"
     }
   },
+  seo: {
+    googleAnalyticsId: "",
+    googleSiteVerification: "",
+    bingSiteVerification: "",
+    sameAs: ""
+  },
   pages: [
     {
       id: "home",
@@ -1466,7 +1474,8 @@ function setCorsHeaders(req, res) {
 function writeJson(res, status, payload) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store"
+    "cache-control": "no-store",
+    "x-robots-tag": "noindex"
   });
   res.end(JSON.stringify(payload, null, 2));
 }
@@ -1571,8 +1580,27 @@ function absoluteUrl(req, pathname) {
   return new URL(pathname || "/", originFor(req)).toString();
 }
 
+// Canonical links, sitemap entries and social tags always name the public storefront, even when the
+// page is rendered by this backend on its own hostname.
+function canonicalUrl(pathname) {
+  return new URL(pathname || "/", canonicalSite()).toString();
+}
+
+// Render also serves this app on *.onrender.com. Pages there would compete with the real storefront in
+// search, so page requests on any other hostname are sent to the public site with a permanent redirect.
+const redirectForeignHosts = Boolean(process.env.RENDER) || process.env.REDIRECT_TO_PUBLIC_SITE === "true";
+function isForeignHost(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase().split(":")[0];
+  const publicHost = new URL(canonicalSite()).hostname.toLowerCase();
+  return Boolean(host) && host !== publicHost && host !== publicHost.replace(/^www\./, "");
+}
+function isPageRequest(pathname) {
+  if (pathname === "/llms.txt") return true;
+  return !/^\/(api|admin|assets|health)(\/|$)/.test(pathname) && !/\.(?:m?js|css|json|png|jpe?g|webp|gif|svg|ico|avif|woff2|mp4|framercms|txt)$/i.test(pathname);
+}
+
 function metaTags({ title, description, keywords, canonicalPath, image }, req) {
-  const canonical = absoluteUrl(req, canonicalPath || "/");
+  const canonical = canonicalUrl(canonicalPath || "/");
   return `
     <meta name="description" content="${escapeHtml(description || "")}">
     <meta name="keywords" content="${escapeHtml(keywords || "")}">
@@ -1580,7 +1608,7 @@ function metaTags({ title, description, keywords, canonicalPath, image }, req) {
     <meta property="og:title" content="${escapeHtml(title || "")}">
     <meta property="og:description" content="${escapeHtml(description || "")}">
     <meta property="og:url" content="${escapeHtml(canonical)}">
-    ${image ? `<meta property="og:image" content="${escapeHtml(absoluteUrl(req, image))}">` : ""}
+    ${image ? `<meta property="og:image" content="${escapeHtml(canonicalUrl(image))}">` : ""}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${escapeHtml(title || "")}">
     <meta name="twitter:description" content="${escapeHtml(description || "")}">
@@ -1596,11 +1624,11 @@ async function sitemap(req) {
   const pageUrls = (settings.pages || []).filter((page) => page.enabled !== false).map((page) => page.canonicalPath || page.path || "/");
   const productUrls = products.map((product) => `/shop/${product.slug}`);
   const blogUrls = blogs.map((blog) => `/blog/${blog.slug}`);
-  const urls = [...new Set([...pageUrls, ...productUrls, ...blogUrls])];
+  const urls = [...new Set([...pageUrls, ...productUrls, ...blogUrls, ...Object.values(policyPaths)])];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((url) => `  <url><loc>${escapeHtml(absoluteUrl(req, url))}</loc></url>`).join("\n")}
+${urls.map((url) => `  <url><loc>${escapeHtml(canonicalUrl(url))}</loc></url>`).join("\n")}
 </urlset>`;
 }
 
@@ -1859,6 +1887,12 @@ async function requestHandler(req, res) {
     }
 
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (redirectForeignHosts && (req.method === "GET" || req.method === "HEAD") && isForeignHost(req) && isPageRequest(url.pathname)) {
+      res.writeHead(301, { location: canonicalUrl(`${url.pathname}${url.search}`), "cache-control": "public, max-age=86400" });
+      res.end();
+      return;
+    }
+
     if (url.pathname.startsWith("/api/account/")) {
       await ensureDbReady();
       await customerAccounts.handle(req, res, url);
@@ -1880,7 +1914,18 @@ async function requestHandler(req, res) {
 
     if (url.pathname === "/robots.txt" && req.method === "GET") {
       res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-      res.end(`User-agent: *\nAllow: /\nSitemap: ${absoluteUrl(req, "/sitemap.xml")}\n`);
+      // The backend hostname only answers with redirects, the admin and the API; the storefront's own
+      // robots.txt and sitemap live on the public site.
+      if (redirectForeignHosts && isForeignHost(req)) return res.end("User-agent: *\nDisallow: /api/\nDisallow: /admin\n");
+      res.end(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: ${canonicalUrl("/sitemap.xml")}\n`);
+      return;
+    }
+
+    const policy = Object.entries(policyPaths).find(([, pathname]) => pathname === url.pathname);
+    if (policy && req.method === "GET") {
+      await ensureDbReady();
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
+      res.end(renderPolicyPage(policy[0], await readSettings()));
       return;
     }
 
@@ -2180,7 +2225,8 @@ async function requestHandler(req, res) {
         "x-frame-options": "SAMEORIGIN",
         "referrer-policy": "strict-origin-when-cross-origin",
         "cache-control": cacheable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
-        vary: "accept-encoding"
+        vary: "accept-encoding",
+        ...(url.pathname.startsWith("/admin") ? { "x-robots-tag": "noindex, nofollow" } : {})
       };
       const compressible = /^(text\/|application\/(json|javascript|xml)|image\/svg)/.test(headers["content-type"]) || ext === ".framercms";
       const accepts = String(req.headers["accept-encoding"] || "").split(",").map((value) => value.trim().split(";")[0]);
