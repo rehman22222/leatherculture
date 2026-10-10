@@ -416,3 +416,80 @@ body.lc-light-header .lc-account-nav:focus-visible svg {
 [data-framer-name="Reviews"] [data-framer-name="01 - Phone"] {
   padding-bottom: 72px !important;
 }
+
+/* Home community carousel: replace the generic stock-image treatment with a
+   color-led jacket showcase. Each card receives its palette from the live
+   product that store-override.js assigns to it. */
+.lc-community-card {
+  position: relative !important;
+  isolation: isolate;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 84% 14%, rgba(255, 255, 255, .88) 0 9%, transparent 35%),
+    linear-gradient(145deg, color-mix(in srgb, var(--lc-community-tint) 82%, #fff) 0%, #fff 58%, var(--lc-community-tint) 130%) !important;
+  border: 1px solid color-mix(in srgb, var(--lc-community-deep) 15%, #fff) !important;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--lc-community-deep) 17%, transparent) !important;
+  transition: transform .32s cubic-bezier(.2,.75,.25,1), box-shadow .32s ease !important;
+}
+
+.lc-community-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 72%;
+  aspect-ratio: 1;
+  right: -26%;
+  bottom: -30%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--lc-community-deep) 18%, transparent);
+  filter: blur(2px);
+}
+
+.lc-community-card img {
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 13px 11px rgba(24, 24, 24, .2));
+  transition: transform .42s cubic-bezier(.2,.75,.25,1), filter .32s ease !important;
+}
+
+.lc-community-card:hover {
+  transform: translateY(-8px) rotate(-.5deg) !important;
+  box-shadow: 0 22px 40px color-mix(in srgb, var(--lc-community-deep) 28%, transparent) !important;
+}
+
+.lc-community-card:hover img {
+  transform: scale(1.045);
+  filter: drop-shadow(0 18px 15px rgba(24, 24, 24, .28));
+}
+
+.lc-community-product-label {
+  position: absolute;
+  z-index: 2;
+  left: 14px;
+  bottom: 14px;
+  max-width: calc(100% - 28px);
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, .32);
+  border-radius: 999px;
+  background: var(--lc-community-deep);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .14);
+  color: var(--lc-community-ink);
+  font: 700 11px/1 Inter, Arial, sans-serif;
+  letter-spacing: .08em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 809px) {
+  .lc-community-card:hover {
+    transform: none !important;
+  }
+
+  .lc-community-product-label {
+    left: 10px;
+    bottom: 10px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+}

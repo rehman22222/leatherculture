@@ -67,12 +67,19 @@
   // The Framer community strip used stock people/fashion photography. These are
   // the asset IDs in that strip, replaced at runtime with the live jacket
   // catalogue so every visible item belongs to LeatherCulture.
-  const communityImageAssetIds = new Set([
+  const communityImageAssetIds = [
     "3BJsJKp6d3GMb73lMFLvun3bVxE", "Q2qaxWvHcpcMDMRF6r6oA7jcK9Q",
     "jz6J8tN19rBotBJ08ib9LED2s8", "U7CtuDK0AXUNTwGdENumrlmdyk",
     "PhQ0ou5z6Mj6gzpcsLLi5rS6E0", "ftObEL64RY81LvY92K11dTejqZ4",
     "IEB9QLOzy0qlnSdGfn5jQsBFFVo"
-  ]);
+  ];
+  const communityPalette = {
+    "the-blade": { tint: "#dce4e9", deep: "#24303a", ink: "#f7fafc" },
+    "the-heritage": { tint: "#f0ded0", deep: "#714936", ink: "#fff9f5" },
+    "the-vibe": { tint: "#dbe5ed", deep: "#344b5e", ink: "#f9fcff" },
+    "the-nomad": { tint: "#dde3d0", deep: "#53613e", ink: "#fbfdf8" },
+    "the-rune": { tint: "#e2e0e3", deep: "#39333e", ink: "#fffaff" }
+  };
   // Alt text for the template's own images, keyed by Framer asset id. Framer's client render drops the
   // alt text of these images, and some template alts were misspelt. The build applies the same map.
   const imageAlts = {
@@ -725,15 +732,32 @@
     const products = (settings?.products || []).filter((product) => product.enabled !== false && product.image);
     if (!products.length) return;
 
-    const images = Array.from(document.querySelectorAll("img")).filter((img) => communityImageAssetIds.has(assetId(img.getAttribute("src") || "")));
-    images.forEach((img, index) => {
-      const product = products[index % products.length];
+    const images = Array.from(document.querySelectorAll("img")).filter((img) => communityImageAssetIds.includes(assetId(img.getAttribute("src") || "")));
+    images.forEach((img) => {
+      const originalAsset = assetId(img.getAttribute("src") || "");
+      const product = products[communityImageAssetIds.indexOf(originalAsset) % products.length];
       const image = mediaUrl(cardImage(product.image));
       img.setAttribute("src", image);
       img.removeAttribute("srcset");
       img.setAttribute("alt", product.alt || product.name);
       const link = img.closest("a");
       if (link) link.setAttribute("href", `/shop/${product.slug}`);
+
+      const card = img.closest(".framer-6vfeu1") || img.parentElement?.parentElement;
+      if (!card) return;
+      const palette = communityPalette[product.slug] || communityPalette["the-blade"];
+      card.classList.add("lc-community-card");
+      card.dataset.lcCommunityProduct = product.slug;
+      card.style.setProperty("--lc-community-tint", palette.tint);
+      card.style.setProperty("--lc-community-deep", palette.deep);
+      card.style.setProperty("--lc-community-ink", palette.ink);
+      let label = card.querySelector(":scope > .lc-community-product-label");
+      if (!label) {
+        label = document.createElement("span");
+        label.className = "lc-community-product-label";
+        card.appendChild(label);
+      }
+      label.textContent = product.name.replace(/^The\s+/i, "");
     });
   }
 
