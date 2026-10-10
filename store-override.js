@@ -64,15 +64,14 @@
     "man-having-tatto-on-neck.png",
     "shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png",
   ];
-  // The Framer community strip is a stock-image carousel. It is replaced with
-  // a stable product deck once the live catalogue has loaded.
-  const communityPalette = {
-    "the-blade": { tint: "#dce4e9", deep: "#24303a", ink: "#f7fafc" },
-    "the-heritage": { tint: "#f0ded0", deep: "#714936", ink: "#fff9f5" },
-    "the-vibe": { tint: "#dbe5ed", deep: "#344b5e", ink: "#f9fcff" },
-    "the-nomad": { tint: "#dde3d0", deep: "#53613e", ink: "#fbfdf8" },
-    "the-rune": { tint: "#e2e0e3", deep: "#39333e", ink: "#fffaff" }
-  };
+  // Keep Framer's original moving carousel and simply swap its stock images
+  // for the live LeatherCulture jacket catalogue.
+  const communityImageAssetIds = new Set([
+    "3BJsJKp6d3GMb73lMFLvun3bVxE", "Q2qaxWvHcpcMDMRF6r6oA7jcK9Q",
+    "jz6J8tN19rBotBJ08ib9LED2s8", "U7CtuDK0AXUNTwGdENumrlmdyk",
+    "PhQ0ou5z6Mj6gzpcsLLi5rS6E0", "ftObEL64RY81LvY92K11dTejqZ4",
+    "IEB9QLOzy0qlnSdGfn5jQsBFFVo"
+  ]);
   // Alt text for the template's own images, keyed by Framer asset id. Framer's client render drops the
   // alt text of these images, and some template alts were misspelt. The build applies the same map.
   const imageAlts = {
@@ -701,7 +700,7 @@
     }
 
     setHeroGalleryImages(heroImages);
-    renderCommunityProductShowcase();
+    setCommunityProductImages();
 
     const mediaItems = [
       ...heroImages.map((item) => ({ image: item.image, alt: item.alt || item.label })),
@@ -721,28 +720,19 @@
     });
   }
 
-  function renderCommunityProductShowcase() {
-    if (location.pathname !== "/") return;
+  function setCommunityProductImages() {
     const products = (settings?.products || []).filter((product) => product.enabled !== false && product.image);
     if (!products.length) return;
-    if (document.querySelector("#lc-jacket-showcase")) return;
-    const stockCarousel = document.querySelector(".framer-1f7xg3z");
-    if (!stockCarousel) return;
 
-    const showcase = document.createElement("section");
-    showcase.id = "lc-jacket-showcase";
-    showcase.className = "lc-jacket-showcase";
-    showcase.setAttribute("aria-label", "LeatherCulture jacket collection");
-    showcase.innerHTML = products.map((product) => {
-      const palette = communityPalette[product.slug] || communityPalette["the-blade"];
-      const colour = String(product.variants?.find((variant) => variant.enabled !== false)?.name || "").split("/")[0].trim();
-      return `<a class="lc-jacket-tile" href="/shop/${product.slug}" style="--lc-community-tint:${palette.tint};--lc-community-deep:${palette.deep};--lc-community-ink:${palette.ink}" aria-label="View ${product.name}">
-        <span class="lc-jacket-tile-glow" aria-hidden="true"></span>
-        <img src="${mediaUrl(cardImage(product.image))}" alt="${product.alt || product.name}" width="400" height="500" loading="lazy" decoding="async">
-        <span class="lc-jacket-tile-info"><b>${product.name.replace(/^The\s+/i, "")}</b>${colour ? `<small>${colour}</small>` : ""}</span>
-      </a>`;
-    }).join("");
-    stockCarousel.replaceWith(showcase);
+    const images = Array.from(document.querySelectorAll("img")).filter((img) => communityImageAssetIds.has(assetId(img.getAttribute("src") || "")));
+    images.forEach((img, index) => {
+      const product = products[index % products.length];
+      img.setAttribute("src", mediaUrl(cardImage(product.image)));
+      img.removeAttribute("srcset");
+      img.setAttribute("alt", product.alt || product.name);
+      const link = img.closest("a");
+      if (link) link.setAttribute("href", `/shop/${product.slug}`);
+    });
   }
 
   function setHeroGalleryImages(heroImages) {
