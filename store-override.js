@@ -64,6 +64,15 @@
     "man-having-tatto-on-neck.png",
     "shot-of-the-person-s-legs-wearing-the-brownish-pai-1.png",
   ];
+  // The Framer community strip used stock people/fashion photography. These are
+  // the asset IDs in that strip, replaced at runtime with the live jacket
+  // catalogue so every visible item belongs to LeatherCulture.
+  const communityImageAssetIds = new Set([
+    "3BJsJKp6d3GMb73lMFLvun3bVxE", "Q2qaxWvHcpcMDMRF6r6oA7jcK9Q",
+    "jz6J8tN19rBotBJ08ib9LED2s8", "U7CtuDK0AXUNTwGdENumrlmdyk",
+    "PhQ0ou5z6Mj6gzpcsLLi5rS6E0", "ftObEL64RY81LvY92K11dTejqZ4",
+    "IEB9QLOzy0qlnSdGfn5jQsBFFVo"
+  ]);
   // Alt text for the template's own images, keyed by Framer asset id. Framer's client render drops the
   // alt text of these images, and some template alts were misspelt. The build applies the same map.
   const imageAlts = {
@@ -692,6 +701,7 @@
     }
 
     setHeroGalleryImages(heroImages);
+    setCommunityProductImages();
 
     const mediaItems = [
       ...heroImages.map((item) => ({ image: item.image, alt: item.alt || item.label })),
@@ -708,6 +718,22 @@
       images.forEach(([img, src]) => {
         if (src.includes(file)) img.setAttribute("alt", item.alt);
       });
+    });
+  }
+
+  function setCommunityProductImages() {
+    const products = (settings?.products || []).filter((product) => product.enabled !== false && product.image);
+    if (!products.length) return;
+
+    const images = Array.from(document.querySelectorAll("img")).filter((img) => communityImageAssetIds.has(assetId(img.getAttribute("src") || "")));
+    images.forEach((img, index) => {
+      const product = products[index % products.length];
+      const image = mediaUrl(cardImage(product.image));
+      img.setAttribute("src", image);
+      img.removeAttribute("srcset");
+      img.setAttribute("alt", product.alt || product.name);
+      const link = img.closest("a");
+      if (link) link.setAttribute("href", `/shop/${product.slug}`);
     });
   }
 
