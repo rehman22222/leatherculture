@@ -10,6 +10,7 @@ const { renderBlogPost } = require("./lib/blog-renderer");
 const { renderPolicyPage, policyPaths } = require("./lib/policy-pages");
 const { siteUrl: canonicalSite } = require("./lib/seo");
 const { createCustomerAccounts } = require("./lib/customers");
+const jacketCollection = require("./lib/jacket-collection");
 const { URL } = require("url");
 const zlib = require("zlib");
 
@@ -1133,6 +1134,11 @@ const defaultSettings = {
   ]
 };
 
+// The live collection is intentionally limited to the five owner-approved
+// jacket designs. Keeping this assignment next to the defaults also makes a
+// new database start with the same catalogue as the deployed store.
+defaultSettings.products = jacketCollection;
+
 function mergeDefaults(source, defaults) {
   if (Array.isArray(defaults)) return Array.isArray(source) ? source : defaults;
   if (!defaults || typeof defaults !== "object") return source ?? defaults;
@@ -1975,14 +1981,19 @@ async function requestHandler(req, res) {
 
     if (url.pathname.startsWith("/shop/") && req.method === "GET") {
       const slug = url.pathname.split("/").filter(Boolean)[1];
-      const staticPage = path.join(root, "shop", slug || "", "index.html");
-      if (!fs.existsSync(staticPage)) await ensureDbReady();
-      const product = !fs.existsSync(staticPage) && await collections.products.findOne({ slug, enabled: { $ne: false } });
+      if (!slug) return;
+      await ensureDbReady();
+      const product = await collections.products.findOne({ slug, enabled: { $ne: false } });
       if (product) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
         res.end(renderProductPage(publicRecord(product), await readSettings(), req));
         return;
       }
+      // Retired source templates must never make an unavailable product page
+      // visible again on the backend host.
+      res.writeHead(302, { location: "/shop" });
+      res.end();
+      return;
     }
 
     if (url.pathname === "/api/admin/login" && req.method === "POST") {

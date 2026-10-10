@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "build": "node scripts/build-blog.js",
-    "verify:seo": "node scripts/verify-seo.js"
+    "verify:seo": "node scripts/verify-seo.js",
+    "catalog:five-jackets": "node scripts/keep-five-jackets.js"
   },
   "engines": {
     "node": "22.x"

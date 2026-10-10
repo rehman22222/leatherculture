@@ -319,6 +319,16 @@ async function buildStorefront(settings, posts, site) {
   const imageAlts = JSON.parse(source.match(/const imageAlts = (\{[\s\S]*?\n  \});/)[1].replace(/,\s*}/g, "}"));
   const publicDirectories = ["assets", "about", "account", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
   for (const name of publicDirectories) await fs.cp(path.join(root, name), path.join(output, name), { recursive: true });
+  // The source tree contains retired Framer product templates. Do not copy them
+  // into a deployment after they have been removed from the live catalogue.
+  const activeSlugs = new Set((settings.products || []).filter(p => p.enabled !== false).map(p => p.slug));
+  const shopOutput = path.join(output, "shop");
+  for (const entry of await fs.readdir(shopOutput, { withFileTypes: true })) {
+    if (!entry.isDirectory() || activeSlugs.has(entry.name)) continue;
+    const retiredTemplate = path.resolve(shopOutput, entry.name);
+    if (path.dirname(retiredTemplate) !== shopOutput) throw new Error("Invalid product template path");
+    await fs.rm(retiredTemplate, { recursive: true, force: true });
+  }
   // New products without a restored template use the backend's product renderer.
   for (const product of (settings.products || []).filter(p => p.enabled !== false)) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product.slug)) throw new Error(`Invalid product slug: ${product.slug}`);
