@@ -14,6 +14,17 @@ const escape = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": 
 const publicPhone = value => /234\s*567|123456789|3XX|XXXXX/i.test(value || "") ? "" : String(value || "").trim();
 const fallbackPolicy = "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
 
+// Product pages are generated only for enabled products. Old Framer content and older journal
+// articles can retain a product URL after an item is retired; send those visitors to the live shop.
+function repairRetiredProductLinks($, settings) {
+  const activeSlugs = new Set((settings.products || []).filter(product => product.enabled !== false).map(product => product.slug));
+  $("a[href]").each((_, element) => {
+    const link = $(element);
+    const match = /(?:^|\/)shop\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:[/?#]|$)/i.exec(link.attr("href") || "");
+    if (match && !activeSlugs.has(match[1])) link.attr("href", "/shop").removeAttr("data-lc-template-slug");
+  });
+}
+
 const assetId = src => (/\/assets\/cdn\/images\/([A-Za-z0-9]+)-[0-9a-f]{8}\./.exec(src || "") || [])[1] || "";
 const priceValue = value => { const match = String(value || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/); return match ? Number(match[0]) : 0; };
 // The homepage collection cards and the products each one covers. The store repurposed the template's
@@ -84,6 +95,9 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     const item = settings.products?.find(item => item.enabled !== false && (item.slug === slug || item.id === slug || `/shop/${item.slug}` === destination));
     if (!item) {
       if (node.attr("data-lc-template-slug") && !node.attr("href")?.includes("/blog") && node.find("img").length) node.remove();
+      // Retired Framer cards can still be present in the source HTML. Keep the card's
+      // collection intent, but never publish a link to a product page that no longer exists.
+      else if ((node.attr("href") || "").includes("/shop/")) node.attr("href", "/shop").removeAttr("data-lc-template-slug");
       return;
     }
     node.attr("href", `/shop/${item.slug}`);
@@ -225,6 +239,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   });
   const email = escape(settings.footer?.email || "info@leatherculture.shop");
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px/1.8 Arial,sans-serif">Customer enquiries: <a href="mailto:${email}">${email}</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a> · ${legalLinks.map(link => `<a href="${link.href}">${escape(link.label)}</a>`).join(" · ")}</div>`);
+  repairRetiredProductLinks($, settings);
   // Every image needs alt text: curated text for the template's assets, else the label of its link.
   $("img").each((_, element) => {
     const img = $(element), curated = imageAlts[assetId(img.attr("src"))];
@@ -357,6 +372,14 @@ async function buildStorefront(settings, posts, site) {
   }
   const assets = new Map();
   await transform(output);
+  // Blog snapshots are generated just before this build and intentionally skip the Framer page
+  // materializer. They still receive the same retired-product link protection.
+  for (const post of posts) {
+    const file = path.join(output, "blog", post.slug, "index.html");
+    const blog = cheerio.load(await fs.readFile(file, "utf8"));
+    repairRetiredProductLinks(blog, settings);
+    await fs.writeFile(file, blog.html());
+  }
   for (const [file, css] of assets) {
     await fs.mkdir(path.join(output, path.dirname(file)), { recursive: true });
     await fs.writeFile(path.join(output, file), css);
@@ -369,7 +392,21 @@ async function buildStorefront(settings, posts, site) {
   const pages = ["/", "/about", "/shop", "/blog", "/contact"];
   // lastmod only where the date is known: journal posts and the policies.
   const entries = [...pages.map(p => [p]), ...products.map(p => [`/shop/${p.slug}`]), ...posts.map(p => [`/blog/${p.slug}`, p.dateModified || p.date]), ...Object.values(policyPaths).map(p => [p, POLICY_UPDATED])];
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map(([p, date]) => `  <url><loc>${escape(new URL(p, site).href)}</loc>${/^\d{4}-\d{2}-\d{2}$/.test(date || "") ? `<lastmod>${date}</lastmod>` : ""}</url>`).join("\n")}\n</urlset>\n`;
+  const seen = new Set();
+  const uniqueEntries = entries.filter(([pathname]) => !seen.has(pathname) && seen.add(pathname));
+  // A sitemap URL must always resolve to a generated HTML page. Fail the deployment rather than
+  // publishing a dead URL if a future product, article or page build changes unexpectedly.
+  for (const [pathname] of uniqueEntries) {
+    if (!/^\/(?:[a-z0-9-]+\/)*[a-z0-9-]*$/i.test(pathname)) throw new Error(`Invalid sitemap path: ${pathname}`);
+    const pageFile = pathname === "/"
+      ? path.resolve(output, "index.html")
+      : path.resolve(output, pathname.slice(1), "index.html");
+    if (path.relative(output, pageFile).startsWith("..") || !await fs.stat(pageFile).then(stat => stat.isFile()).catch(() => false)) {
+      throw new Error(`Sitemap path does not have a generated page: ${pathname}`);
+    }
+  }
+  const entriesForSitemap = uniqueEntries;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entriesForSitemap.map(([p, date]) => `  <url><loc>${escape(new URL(p, site).href)}</loc>${/^\d{4}-\d{2}-\d{2}$/.test(date || "") ? `<lastmod>${date}</lastmod>` : ""}</url>`).join("\n")}\n</urlset>\n`;
   await fs.writeFile(path.join(output, "sitemap.xml"), xml);
   const brief = llmsText(settings, products, posts, site);
   await fs.writeFile(path.join(output, "llms.txt"), brief);

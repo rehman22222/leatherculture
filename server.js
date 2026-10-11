@@ -1627,14 +1627,26 @@ async function sitemap(req) {
     publicRecords("products", { enabled: { $ne: false } }),
     publicRecords("blogs", { status: "published" })
   ]);
-  const pageUrls = (settings.pages || []).filter((page) => page.enabled !== false).map((page) => page.canonicalPath || page.path || "/");
-  const productUrls = products.map((product) => `/shop/${product.slug}`);
-  const blogUrls = blogs.map((blog) => `/blog/${blog.slug}`);
-  const urls = [...new Set([...pageUrls, ...productUrls, ...blogUrls, ...Object.values(policyPaths)])];
+  // Only list routes that this application actually serves. Admin page settings can contain
+  // drafts or legacy paths, neither of which belongs in a public sitemap.
+  const publicPages = ["/", "/about", "/shop", "/blog", "/contact"];
+  const validSlug = value => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(value || ""));
+  const date = value => {
+    const parsed = new Date(value || "");
+    return Number.isNaN(parsed.valueOf()) ? "" : parsed.toISOString().slice(0, 10);
+  };
+  const entries = [
+    ...publicPages.map(pathname => [pathname]),
+    ...products.filter(product => validSlug(product.slug)).map(product => [`/shop/${product.slug}`, date(product.updatedAt || product.createdAt)]),
+    ...blogs.filter(blog => validSlug(blog.slug)).map(blog => [`/blog/${blog.slug}`, date(blog.dateModified || blog.date || blog.updatedAt || blog.createdAt)]),
+    ...Object.values(policyPaths).map(pathname => [pathname])
+  ];
+  const seen = new Set();
+  const urls = entries.filter(([pathname]) => !seen.has(pathname) && seen.add(pathname));
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((url) => `  <url><loc>${escapeHtml(canonicalUrl(url))}</loc></url>`).join("\n")}
+${urls.map(([pathname, lastmod]) => `  <url><loc>${escapeHtml(canonicalUrl(pathname))}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}</url>`).join("\n")}
 </urlset>`;
 }
 
@@ -1923,7 +1935,7 @@ async function requestHandler(req, res) {
       // The backend hostname only answers with redirects, the admin and the API; the storefront's own
       // robots.txt and sitemap live on the public site.
       if (redirectForeignHosts && isForeignHost(req)) return res.end("User-agent: *\nDisallow: /api/\nDisallow: /admin\n");
-      res.end(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: ${canonicalUrl("/sitemap.xml")}\n`);
+      res.end(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /account/\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /review/\n\nSitemap: ${canonicalUrl("/sitemap.xml")}\n`);
       return;
     }
 
@@ -2237,7 +2249,7 @@ async function requestHandler(req, res) {
         "referrer-policy": "strict-origin-when-cross-origin",
         "cache-control": cacheable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
         vary: "accept-encoding",
-        ...(url.pathname.startsWith("/admin") ? { "x-robots-tag": "noindex, nofollow" } : {})
+        ...(/^\/(?:admin|account|cart|checkout|order|review)(?:\/|$)/.test(url.pathname) ? { "x-robots-tag": "noindex, nofollow" } : {})
       };
       const compressible = /^(text\/|application\/(json|javascript|xml)|image\/svg)/.test(headers["content-type"]) || ext === ".framercms";
       const accepts = String(req.headers["accept-encoding"] || "").split(",").map((value) => value.trim().split(";")[0]);
@@ -2257,7 +2269,7 @@ async function requestHandler(req, res) {
       } catch (missing) {
         /* fall back to plain text */
       }
-      res.writeHead(404, { "content-type": "text/html; charset=utf-8" });
+      res.writeHead(404, { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex, follow" });
       res.end(body);
     }
   } catch (error) {

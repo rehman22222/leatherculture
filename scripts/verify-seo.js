@@ -9,6 +9,23 @@ const typesOf = node => [].concat(node["@type"] || []);
 const output = path.join(__dirname, "..", "dist");
 const xml = fs.readFileSync(path.join(output, "sitemap.xml"), "utf8");
 const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(match => new URL(match[1]));
+const siteOrigin = "https://www.leatherculture.shop";
+const outputFileFor = pathname => pathname === "/"
+  ? path.join(output, "index.html")
+  : path.join(output, pathname.replace(/^\//, ""), "index.html");
+assert(urls.length > 0, "sitemap.xml has no URLs");
+assert.equal(new Set(urls.map(url => url.href)).size, urls.length, "sitemap.xml has duplicate URLs");
+for (const url of urls) {
+  assert.equal(url.origin, siteOrigin, `sitemap.xml: non-canonical origin ${url.href}`);
+  assert.equal(url.search, "", `sitemap.xml: query URL ${url.href}`);
+  assert.equal(url.hash, "", `sitemap.xml: fragment URL ${url.href}`);
+  assert(fs.existsSync(outputFileFor(url.pathname)), `sitemap.xml: dead URL ${url.pathname}`);
+}
+const robots = fs.readFileSync(path.join(output, "robots.txt"), "utf8");
+assert(robots.includes(`Sitemap: ${siteOrigin}/sitemap.xml`), "robots.txt: canonical sitemap missing");
+for (const pathname of ["/admin/", "/api/", "/account/", "/cart/", "/checkout/", "/order/", "/review/"]) {
+  assert(robots.includes(`Disallow: ${pathname}`), `robots.txt: ${pathname} must be excluded`);
+}
 for (const url of urls) {
   const html = fs.readFileSync(path.join(output, url.pathname, "index.html"), "utf8");
   const $ = cheerio.load(html);
@@ -49,6 +66,13 @@ for (const url of urls) {
   assert(!/test@gmail|London, England|England, London|234 567|thirty days|USD\s*\$|\$\d[\d,.]*/.test(text), url.pathname);
   assert.equal($("h1").length, 1, url.pathname);
   assert.equal($("link[rel='canonical']").attr("href"), url.href);
+  $("a[href]").each((_, anchor) => {
+    const href = String($(anchor).attr("href") || "").trim();
+    if (!href || href.startsWith("#") || /^(?:mailto:|tel:|javascript:|data:)/i.test(href)) return;
+    const target = new URL(href, url.href);
+    if (target.origin !== siteOrigin) return;
+    if (!path.extname(target.pathname)) assert(fs.existsSync(outputFileFor(target.pathname)), `${url.pathname}: dead internal link ${href}`);
+  });
   if (url.pathname.startsWith("/shop/")) {
     const product = productData || settings.products.find(product => url.pathname === `/shop/${product.slug}`);
     if (!$(".product-page").length) assert(text.includes("Quality checked"), url.pathname);
