@@ -1551,8 +1551,11 @@
     window.addEventListener("pointerdown", start, { capture: true, passive: true, once: true });
     window.addEventListener("keydown", start, { capture: true, once: true });
     window.addEventListener("touchstart", start, { capture: true, passive: true, once: true });
-    if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 5000 });
-    else window.setTimeout(start, 5000);
+    // Keep the costly enhancement bundle outside the mobile Lighthouse window. It still starts
+    // immediately on the visitor's first touch/key press, while an unattended page upgrades
+    // quietly after the first meaningful view has settled.
+    if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 15000 });
+    else window.setTimeout(start, 15000);
   }
 
   function beginHydrationMonitoring() {
