@@ -66,7 +66,10 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   replacements.set("Trusted Quality", "Quality checked");
   replacements.set("Secure Payments", "Cash on delivery");
   replacements.set("Shop confidently with our secure, encrypted checkout.", settings.checkout?.codNote || "Pay in cash when your order arrives.");
-  if (pathname === "/") replacements.set("Premium wear for modern living", "Premium Leather Jackets Made in Pakistan");
+  // Keep the SSR hero copy identical to the settings snapshot that hydrates later.
+  // A different build-time title makes the above-the-fold heading re-wrap once Framer
+  // takes over, which is a guaranteed mobile layout shift.
+  if (pathname === "/") replacements.set("Premium wear for modern living", settings.hero?.title || "Premium Leather Jackets Made in Pakistan");
   $("p,h1,h2,h3,h4,h5,h6,span").each((_, element) => {
     const node = $(element);
     if (node.find("p,h1,h2,h3,h4,h5,h6").length) return;
@@ -305,18 +308,21 @@ function frontLoad($, settings, assets, pathname) {
   }
   // Native lazy loading must be in the HTML sent to the browser (not added after JavaScript runs),
   // otherwise responsive Framer variants below the fold all begin downloading during first paint.
-  // The home hero is the only image deliberately kept eager and high priority.
-  let homeHeroAssigned = false;
+  // Framer renders desktop, phone and carousel copies of the same homepage hero. On the mobile
+  // route we keep exactly the visible phone hero eager/high; the responsive preload and this img
+  // select the same rendition. Every hidden/animated copy stays lazy so it cannot steal bandwidth.
   $("img").each((_, element) => {
     const image = $(element);
     const src = image.attr("src") || "";
-    const isHomeHero = pathname === "/" && !homeHeroAssigned && src.includes("g813yVl0fq2gEobS7kOZx537SY");
+    const isHomeHero = pathname === "/" && src.includes("g813yVl0fq2gEobS7kOZx537SY");
+    const isPhoneHero = isHomeHero
+      && image.parents(".ssr-variant.hidden-a8katl.hidden-72rtr7").length > 0
+      && image.parents("[data-framer-name='Hero Carousel']").length === 0;
     image.attr("decoding", "async");
-    if (isHomeHero) {
-      homeHeroAssigned = true;
+    if (isPhoneHero) {
       image.attr("fetchpriority", "high").attr("loading", "eager");
-    } else if (src.includes("/assets/brand/")) {
-      image.attr("loading", "eager");
+    } else if (isHomeHero) {
+      image.removeAttr("fetchpriority").attr("loading", "lazy");
     } else if (image.attr("fetchpriority") !== "high") {
       image.attr("loading", "lazy");
     }

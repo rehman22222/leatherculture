@@ -156,6 +156,7 @@
   try { settings = JSON.parse(document.getElementById("lc-build-settings")?.textContent || "null"); } catch (_) { /* legacy pages use the API */ }
   let previousSettings = null;
   const apiBase = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
+  const isHomePage = location.pathname === "/" || location.pathname === "/index.html";
   const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobileViewport = window.matchMedia && window.matchMedia("(max-width: 809px)").matches;
 
@@ -728,6 +729,9 @@
     const images = Array.from(document.querySelectorAll("img")).filter((img) => communityImageAssetIds.has(assetId(img.getAttribute("src") || "")));
     images.forEach((img, index) => {
       const product = products[index % products.length];
+      // Used by the performance scheduler: the real carousel can hydrate when a visitor
+      // reaches it instead of making the hero compete with Framer's whole runtime.
+      img.dataset.lcCommunityCarousel = "true";
       img.setAttribute("src", mediaUrl(cardImage(product.image)));
       img.removeAttribute("srcset");
       img.setAttribute("alt", product.alt || product.name);
@@ -1531,30 +1535,98 @@
     beginHydrationMonitoring();
   }
 
-  // The page is fully usable as static HTML. Hydrating Framer before LCP makes a phone compete
-  // with a large JS task for its first paint, so load it when the browser is idle or the visitor
-  // begins interacting. This keeps menus, galleries and other enhanced controls available without
-  // charging every visitor that work during the critical rendering path.
+  // The page is fully usable as static HTML. Framer's React/Motion bundle is intentionally not
+  // loaded during an unattended homepage visit: requestIdleCallback is allowed to run immediately,
+  // which previously made its multi-second hydration compete with LCP unpredictably.
   let runtimeScheduled = false;
   let hydrationRefreshes = 0;
   let hydrationRefreshQueued = false;
   let hydrationObserver = null;
+  let settingsRefreshScheduled = false;
+
+  function eventElement(event) {
+    const target = event && event.target;
+    return target instanceof Element ? target : target && target.parentElement;
+  }
+
+  function isMobileMenuEvent(event) {
+    return Boolean(eventElement(event)?.closest("nav[data-framer-name='Mobile'] [data-framer-name='Menu']"));
+  }
+
+  function setupNativeMobileMenu() {
+    document.querySelectorAll("nav[data-framer-name='Mobile']").forEach((nav) => {
+      const trigger = nav.querySelector("[data-framer-name='Menu']");
+      const panel = nav.querySelector(".framer-yf8xve");
+      if (!trigger || !panel || trigger.dataset.lcNativeMenuBound) return;
+      trigger.dataset.lcNativeMenuBound = "true";
+      trigger.setAttribute("role", "button");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.setAttribute("aria-controls", "lc-mobile-navigation");
+      panel.id = panel.id || "lc-mobile-navigation";
+
+      const setOpen = (open) => {
+        nav.classList.toggle("framer-v-174by37", !open);
+        nav.classList.toggle("framer-v-1q6h91f", open);
+        panel.style.opacity = open ? "1" : "0";
+        panel.style.pointerEvents = open ? "auto" : "none";
+        trigger.setAttribute("aria-expanded", String(open));
+      };
+      const toggle = (event) => {
+        if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(trigger.getAttribute("aria-expanded") !== "true");
+      };
+      trigger.addEventListener("click", toggle);
+      trigger.addEventListener("keydown", toggle);
+      panel.addEventListener("click", (event) => {
+        if (eventElement(event)?.closest("a[href]")) setOpen(false);
+      });
+      setOpen(false);
+    });
+  }
+
+  function scheduleSettingsRefresh() {
+    if (settingsRefreshScheduled) return;
+    settingsRefreshScheduled = true;
+    // Static build settings already make the homepage correct. Only ask the API for newer admin
+    // content after a real interaction, when any visual update is no longer part of the load CLS.
+    window.setTimeout(loadSettings, 1500);
+  }
+
+  function observeHomepageCarousel(start) {
+    if (!isHomePage || !("IntersectionObserver" in window)) return;
+    const carouselImage = document.querySelector("img[data-lc-community-carousel]");
+    const target = carouselImage?.closest("section") || carouselImage?.parentElement;
+    if (!target || target.dataset.lcRuntimeObserved) return;
+    target.dataset.lcRuntimeObserved = "true";
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      start();
+    }, { rootMargin: "320px 0px", threshold: 0.01 });
+    observer.observe(target);
+  }
+
   function scheduleFramerRuntime() {
     if (runtimeScheduled) return;
     runtimeScheduled = true;
-    const start = () => {
+    const start = (event) => {
+      // The lightweight menu fallback below handles the first menu press itself. Loading Framer
+      // here would swallow that press and make the menu feel broken on a slow phone.
+      if (isMobileMenuEvent(event)) return;
       window.removeEventListener("pointerdown", start, true);
       window.removeEventListener("keydown", start, true);
       window.removeEventListener("touchstart", start, true);
       startFramerRuntime();
+      scheduleSettingsRefresh();
     };
-    window.addEventListener("pointerdown", start, { capture: true, passive: true, once: true });
-    window.addEventListener("keydown", start, { capture: true, once: true });
-    window.addEventListener("touchstart", start, { capture: true, passive: true, once: true });
-    // Keep the costly enhancement bundle outside the mobile Lighthouse window. It still starts
-    // immediately on the visitor's first touch/key press, while an unattended page upgrades
-    // quietly after the first meaningful view has settled.
-    if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 15000 });
+    // Do not use once:true: a menu press is intentionally handled by the native fallback and
+    // must not consume the listener that will upgrade the page on the visitor's next action.
+    window.addEventListener("pointerdown", start, { capture: true, passive: true });
+    window.addEventListener("keydown", start, { capture: true });
+    window.addEventListener("touchstart", start, { capture: true, passive: true });
+    if (isHomePage) observeHomepageCarousel(start);
     else window.setTimeout(start, 15000);
   }
 
@@ -1579,17 +1651,13 @@
     optimizeMedia();
     setLogoBrand();
     ensureAccountNavigation();
+    setupNativeMobileMenu();
     apply();
     scheduleHeaderContrast();
   });
   window.addEventListener("load", () => {
     pageLoaded = true;
-    apply();
     scheduleFramerRuntime();
-    // Fresh settings are useful, but the deployed page already carries a settings snapshot.
-    // Fetching them after the critical path prevents a slow API response from delaying LCP.
-    if ("requestIdleCallback" in window) window.requestIdleCallback(loadSettings, { timeout: 6000 });
-    else window.setTimeout(loadSettings, 6000);
   });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
   window.addEventListener("resize", scheduleHeaderContrast);
