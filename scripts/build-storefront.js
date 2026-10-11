@@ -251,7 +251,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   });
   if (["/", "/shop", "/contact"].includes(pathname)) $(".lc-answers .lc-lede").first().after(factsTable(settings));
   addCareHowTo($);
-  frontLoad($, settings, assets);
+  frontLoad($, settings, assets, pathname);
   return $.html();
 }
 
@@ -290,7 +290,7 @@ function addCareHowTo($) {
 // structured data goes right after the title, Framer's 200 KB stylesheet becomes a cached file,
 // the answers section leads the body (CSS keeps it below the page content and store-override.js
 // moves it above the footer), and the settings blob goes to the end, next to the script that reads it.
-function frontLoad($, settings, assets) {
+function frontLoad($, settings, assets, pathname) {
   const title = $("head > title").first();
   const jsonLd = $("script[type='application/ld+json']");
   if (title.length) title.after(jsonLd);
@@ -303,6 +303,24 @@ function frontLoad($, settings, assets) {
     // Framer's runtime only reads data-framer-components from this tag, to skip CSS that is already present.
     ssr.text("");
   }
+  // Native lazy loading must be in the HTML sent to the browser (not added after JavaScript runs),
+  // otherwise responsive Framer variants below the fold all begin downloading during first paint.
+  // The home hero is the only image deliberately kept eager and high priority.
+  let homeHeroAssigned = false;
+  $("img").each((_, element) => {
+    const image = $(element);
+    const src = image.attr("src") || "";
+    const isHomeHero = pathname === "/" && !homeHeroAssigned && src.includes("g813yVl0fq2gEobS7kOZx537SY");
+    image.attr("decoding", "async");
+    if (isHomeHero) {
+      homeHeroAssigned = true;
+      image.attr("fetchpriority", "high").attr("loading", "eager");
+    } else if (src.includes("/assets/brand/")) {
+      image.attr("loading", "eager");
+    } else if (image.attr("fetchpriority") !== "high") {
+      image.attr("loading", "lazy");
+    }
+  });
   const answers = $("body > .lc-answers").first();
   if (answers.length && $("body > #main").length) {
     $("body").prepend(answers);

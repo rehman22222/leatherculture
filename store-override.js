@@ -239,13 +239,14 @@
   });
 
   function optimizeMedia() {
-    const fold = window.innerHeight * 1.25;
     document.querySelectorAll("img").forEach((image) => {
       image.decoding = "async";
       if (image.dataset.lcMediaOptimized || image.getAttribute("fetchpriority") === "high") return;
-      const rect = image.getBoundingClientRect();
-      const aboveFold = rect.width > 0 && rect.top + window.scrollY < fold;
-      if (!aboveFold) image.loading = "lazy";
+      // Reading each image's layout during Framer hydration caused repeated forced reflows.
+      // Build output already marks the LCP image high priority, so every other visual can safely
+      // wait for the browser's native lazy-loader without measuring its position in JavaScript.
+      const isHeaderImage = Boolean(image.closest("header, .framer-149q19i-container"));
+      if (!isHeaderImage) image.loading = "lazy";
       image.dataset.lcMediaOptimized = "true";
     });
 
@@ -1527,25 +1528,66 @@
     script.setAttribute("data-framer-bundle", "main");
     script.src = holder.dataset.lcFramerMain;
     document.body.appendChild(script);
+    beginHydrationMonitoring();
+  }
+
+  // The page is fully usable as static HTML. Hydrating Framer before LCP makes a phone compete
+  // with a large JS task for its first paint, so load it when the browser is idle or the visitor
+  // begins interacting. This keeps menus, galleries and other enhanced controls available without
+  // charging every visitor that work during the critical rendering path.
+  let runtimeScheduled = false;
+  let hydrationRefreshes = 0;
+  let hydrationRefreshQueued = false;
+  let hydrationObserver = null;
+  function scheduleFramerRuntime() {
+    if (runtimeScheduled) return;
+    runtimeScheduled = true;
+    const start = () => {
+      window.removeEventListener("pointerdown", start, true);
+      window.removeEventListener("keydown", start, true);
+      window.removeEventListener("touchstart", start, true);
+      startFramerRuntime();
+    };
+    window.addEventListener("pointerdown", start, { capture: true, passive: true, once: true });
+    window.addEventListener("keydown", start, { capture: true, once: true });
+    window.addEventListener("touchstart", start, { capture: true, passive: true, once: true });
+    if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 5000 });
+    else window.setTimeout(start, 5000);
+  }
+
+  function beginHydrationMonitoring() {
+    if (hydrationObserver || !document.body) return;
+    hydrationObserver = new MutationObserver(() => {
+      // A hydration commit can replace Framer's server HTML. Repair it at most twice, instead of
+      // running the complete DOM sweep for every ticker and carousel mutation forever.
+      if (applying || hydrationRefreshQueued || hydrationRefreshes >= 2) return;
+      hydrationRefreshQueued = true;
+      window.requestAnimationFrame(() => {
+        hydrationRefreshQueued = false;
+        hydrationRefreshes += 1;
+        apply();
+      });
+    });
+    hydrationObserver.observe(document.querySelector("#main") || document.body, { childList: true, subtree: true });
+    window.setTimeout(() => hydrationObserver?.disconnect(), 7000);
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    requestAnimationFrame(() => requestAnimationFrame(startFramerRuntime));
-    setTimeout(startFramerRuntime, 1500);
     optimizeMedia();
     setLogoBrand();
     ensureAccountNavigation();
-    loadSettings();
     apply();
     scheduleHeaderContrast();
   });
   window.addEventListener("load", () => {
     pageLoaded = true;
     apply();
+    scheduleFramerRuntime();
+    // Fresh settings are useful, but the deployed page already carries a settings snapshot.
+    // Fetching them after the critical path prevents a slow API response from delaying LCP.
+    if ("requestIdleCallback" in window) window.requestIdleCallback(loadSettings, { timeout: 6000 });
+    else window.setTimeout(loadSettings, 6000);
   });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
   window.addEventListener("resize", scheduleHeaderContrast);
-  new MutationObserver(() => {
-    if (!applying) apply();
-  }).observe(document.documentElement, { childList: true, subtree: true });
 })();
