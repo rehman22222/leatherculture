@@ -255,7 +255,63 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   if (["/", "/shop", "/contact"].includes(pathname)) $(".lc-answers .lc-lede").first().after(factsTable(settings));
   addCareHowTo($);
   frontLoad($, settings, assets, pathname);
+  applyAccessibilityMarkup($, pathname, phone);
   return $.html();
+}
+
+// Framer's exported markup uses visual components for a few controls. Fix the small semantic
+// gaps in the generated HTML as well as at runtime, so the page remains accessible before (or
+// without) hydration and the audit never depends on a timing race.
+function applyAccessibilityMarkup($, pathname, phone) {
+  const retag = (node, tag) => {
+    const replacement = $(`<${tag}></${tag}>`).attr(node.attr()).html(node.html());
+    node.replaceWith(replacement);
+  };
+
+  // The announcement ticker is visually a group, but its direct children are list items. Keep
+  // the native list semantics rather than overriding them with role="group".
+  $("ul[role='group']").filter((_, element) => $(element).children("li.ticker-item").length).attr("role", "list");
+
+  $("nav[data-framer-name='Mobile']").each((index, element) => {
+    const nav = $(element);
+    const panel = nav.find(".framer-yf8xve").first();
+    const trigger = nav.find("[data-framer-name='Menu']").first();
+    if (!panel.length || !trigger.length) return;
+    const panelId = panel.attr("id") || `lc-mobile-navigation-${index + 1}`;
+    panel.attr("id", panelId);
+    trigger.attr({
+      role: "button",
+      tabindex: "0",
+      "aria-controls": panelId,
+      "aria-expanded": "false",
+      "aria-label": "Open navigation menu"
+    });
+  });
+
+  $("a[data-lc-phone]").attr("aria-label", phone ? `Call LeatherCulture at ${phone}` : "Email our team at LeatherCulture");
+
+  // At phone width Framer shows a responsive H2 hero variant. It is the primary page title, so
+  // make it an H1 in the static document too. The collection-card H3s remain children of their
+  // preceding Collections H2.
+  if (pathname === "/") {
+    // The desktop copy is hidden at phone width. Demote it first so the static DOM has exactly
+    // one H1; the runtime promotes the visible desktop hero after a responsive render.
+    $("h1.framer-styles-preset-16abb0u").each((_, element) => retag($(element), "h2"));
+    $(".ssr-variant.hidden-a8katl.hidden-72rtr7 h2.framer-styles-preset-16abb0u").each((_, element) => retag($(element), "h1"));
+  }
+
+  if (!$("style[data-lc-a11y]").length) {
+    $("head").append(`<style data-lc-a11y>
+      [data-framer-name="Reviews"] .framer-styles-preset-ffjk29,
+      .lc-answers .lc-meta { --framer-text-color: #6b6b6b !important; color: #6b6b6b !important; }
+      footer a[data-lc-phone],
+      footer a[data-lc-phone] .framer-text { --framer-text-color: #fff !important; color: #fff !important; }
+      :where(a, button, input, select, textarea, summary, [role="button"]):focus-visible {
+        outline: 3px solid #0a67ff !important;
+        outline-offset: 3px !important;
+      }
+    </style>`);
+  }
 }
 
 // Ordering facts as a table, from the same checkout settings the cart uses.

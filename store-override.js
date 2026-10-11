@@ -1212,13 +1212,17 @@
     document.querySelectorAll("[data-lc-phone]").forEach(node => {
       const label = phone && !placeholder ? phone : "Email our team";
       if (node.textContent !== label) node.textContent = label;
-      if (node.tagName === "A") node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : "mailto:info@leatherculture.shop";
+      if (node.tagName === "A") {
+        node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : "mailto:info@leatherculture.shop";
+        node.setAttribute("aria-label", phone && !placeholder ? `Call LeatherCulture at ${phone}` : "Email our team at LeatherCulture");
+      }
     });
     if (!phone || placeholder) {
       replaceText(["+001 234 567 890"], "Email our team");
       document.querySelectorAll("a[href^='tel:']").forEach(link => {
         link.href = "mailto:info@leatherculture.shop";
         link.textContent = "Email our team";
+        link.setAttribute("aria-label", "Email our team at LeatherCulture");
       });
     }
     const product = currentProductFromPath();
@@ -1354,8 +1358,10 @@
     return element.getClientRects().length > 0;
   }
 
-  // Keep exactly one <h1> per page: promote the product title on product pages,
-  // demote any duplicate hero headings Framer renders for other breakpoints.
+  // Keep exactly one <h1> per page: on the homepage the phone hero starts as an H2 in
+  // Framer's responsive markup, while product pages occasionally need their title promoted.
+  // Never promote an arbitrary collection-card heading: that makes the next card skip from H1
+  // to H3 for screen-reader users.
   function enforceSingleH1() {
     if (!document.body) return;
     let headings = Array.from(document.querySelectorAll("h1"));
@@ -1363,10 +1369,13 @@
     if (!headings.some(isRendered)) {
       const product = currentProductFromPath();
       const name = (product && product.name) || (productFallbacks[location.pathname.split("/").filter(Boolean)[1]] || {}).name;
-      const candidate = Array.from(document.querySelectorAll("h2, h3")).find((node) => {
+      const heroCandidate = isHomePage
+        ? Array.from(document.querySelectorAll("h2.framer-styles-preset-16abb0u")).find(isRendered)
+        : null;
+      const candidate = heroCandidate || (name && Array.from(document.querySelectorAll("h2, h3")).find((node) => {
         const text = (node.textContent || "").trim();
-        return isRendered(node) && (node.classList.contains("framer-styles-preset-17m6oxo") || (name && text === name));
-      });
+        return isRendered(node) && text === name;
+      }));
       if (candidate) retag(candidate, "h1");
       headings = Array.from(document.querySelectorAll("h1"));
     }
@@ -1383,6 +1392,14 @@
     document.querySelectorAll("h4, h5, h6").forEach((heading) => {
       const next = heading.tagName === "H4" ? "h3" : heading.tagName === "H5" ? "h4" : "h5";
       retag(heading, next);
+    });
+  }
+
+  // Framer gives its animated announcement ticker role="group", which overrides the semantic
+  // list role while its children remain <li>. Restore a real list after every hydration pass.
+  function enforceTickerListSemantics() {
+    document.querySelectorAll("ul[role='group']").forEach((list) => {
+      if (Array.from(list.children).some((child) => child.matches("li.ticker-item"))) list.setAttribute("role", "list");
     });
   }
 
@@ -1468,6 +1485,8 @@
       placeAnswers();
       enforceSingleH1();
       enforceHeadingLevels();
+      enforceTickerListSemantics();
+      document.querySelectorAll("nav[data-framer-name='Mobile']").forEach(mobileMenuControls);
       applySettings();
       applyImageAlts();
       ensureLegalLinks();
@@ -1553,16 +1572,26 @@
     return Boolean(eventElement(event)?.closest("nav[data-framer-name='Mobile'] [data-framer-name='Menu']"));
   }
 
+  function mobileMenuControls(nav, index) {
+    const trigger = nav.querySelector("[data-framer-name='Menu']");
+    const panel = nav.querySelector(".framer-yf8xve");
+    if (!trigger || !panel) return null;
+    const panelId = panel.id || `lc-mobile-navigation-${index + 1}`;
+    panel.id = panelId;
+    trigger.setAttribute("role", "button");
+    trigger.setAttribute("tabindex", "0");
+    trigger.setAttribute("aria-controls", panelId);
+    if (!trigger.hasAttribute("aria-expanded")) trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-label", trigger.getAttribute("aria-expanded") === "true" ? "Close navigation menu" : "Open navigation menu");
+    return { trigger, panel };
+  }
+
   function setupNativeMobileMenu() {
-    document.querySelectorAll("nav[data-framer-name='Mobile']").forEach((nav) => {
-      const trigger = nav.querySelector("[data-framer-name='Menu']");
-      const panel = nav.querySelector(".framer-yf8xve");
-      if (!trigger || !panel || trigger.dataset.lcNativeMenuBound) return;
+    document.querySelectorAll("nav[data-framer-name='Mobile']").forEach((nav, index) => {
+      const controls = mobileMenuControls(nav, index);
+      if (!controls || controls.trigger.dataset.lcNativeMenuBound) return;
+      const { trigger, panel } = controls;
       trigger.dataset.lcNativeMenuBound = "true";
-      trigger.setAttribute("role", "button");
-      trigger.setAttribute("aria-expanded", "false");
-      trigger.setAttribute("aria-controls", "lc-mobile-navigation");
-      panel.id = panel.id || "lc-mobile-navigation";
 
       const setOpen = (open) => {
         nav.classList.toggle("framer-v-174by37", !open);
@@ -1570,6 +1599,7 @@
         panel.style.opacity = open ? "1" : "0";
         panel.style.pointerEvents = open ? "auto" : "none";
         trigger.setAttribute("aria-expanded", String(open));
+        trigger.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
       };
       const toggle = (event) => {
         if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
