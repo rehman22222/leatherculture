@@ -13,17 +13,31 @@ Open:
 - Store: `http://localhost:8000`
 - Admin: `http://localhost:8000/admin`
 
-Default admin password:
+For local development only, the admin password defaults to:
 
 ```bash
 leatherculture123
 ```
 
-Change it before real use:
+On Render (or with `NODE_ENV=production`) there is no default: admin login stays
+disabled until `ADMIN_PASSWORD` is set. Locally you can override it too:
 
 ```bash
 $env:ADMIN_PASSWORD="your-strong-password"; npm start
 ```
+
+Ten failed logins from one address (or 100 overall) lock admin login for 15
+minutes, and admin sessions expire after 8 hours.
+
+## Stock
+
+Placing an order takes its quantity out of the variant's stock; an order that
+would oversell is refused. Cancelling an order in admin returns its stock, and
+moving it out of Cancelled takes the stock again if it is still available.
+Deleting an order does not change stock, so cancel first if the items should go
+back on sale. Because every stock change counts as a store change, saving
+settings from an admin tab opened before a new order asks you to reload first,
+so old stock numbers are never written back.
 
 MongoDB is configured from `.env`:
 

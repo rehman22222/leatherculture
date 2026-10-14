@@ -1365,6 +1365,15 @@ async function save() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(settings),
     });
+    if (response.status === 409) {
+      const { message } = await response.json().catch(() => ({}));
+      if (confirm(`${message || "The store changed after you opened the admin."}\n\nLoad the latest version now? Unsaved edits on this page will be lost.`)) {
+        await load();
+        showToast("Loaded the latest version. Re-apply your edits, then save.");
+        return;
+      }
+      throw new Error("Not saved. Reload the admin to get the latest version before saving.");
+    }
     if (!response.ok) throw new Error((await response.json()).message || "Save failed");
     settings = await response.json();
     markClean();
@@ -1390,7 +1399,8 @@ loginForm.addEventListener("submit", async (event) => {
     body: JSON.stringify({ password: passwordInput.value }),
   });
   if (!response.ok) {
-    loginStatus.textContent = "Wrong password";
+    const { message } = await response.json().catch(() => ({}));
+    loginStatus.textContent = response.status === 401 ? "Wrong password" : message || "Login failed";
     return;
   }
   passwordInput.value = "";

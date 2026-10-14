@@ -11,13 +11,18 @@ const { renderPolicyPage, policyPaths } = require("./lib/policy-pages");
 const { siteUrl: canonicalSite } = require("./lib/seo");
 const { createCustomerAccounts } = require("./lib/customers");
 const jacketCollection = require("./lib/jacket-collection");
+const { clientIp, peerIp } = require("./lib/client-ip");
 const { URL } = require("url");
 const zlib = require("zlib");
 
 const root = __dirname;
 const uploadDir = path.join(root, "assets", "uploads");
 const port = Number(process.env.PORT || 8000);
-const adminPassword = process.env.ADMIN_PASSWORD || "leatherculture123";
+const isProduction = Boolean(process.env.RENDER) || process.env.NODE_ENV === "production";
+// The development fallback is published in the README, so it is never accepted in production.
+const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? "" : "leatherculture123");
+if (!adminPassword) console.error("ADMIN_PASSWORD is not set: admin login is disabled.");
+const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000;
 const mongoUri = cleanEnv(process.env.MONGODB_URI);
 const mongoDbName = cleanEnv(process.env.MONGODB_DB_NAME) || "Leater-store";
 const allowedOrigins = new Set(
@@ -1179,6 +1184,7 @@ async function readSettings() {
 
   return {
     ...settingsOnly(settings),
+    revision: Number(document && document.revision) || 0,
     pages: pages.map(publicRecord),
     banners: banners.map(publicRecord),
     categories: categories.map(publicRecord),
@@ -1187,14 +1193,23 @@ async function readSettings() {
   };
 }
 
-async function writeSettings(next) {
-  const merged = normalizeStoreData(mergeDefaults(next, defaultSettings));
+/**
+ * Saves the whole store. With expectedRevision (the revision the admin page loaded), the save is
+ * refused with 409 if anything changed since, such as another admin's save or an order taking stock.
+ */
+async function writeSettings(next, expectedRevision) {
+  const { revision, ...incoming } = next || {};
+  const merged = normalizeStoreData(mergeDefaults(incoming, defaultSettings));
   merged.content = { values: Object.fromEntries(Object.entries((merged.content && merged.content.values) || {}).filter(([, value]) => String(value || "").trim())) };
-  await collections.settings.updateOne(
-    { _id: settingsDocumentId },
-    { $set: { ...settingsOnly(merged), updatedAt: new Date() } },
-    { upsert: true }
+  const checked = expectedRevision !== undefined;
+  const result = await collections.settings.updateOne(
+    { _id: settingsDocumentId, ...(checked ? { revision: expectedRevision || { $in: [0, null] } } : {}) },
+    { $set: { ...settingsOnly(merged), updatedAt: new Date() }, $inc: { revision: 1 } },
+    { upsert: !checked }
   );
+  if (checked && !result.matchedCount) {
+    throw Object.assign(new Error("The store changed after you opened the admin (for example, a new order updated stock, or another admin saved). Nothing was saved."), { status: 409 });
+  }
   await Promise.all([
     replaceCollection("pages", merged.pages || []),
     replaceCollection("banners", merged.banners || []),
@@ -1229,11 +1244,16 @@ function normalizeSeo(item, type) {
   return normalized;
 }
 
+// Orders take stock with a numeric comparison, so a stock typed into the admin is stored as a whole number.
+function withNumericStock(variant) {
+  return { ...variant, stock: Math.max(0, Math.floor(Number(variant && variant.stock) || 0)) };
+}
+
 function normalizeStoreData(data) {
   const normalized = { ...data };
   normalized.pages = (normalized.pages || []).map((item) => normalizeSeo(item, "page"));
   normalized.categories = (normalized.categories || []).map((item) => normalizeSeo(item, "category"));
-  normalized.products = (normalized.products || []).map((item) => normalizeSeo(item, "product"));
+  normalized.products = (normalized.products || []).map((item) => normalizeSeo(Array.isArray(item.variants) ? { ...item, variants: item.variants.map(withNumericStock) } : item, "product"));
   normalized.blogPosts = (normalized.blogPosts || []).map((item) => normalizeSeo(item, "blog"));
   normalized.banners = (normalized.banners || []).map((item, index) => ({ ...item, id: item.id || slugify(item.label || item.title || `banner-${index + 1}`) }));
   return normalized;
@@ -1306,7 +1326,11 @@ async function backfillProductVariants() {
   const writes = products
     .map((product) => {
       const fallback = defaultsById.get(product.id) || defaultsById.get(product.slug);
-      if (product.variants && product.variants.length) return null;
+      if (product.variants && product.variants.length) {
+        // older saves stored stock as typed text
+        if (product.variants.every((variant) => Number.isInteger(variant.stock) && variant.stock >= 0)) return null;
+        return { updateOne: { filter: { _id: product._id }, update: { $set: { variants: product.variants.map(withNumericStock) } } } };
+      }
       return {
         updateOne: {
           filter: { _id: product._id },
@@ -1438,7 +1462,8 @@ async function connectDb() {
     return;
   }
 
-  const legacy = publicSettings(existing);
+  // revision is only ever incremented, never rewritten
+  const { revision, ...legacy } = publicSettings(existing);
   await collections.settings.updateOne(
     { _id: settingsDocumentId },
     { $set: { ...settingsOnly(legacy), updatedAt: new Date() }, $unset: { banners: "", categories: "", products: "", blogPosts: "" } }
@@ -1514,9 +1539,67 @@ function parseCookies(req) {
   );
 }
 
+// sessions maps a token to its expiry time
 function isAdmin(req) {
   const token = parseCookies(req).lc_admin_session;
-  return Boolean(token && sessions.has(token));
+  const expiresAt = token && sessions.get(token);
+  if (!expiresAt) return false;
+  if (expiresAt > Date.now()) return true;
+  sessions.delete(token);
+  return false;
+}
+
+function pruneAdminSessions() {
+  const now = Date.now();
+  for (const [token, expiresAt] of sessions) if (expiresAt <= now) sessions.delete(token);
+}
+
+function passwordMatches(candidate) {
+  if (!adminPassword || typeof candidate !== "string") return false;
+  const digestOf = (value) => crypto.createHash("sha256").update(value).digest();
+  return crypto.timingSafeEqual(digestOf(candidate), digestOf(adminPassword));
+}
+
+// Fixed-window counters kept in memory; a window is dropped once it has ended.
+function windowCounter(windowMs) {
+  const windows = new Map();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of windows) if (entry.resetAt <= now) windows.delete(key);
+  }, windowMs).unref();
+  function current(key) {
+    const now = Date.now();
+    let entry = windows.get(key);
+    if (!entry || entry.resetAt <= now) {
+      entry = { count: 0, resetAt: now + windowMs };
+      windows.set(key, entry);
+    }
+    return entry;
+  }
+  return { hit: (key) => ++current(key).count, count: (key) => current(key).count };
+}
+
+// Failed admin logins: per connecting address, plus a global ceiling against distributed guessing.
+const adminLoginFailures = windowCounter(15 * 60 * 1000);
+function adminLoginBlocked(req) {
+  return adminLoginFailures.count(`peer:${peerIp(req)}`) >= 10 || adminLoginFailures.count("all") >= 100;
+}
+function recordAdminLoginFailure(req) {
+  adminLoginFailures.hit(`peer:${peerIp(req)}`);
+  adminLoginFailures.hit("all");
+}
+
+// Admin calls come from the admin page itself or a storefront domain. Browsers always send Origin on
+// cross-site POST/PUT/DELETE, so forms and scripts on other sites cannot use the admin cookie.
+function trustedOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  if (allowedOrigins.has(origin)) return true;
+  try {
+    return new URL(origin).host === String(req.headers["x-forwarded-host"] || req.headers.host || "");
+  } catch (error) {
+    return false;
+  }
 }
 
 function setSessionCookie(res, token) {
@@ -1686,7 +1769,7 @@ function parsePrice(value) {
 }
 
 function publicOrder(document) {
-  const { _id, ...order } = document || {};
+  const { _id, stockReserved, stockReleased, ...order } = document || {};
   return order;
 }
 
@@ -1696,14 +1779,71 @@ function orderId() {
   return `LC-${stamp}${rand}`;
 }
 
-const orderAttempts = new Map();
+// 20 an hour per shopper, and 200 per connecting hop so a forged X-Forwarded-For cannot lift the cap.
+const orderAttempts = windowCounter(60 * 60 * 1000);
 function orderRateLimited(req) {
-  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
-  const now = Date.now();
-  const recent = (orderAttempts.get(ip) || []).filter((time) => now - time < 60 * 60 * 1000);
-  recent.push(now);
-  orderAttempts.set(ip, recent);
-  return recent.length > 20;
+  const perClient = orderAttempts.hit(`client:${clientIp(req)}`);
+  const perPeer = orderAttempts.hit(`peer:${peerIp(req)}`);
+  return perClient > 20 || perPeer > 200;
+}
+
+/* ---------- stock ---------- */
+
+// The admin edits stock through whole-settings saves, so every stock change also bumps the settings
+// revision; a save from a page loaded before the change is then refused instead of restoring old stock.
+async function bumpSettingsRevision() {
+  await collections.settings.updateOne({ _id: settingsDocumentId }, { $inc: { revision: 1 } });
+}
+
+function stockError(line) {
+  const label = `${line.name}${line.variantName ? ` (${line.variantName})` : ""}`;
+  return Object.assign(new Error(`Sorry, ${label} does not have enough stock for this quantity. Please update your cart.`), { status: 409 });
+}
+
+/** Takes each line out of stock atomically; if any line is short, the ones already taken are put back. */
+async function reserveStock(lines) {
+  const taken = [];
+  try {
+    for (const line of lines) {
+      const result = await collections.products.updateOne(
+        { id: line.productId, variants: { $elemMatch: { id: line.variantId, stock: { $gte: line.qty } } } },
+        { $inc: { "variants.$.stock": -line.qty } }
+      );
+      if (!result.modifiedCount) throw stockError(line);
+      taken.push(line);
+    }
+  } catch (error) {
+    await releaseStock(taken);
+    throw error;
+  }
+  if (taken.length) await bumpSettingsRevision();
+}
+
+async function releaseStock(lines) {
+  for (const line of lines) {
+    await collections.products.updateOne({ id: line.productId, "variants.id": line.variantId }, { $inc: { "variants.$.stock": line.qty } });
+  }
+  if (lines.length) await bumpSettingsRevision();
+}
+
+/** Cancelling returns an order's stock once; reopening a cancelled order takes it again. */
+async function syncOrderStock(order, nextStatus) {
+  const lines = order.stockReserved || [];
+  if (!lines.length || nextStatus === order.status) return;
+  if (nextStatus === "cancelled") {
+    const claimed = await collections.orders.updateOne({ id: order.id, stockReleased: { $ne: true } }, { $set: { stockReleased: true } });
+    if (claimed.modifiedCount) await releaseStock(lines);
+  } else if (order.status === "cancelled") {
+    const claimed = await collections.orders.updateOne({ id: order.id, stockReleased: true }, { $set: { stockReleased: false } });
+    if (!claimed.modifiedCount) return;
+    try {
+      await reserveStock(lines);
+    } catch (error) {
+      await collections.orders.updateOne({ id: order.id }, { $set: { stockReleased: true } });
+      if (error.status === 409) error.message = `Not enough stock to reopen this order. ${error.message.replace(/ Please update your cart\.$/, "")}`;
+      throw error;
+    }
+  }
 }
 
 function cleanText(value, max = 200) {
@@ -1730,6 +1870,7 @@ async function createOrder(body, account = null) {
   const requested = Array.isArray(body.items) ? body.items.slice(0, 30) : [];
   if (!requested.length) throw Object.assign(new Error("Your cart is empty."), { status: 400 });
   const items = [];
+  const stockLines = [];
   for (const line of requested) {
     const slug = cleanText(line.slug, 120);
     const product = (settings.products || []).find((item) => item.enabled !== false && (item.slug === slug || item.id === slug));
@@ -1750,6 +1891,7 @@ async function createOrder(body, account = null) {
       unitPrice,
       lineTotal: unitPrice * qty
     });
+    if (variant) stockLines.push({ productId: product.id, variantId: variant.id, qty, name: product.name, variantName: variant.name });
   }
   if (!items.length) throw Object.assign(new Error("These products are no longer available."), { status: 400 });
 
@@ -1767,10 +1909,17 @@ async function createOrder(body, account = null) {
     subtotal,
     shipping,
     total: subtotal + shipping,
+    stockReserved: stockLines,
     createdAt: new Date(),
     updatedAt: new Date()
   };
-  await collections.orders.insertOne(order);
+  await reserveStock(stockLines);
+  try {
+    await collections.orders.insertOne(order);
+  } catch (error) {
+    await releaseStock(stockLines);
+    throw error;
+  }
   // Queued, never awaited: a slow SMTP host must not hold up the customer's checkout.
   queueOrderEmails(order).catch((error) => console.error("mail: order emails failed to queue", error && error.message));
   return publicOrder(order);
@@ -1883,13 +2032,22 @@ async function createReview(body) {
   return publicReview(review);
 }
 
+// The app root also holds server code, scripts and .env, so only these top-level entries are served.
+const publicEntries = new Set([
+  "index.html", "404.html", "llms.txt", "cart.js", "site-config.js", "store-override.js", "store.css", "brand-override.css",
+  "about", "account", "admin", "assets", "blog", "cart", "checkout", "contact", "order", "review", "shop"
+]);
+
 function safeFileFor(urlPath) {
   let requestPath = decodeURIComponent(urlPath);
   if (requestPath === "/admin") requestPath = "/admin/";
   if (requestPath.endsWith("/")) requestPath += "index.html";
 
   let file = path.normalize(path.join(root, requestPath));
-  if (!file.startsWith(root)) return null;
+  const relative = path.relative(root, file);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return null;
+  const parts = relative.split(path.sep);
+  if (!publicEntries.has(parts[0]) || parts.some((part) => part.startsWith("."))) return null;
   // Clean URLs: /shop/slug -> /shop/slug/index.html
   if (!path.extname(file) && fs.existsSync(path.join(file, "index.html"))) file = path.join(file, "index.html");
   return file;
@@ -1909,6 +2067,13 @@ async function requestHandler(req, res) {
       res.writeHead(301, { location: canonicalUrl(`${url.pathname}${url.search}`), "cache-control": "public, max-age=86400" });
       res.end();
       return;
+    }
+
+    const adminWrite = !["GET", "HEAD"].includes(req.method) && (url.pathname.startsWith("/api/admin/") || url.pathname === "/api/storefront/settings");
+    if (adminWrite) {
+      if (!trustedOrigin(req)) return writeJson(res, 403, { message: "This request is not allowed." });
+      const hasBody = Number(req.headers["content-length"] || 0) > 0 || Boolean(req.headers["transfer-encoding"]);
+      if (hasBody && !String(req.headers["content-type"] || "").startsWith("application/json")) return writeJson(res, 415, { message: "Use a JSON request." });
     }
 
     if (url.pathname.startsWith("/api/account/")) {
@@ -1991,9 +2156,9 @@ async function requestHandler(req, res) {
       }
     }
 
-    if (url.pathname.startsWith("/shop/") && req.method === "GET") {
-      const slug = url.pathname.split("/").filter(Boolean)[1];
-      if (!slug) return;
+    // "/shop/" has no slug and falls through to the static shop page
+    const slug = url.pathname.startsWith("/shop/") && req.method === "GET" ? url.pathname.split("/").filter(Boolean)[1] : "";
+    if (slug) {
       await ensureDbReady();
       const product = await collections.products.findOne({ slug, enabled: { $ne: false } });
       if (product) {
@@ -2009,11 +2174,16 @@ async function requestHandler(req, res) {
     }
 
     if (url.pathname === "/api/admin/login" && req.method === "POST") {
-      await ensureDbReady();
-      const body = JSON.parse(await readBody(req) || "{}");
-      if (body.password !== adminPassword) return writeJson(res, 401, { message: "Invalid password" });
+      if (!adminPassword) return writeJson(res, 503, { message: "Admin login is disabled until ADMIN_PASSWORD is set on the server." });
+      if (adminLoginBlocked(req)) return writeJson(res, 429, { message: "Too many failed attempts. Please try again in 15 minutes." });
+      const body = JSON.parse(await readBody(req, 16384) || "{}");
+      if (!passwordMatches(body.password)) {
+        recordAdminLoginFailure(req);
+        return writeJson(res, 401, { message: "Invalid password" });
+      }
+      pruneAdminSessions();
       const token = crypto.randomBytes(32).toString("hex");
-      sessions.set(token, Date.now());
+      sessions.set(token, Date.now() + ADMIN_SESSION_MS);
       setSessionCookie(res, token);
       return jsonWithCookie(res, 200, { ok: true });
     }
@@ -2073,6 +2243,11 @@ async function requestHandler(req, res) {
       if (typeof body.trackingUrl === "string") update.trackingUrl = cleanText(body.trackingUrl, 300);
       if (typeof body.deliveryEstimate === "string") update.deliveryEstimate = cleanText(body.deliveryEstimate, 80);
       if (update.status && update.status !== previous.status) {
+        try {
+          await syncOrderStock(previous, update.status);
+        } catch (error) {
+          return writeJson(res, error.status || 500, { message: error.message || "Could not update stock for this order." });
+        }
         update.history = [...(previous.history || []), { status: update.status, at: new Date() }].slice(-30);
       }
       await collections.orders.updateOne({ id: orderMatch[1] }, { $set: update });
@@ -2222,14 +2397,19 @@ async function requestHandler(req, res) {
     if (url.pathname === "/api/storefront/settings" && req.method === "PUT") {
       await ensureDbReady();
       if (!isAdmin(req)) return writeJson(res, 401, { message: "Please login again" });
-      const body = await readBody(req);
-      return writeJson(res, 200, await writeSettings(JSON.parse(body || "{}")));
+      const body = JSON.parse(await readBody(req) || "{}");
+      try {
+        return writeJson(res, 200, await writeSettings(body, Number.isInteger(body.revision) ? body.revision : undefined));
+      } catch (error) {
+        if (error.status === 409) return writeJson(res, 409, { message: error.message });
+        throw error;
+      }
     }
 
     const file = safeFileFor(url.pathname);
-    if (!file) return writeJson(res, 400, { message: "Bad path" });
 
     try {
+      if (!file) throw new Error("Not a public file");
       let data = await fs.promises.readFile(file);
       const ext = path.extname(file).toLowerCase();
       if (ext === ".html") {
@@ -2249,7 +2429,9 @@ async function requestHandler(req, res) {
         "referrer-policy": "strict-origin-when-cross-origin",
         "cache-control": cacheable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=86400",
         vary: "accept-encoding",
-        ...(/^\/(?:admin|account|cart|checkout|order|review)(?:\/|$)/.test(url.pathname) ? { "x-robots-tag": "noindex, nofollow" } : {})
+        ...(/^\/(?:admin|account|cart|checkout|order|review)(?:\/|$)/.test(url.pathname) ? { "x-robots-tag": "noindex, nofollow" } : {}),
+        // Uploaded SVGs share this origin with the admin; opened directly they must not run script.
+        ...(url.pathname.startsWith("/assets/uploads/") ? { "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox" } : {})
       };
       const compressible = /^(text\/|application\/(json|javascript|xml)|image\/svg)/.test(headers["content-type"]) || ext === ".framercms";
       const accepts = String(req.headers["accept-encoding"] || "").split(",").map((value) => value.trim().split(";")[0]);
