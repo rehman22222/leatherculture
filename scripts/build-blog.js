@@ -21,10 +21,12 @@ async function fetchJson(url) {
 async function main() {
   const api = process.env.BLOG_API_BASE || "https://leatherculture-backend.onrender.com";
   const site = process.env.SITE_URL || "https://www.leatherculture.shop";
-  const [settings, posts] = await Promise.all([
+  const [settings, posts, productReviews] = await Promise.all([
     fetchJson(`${api}/api/storefront/settings`),
-    fetchJson(`${api}/api/storefront/blogs`)
+    fetchJson(`${api}/api/storefront/blogs`),
+    fetchJson(`${api}/api/storefront/reviews?scope=products`)
   ]);
+  settings.productReviews = productReviews.filter(review => review.productSlug && review.status === "approved" && review.verified === true).map(require("../lib/review-input").storefrontReview);
   if (!Array.isArray(posts) || !posts.length) throw new Error("No published blog posts returned");
   const published = posts.filter(post => post.status === "published");
   for (const post of published) {

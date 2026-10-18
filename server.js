@@ -684,7 +684,7 @@ const defaultSettings = {
     shippingFee: 250,
     freeShippingFrom: 10000,
     codEnabled: true,
-    codNote: "Pay in cash when your order arrives. Delivery across Pakistan in 3-5 working days.",
+    codNote: "Pay in cash when your order arrives. Delivery across Pakistan takes 5-7 days. We will keep you updated on your order.",
     whatsapp: "",
     notifyEmail: "",
     returnsPolicy: "",
@@ -1987,6 +1987,8 @@ async function queueStatusEmails(order, previousStatus) {
 
 /* ---------- customer reviews ---------- */
 
+const { reviewProducts, reviewSelection, storefrontReview } = require("./lib/review-input");
+
 function publicReview(document) {
   const { _id, email, ip, token, ...review } = document || {};
   return review;
@@ -2001,21 +2003,21 @@ async function createReview(body) {
   const order = await collections.orders.findOne({ id: orderId });
   if (!order) throw Object.assign(new Error("We could not find that order."), { status: 404 });
 
-  const rating = Math.min(5, Math.max(1, Math.round(Number(body.rating) || 0)));
+  const selected = reviewSelection(order, body);
   const text = cleanText(body.text, 1200);
-  if (!rating) throw Object.assign(new Error("Please choose a rating."), { status: 400 });
   if (text.length < 15) throw Object.assign(new Error("Please write a few words about your order."), { status: 400 });
 
   const customer = order.customer || {};
   const review = {
     id: `RV-${crypto.randomBytes(4).toString("hex").toUpperCase()}`,
     orderId,
-    rating,
+    rating: selected.rating,
     text,
-    name: cleanText(body.name, 60) || customer.name || "Customer",
+    name: cleanText(body.name, 60) || String(customer.name || "Customer").trim().split(/\s+/)[0],
     city: cleanText(body.city, 60) || customer.city || "",
     email: customer.email || "",
-    product: (order.items && order.items[0] && order.items[0].name) || "",
+    product: selected.product,
+    productSlug: selected.productSlug,
     status: "pending",
     verified: true,
     createdAt: new Date(),
@@ -2163,7 +2165,9 @@ async function requestHandler(req, res) {
       const product = await collections.products.findOne({ slug, enabled: { $ne: false } });
       if (product) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
-        res.end(renderProductPage(publicRecord(product), await readSettings(), req));
+        const settings = await readSettings();
+        settings.productReviews = (await collections.reviews.find({ status: "approved", verified: true, productSlug: slug }).sort({ createdAt: -1 }).toArray()).map(storefrontReview);
+        res.end(renderProductPage(publicRecord(product), settings, req));
         return;
       }
       // Retired source templates must never make an unavailable product page
@@ -2325,6 +2329,17 @@ async function requestHandler(req, res) {
 
     /* ---------- customer reviews ---------- */
 
+    if (url.pathname === "/api/reviews/products" && req.method === "GET") {
+      await ensureDbReady();
+      res.setHeader("cache-control", "no-store");
+      const orderId = cleanText(url.searchParams.get("order"), 40);
+      if (!orderId || url.searchParams.get("t") !== mailer.reviewToken(orderId)) return writeJson(res, 403, { message: "Please use the review link from your email." });
+      const order = await collections.orders.findOne({ id: orderId });
+      if (!order) return writeJson(res, 404, { message: "Order not found" });
+      if (order.status !== "delivered") return writeJson(res, 400, { message: "Reviews open after your order has been delivered." });
+      return writeJson(res, 200, reviewProducts(order));
+    }
+
     if (url.pathname === "/api/reviews" && req.method === "POST") {
       await ensureDbReady();
       if (orderRateLimited(req)) return writeJson(res, 429, { message: "Too many attempts. Please try again later." });
@@ -2352,9 +2367,15 @@ async function requestHandler(req, res) {
 
     if (url.pathname === "/api/storefront/reviews" && req.method === "GET") {
       await ensureDbReady();
-      const rows = await collections.reviews.find({ status: "approved" }).sort({ createdAt: -1 }).limit(24).toArray();
+      const product = url.searchParams.get("product");
+      const productsOnly = url.searchParams.get("scope") === "products";
+      if (product !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product)) return writeJson(res, 400, { message: "Invalid product" });
+      const query = { status: "approved", ...(product ? { verified: true, productSlug: product } : productsOnly ? { verified: true, productSlug: { $type: "string", $ne: "" } } : {}) };
+      const cursor = collections.reviews.find(query).sort({ createdAt: -1 });
+      // Product averages use every approved review; the home-page carousel uses the latest 24.
+      const rows = await (product || productsOnly ? cursor : cursor.limit(24)).toArray();
       res.setHeader("cache-control", "public, max-age=120");
-      return writeJson(res, 200, rows.map(publicReview));
+      return writeJson(res, 200, rows.map(storefrontReview));
     }
 
     if (url.pathname === "/api/admin/reviews" && req.method === "GET") {

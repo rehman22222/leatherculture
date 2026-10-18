@@ -37,6 +37,7 @@
     ["Follow us:", "footer.followTitle"],
     ["Get in touch", "footer.getInTouchTitle"],
     ["test@gmail.com", "footer.email"],
+    ["info@leatherculture.shop", "footer.email"],
     ["hello@leatherculture.com", "footer.email"],
     ["+001 234 567 890", "footer.phone"],
     ["London, England", "footer.address"],
@@ -1208,13 +1209,17 @@
   }
 
   function syncBusinessDetails() {
+    const deliveryEstimate = (String(settings.checkout?.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
+    if (deliveryEstimate) document.querySelectorAll("p").forEach(node => {
+      if (!node.children.length && /3[-–]5 working days/i.test(node.textContent)) node.textContent = node.textContent.replace(/3[-–]5 working days/gi, deliveryEstimate);
+    });
     if (currentProductFromPath()) replaceText(["Trusted Quality", "Genuine leather"], "Quality checked");
     const placeholders = { "test@gmail.com": "you@example.com", "+123 456 789 00": "Enter your phone number", "Nasir": "Your first name", "Nawaz": "Your last name", "Enquiry ....": "What can we help you with?" };
     document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach(node => {
       const value = placeholders[node.getAttribute("placeholder")];
       if (value) node.setAttribute("placeholder", value);
     });
-    const policy = settings.checkout?.returnsPolicy?.trim() || "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
+    const policy = settings.checkout?.returnsPolicy?.trim() || "Contact contact@leatherculture.shop for the current returns and exchange policy before ordering.";
     const phone = settings.footer?.phone || "";
     const placeholder = /234\s*567|123456789|3XX|XXXXX/i.test(phone);
     document.querySelectorAll("[data-lc-phone], a[href^='tel:']").forEach(node => {
@@ -1223,7 +1228,7 @@
       if (text.textContent !== label) text.textContent = label;
       if (node.tagName === "A") {
         node.dataset.lcPhone = "true";
-        node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "info@leatherculture.shop"}`;
+        node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "contact@leatherculture.shop"}`;
         node.setAttribute("aria-label", phone && !placeholder ? `Call LeatherCulture at ${phone}` : "Email our team at LeatherCulture");
         if (node.closest("footer")) {
           node.parentElement.dataset.lcPhoneRow = "true";
@@ -1268,7 +1273,12 @@
           if (node["@type"] === "Product" && product) {
             node.offers.price = String(product.price || "").replace(/[^0-9.]/g, "");
             node.offers.priceCurrency = "PKR";
-            delete node.offers.hasMerchantReturnPolicy;
+            if (window.LeatherCultureCommerce) {
+              node.offers.shippingDetails = window.LeatherCultureCommerce.shippingDetails(Number(node.offers.price), settings.checkout);
+              const returns = window.LeatherCultureCommerce.returnPolicy(settings.checkout, "https://www.leatherculture.shop");
+              if (returns) node.offers.hasMerchantReturnPolicy = returns;
+              else delete node.offers.hasMerchantReturnPolicy;
+            }
           }
         });
         const updated = JSON.stringify(data);

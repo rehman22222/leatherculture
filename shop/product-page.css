@@ -96,6 +96,13 @@
 #product-message:empty { display: none; }
 
 .product-related { margin-top: 72px; }
+.product-guides, .product-reviews { margin-top: 48px; padding-top: 28px; border-top: 1px solid #ddd; }
+.product-guides h2, .product-reviews h2 { margin: 0 0 16px; font-size: 24px; }
+.product-guides ul { padding-left: 20px; }
+.product-guides li { margin: 12px 0; }
+.product-guides a { color: inherit; text-underline-offset: 3px; }
+.product-reviews p { color: #625d55; line-height: 1.7; overflow-wrap: anywhere; }
+.product-review-list article { padding: 12px 0; border-bottom: 1px solid #eee; }
 .product-related h2 { margin: 0 0 20px; font-size: 24px; }
 .product-related-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .product-related-grid a { display: block; color: inherit; text-decoration: none; }

@@ -26,6 +26,7 @@
   }
 
   let rating = 0;
+  let products = [];
 
   function stars() {
     return [1, 2, 3, 4, 5]
@@ -36,8 +37,11 @@
   function form() {
     root.innerHTML = `
       <h1>How was your order?</h1>
-      <p class="muted">Order ${escapeHtml(orderId)} · your review is published with your first name and city only.</p>
+      <p class="muted">Order ${escapeHtml(orderId)} · your review is published with your chosen display name and city only.</p>
       <div class="card" style="max-width:620px;margin-top:22px">
+        <label>What are you reviewing?
+          <select id="product"><option value="">Overall order and service</option>${products.map(p => `<option value="${escapeHtml(p.slug)}">${escapeHtml(p.name)}</option>`).join("")}</select>
+        </label>
         <label>Your rating
           <div class="stars" id="stars">${stars()}</div>
         </label>
@@ -77,6 +81,7 @@
           order: orderId,
           token,
           rating,
+          productSlug: document.getElementById("product").value,
           text: document.getElementById("text").value,
           name: document.getElementById("name").value,
           city: document.getElementById("city").value,
@@ -104,5 +109,15 @@
     </div>`;
   }
 
-  form();
+  (async () => {
+    try {
+      const response = await fetch(api(`/api/reviews/products?${new URLSearchParams({ order: orderId, t: token })}`), { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not load your order's products.");
+      products = data;
+      form();
+    } catch (error) {
+      root.innerHTML = `<h1>Review your order</h1><p>${escapeHtml(error.message)}</p><a href="/contact">Contact our team</a>`;
+    }
+  })();
 })();

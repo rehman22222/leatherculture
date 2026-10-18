@@ -730,6 +730,24 @@ function renderCheckoutSettings() {
       </div>
       ${field("checkout.codNote", "Payment note shown at checkout", "textarea")}
       ${field("checkout.returnsPolicy", "Returns and exchange policy", "textarea", [], { help: "Your actual policy, including the period and conditions. Published on product pages and FAQs. Leave blank until confirmed." })}
+      <details><summary>Google shipping and returns information</summary>
+        <p class="hint">Enter actual business terms only. Delivery ranges below are calendar days and must match your published delivery estimate. Leave blank while unconfirmed. Rebuild the storefront after changes so the initial HTML is updated.</p>
+        <div class="grid">
+          ${field("checkout.handlingDaysMin", "Handling days: minimum")}
+          ${field("checkout.handlingDaysMax", "Handling days: maximum")}
+          ${field("checkout.transitDaysMin", "Courier transit days: minimum")}
+          ${field("checkout.transitDaysMax", "Courier transit days: maximum")}
+        </div>
+        <p class="hint">The return values must match the policy written above, including exceptions and who pays postage. An exchange-only policy needs separate review; do not describe it here as a refund policy.</p>
+        <div class="grid">
+          ${field("checkout.merchantReturns.category", "Return window", "select", [{ value: "", label: "Not confirmed" }, { value: "finite", label: "Fixed return window" }, { value: "unlimited", label: "Unlimited return window" }, { value: "none", label: "Returns not permitted" }])}
+          ${field("checkout.merchantReturns.days", "Days after delivery (fixed window)")}
+          ${field("checkout.merchantReturns.method", "Return method", "select", [{ value: "", label: "Not confirmed" }, { value: "mail", label: "Courier / mail" }, { value: "store", label: "In store" }])}
+          ${field("checkout.merchantReturns.fees", "Return postage", "select", [{ value: "", label: "Not confirmed" }, { value: "free", label: "Free to the customer" }, { value: "customer", label: "Customer arranges and pays courier" }, { value: "fixed", label: "Store charges a fixed return fee" }])}
+          ${field("checkout.merchantReturns.feeAmount", "Fixed return fee (PKR)")}
+        </div>
+        ${field("checkout.merchantReturns.confirmed", "I confirm these return terms match our published policy", "checkbox")}
+      </details>
       <div class="grid">
         ${field("checkout.cartButton", "Product button label")}
         ${field("checkout.addedButton", "Label after adding")}
@@ -828,8 +846,8 @@ function renderEmails() {
       <div class="grid">
         ${mailField("fromName", "Sender name", { placeholder: "LeatherCulture", help: "What customers see in their inbox." })}
         ${mailField("fromEmail", "Send from", { placeholder: "orders@leatherculture.shop" })}
-        ${mailField("replyTo", "Replies go to", { placeholder: "info@leatherculture.shop" })}
-        ${mailField("adminRecipients", "Order alerts to", { placeholder: "orders@leatherculture.shop, info@leatherculture.shop", help: "Comma separated. These get the new-order email." })}
+        ${mailField("replyTo", "Replies go to", { placeholder: "contact@leatherculture.shop" })}
+        ${mailField("adminRecipients", "Order alerts to", { placeholder: "orders@leatherculture.shop, contact@leatherculture.shop", help: "Comma separated. These get the new-order email." })}
       </div>
       <div class="btn-row">
         <button type="button" class="primary" data-mail-save>Save email settings</button>
@@ -978,7 +996,7 @@ function renderReviews() {
       <a class="tab ${!filter ? "active" : ""}" href="#/reviews">All <span class="count">${count()}</span></a>
       ${statuses.map((st) => `<a class="tab ${filter === st ? "active" : ""}" href="#/reviews/${st}">${st[0].toUpperCase() + st.slice(1)} <span class="count">${count(st)}</span></a>`).join("")}
     </div>
-    <p class="hint">Reviews only arrive through the link emailed to a customer after their order is delivered, so every one is tied to a real order. Approve a review to show it on the home page.</p>
+    <p class="hint">Reviews arrive through the link emailed after delivery. Approved reviews appear on the home page; product reviews also appear on the selected jacket with matching rating schema. Overall order reviews do not count toward a jacket's rating. Moderate spam and abusive content consistently, regardless of star rating.</p>
     <div class="list-head"><span class="muted">${rows.length} review${rows.length === 1 ? "" : "s"}</span><button type="button" class="secondary" data-refresh-reviews>Refresh</button></div>
     ${rows.length
       ? rows

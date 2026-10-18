@@ -4,7 +4,8 @@ const crypto = require("crypto");
 const cheerio = require("cheerio");
 const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, legalLinks } = require("../lib/seo");
 const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
-const { renderProductPage, shippingFor } = require("../lib/product-renderer");
+const { renderProductPage } = require("../lib/product-renderer");
+const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
 const { sourcesFor } = require("../lib/citations");
 
 const root = path.resolve(__dirname, "..");
@@ -12,7 +13,7 @@ const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
 const get = (object, key) => key.split(".").reduce((value, part) => value?.[part], object);
 const escape = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const publicPhone = value => /234\s*567|123456789|3XX|XXXXX/i.test(value || "") ? "" : String(value || "").trim();
-const fallbackPolicy = "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
+const fallbackPolicy = "Contact contact@leatherculture.shop for the current returns and exchange policy before ordering.";
 
 // Product pages are generated only for enabled products. Old Framer content and older journal
 // articles can retain a product URL after an item is retired; send those visitors to the live shop.
@@ -51,6 +52,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   if (!$("meta[name='google-site-verification'],meta[name='msvalidate.01']").length) $("head").append(verificationTags(settings));
   if (!privatePage(pathname) && !$("script[src*='googletagmanager.com/gtag/js']").length) $("head").append(analyticsTags(settings));
   const product = settings.products?.find(item => pathname === `/shop/${item.slug}`);
+  if (product && $("script[src*='store-override.js']").length) $("head").append('<script src="/shop/commerce-schema.js?v=1"></script>');
   const pageSeo = product || settings.pages?.find(page => page.path === pathname);
   if (pageSeo?.metaTitle) {
     $("title").text(pageSeo.metaTitle);
@@ -59,6 +61,22 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   if (pageSeo?.metaDescription) $("meta[name='description'],meta[property='og:description'],meta[name='twitter:description']").attr("content", pageSeo.metaDescription);
   if (pageSeo?.keywords) $("meta[name='keywords']").attr("content", pageSeo.keywords);
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
+  const deliveryEstimate = (String(settings.checkout?.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
+  const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
+  const priceText = prices.length ? ` Current jacket prices start at Rs ${Math.min(...prices).toLocaleString("en-US")}.` : "";
+  const deliveryText = deliveryEstimate ? ` Estimated delivery across Pakistan takes ${escape(deliveryEstimate)}.` : "";
+  const leadCopy = {
+    "/": `Explore the current <a href="/shop">LeatherCulture jacket collection</a> in Pakistan.${escape(priceText)}${deliveryText} Pay the courier in cash when your order arrives. For sizing, materials or order questions, <a href="/contact">contact our team</a>.`,
+    "/shop": `Compare the current LeatherCulture jackets and choose a style for your wardrobe.${escape(priceText)}${deliveryText} Read the <a href="/blog/leather-jacket-price-pakistan">jacket buying guide</a> and <a href="/contact">ask our team</a> about measurements or materials before ordering.`,
+    "/about": 'LeatherCulture sells jackets online in Pakistan with cash on delivery. Explore the <a href="/shop">current collection</a>, or <a href="/contact">contact the team</a> for product measurements, material details and order support.',
+    "/contact": `Contact LeatherCulture at <a href="mailto:${escape(settings.footer?.email || "contact@leatherculture.shop")}">${escape(settings.footer?.email || "contact@leatherculture.shop")}</a> for sizing, product details, order updates and returns.${deliveryText} See our <a href="/terms#returns">returns and refund policy</a> before sending an item back.`,
+    "/blog": 'Practical jacket buying, sizing, styling and care guides from the LeatherCulture team. Browse the guides below and explore the <a href="/shop">current jacket collection</a>.'
+  };
+  if (leadCopy[pathname]) $(".lc-answers .lc-lede").first().html(leadCopy[pathname]);
+  $(".lc-answers p").each((_, element) => {
+    const node = $(element);
+    if (/Every LeatherCulture jacket is made from genuine leather and finished by hand/i.test(node.text())) node.html('Check the individual product details and <a href="/contact">ask our team to confirm the shell material, lining and construction</a> before ordering.');
+  });
   const phone = publicPhone(settings.footer?.phone);
   const redirects = require("../vercel.json").redirects || [];
   const replacements = new Map(bindings.map(([original, key]) => [normalize(original), get(settings, key)]));
@@ -72,7 +90,8 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   replacements.set("+001 234 567 890", phone || "Email our team");
   replacements.set("England, London", settings.footer?.address || "Pakistan");
   replacements.set("London, England", settings.footer?.address || "Pakistan");
-  replacements.set("test@gmail.com", settings.footer?.email || "info@leatherculture.shop");
+  replacements.set("info@leatherculture.shop", settings.footer?.email || "contact@leatherculture.shop");
+  replacements.set("test@gmail.com", settings.footer?.email || "contact@leatherculture.shop");
   replacements.set("Change your mind? Return any item easily within thirty days.", policy);
   replacements.set("Easy Returns", "Returns and exchanges");
   replacements.set("Trusted Quality", "Quality checked");
@@ -88,8 +107,13 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     if (normalize(node.text()) === "+001 234 567 890") node.attr("data-lc-phone", "true");
     const value = replacements.get(normalize(node.text()));
     if (typeof value === "string" && value) node.text(value);
+    if (deliveryEstimate && !node.children().length && /3[-–]5 working days/i.test(node.text())) node.text(node.text().replace(/3[-–]5 working days/gi, deliveryEstimate));
   });
-  $("a[href^='mailto:']").attr("href", `mailto:${settings.footer?.email || "info@leatherculture.shop"}`);
+  $("a[href^='mailto:']").attr("href", `mailto:${settings.footer?.email || "contact@leatherculture.shop"}`);
+  $("a[href^='mailto:']").each((_, element) => {
+    const node = $(element);
+    if (["info@leatherculture.shop", "test@gmail.com"].includes(normalize(node.text()))) node.text(settings.footer?.email || "contact@leatherculture.shop");
+  });
   const placeholders = { "test@gmail.com": "you@example.com", "+123 456 789 00": "Enter your phone number", "Nasir": "Your first name", "Nawaz": "Your last name", "Enquiry ....": "What can we help you with?" };
   $("input[placeholder],textarea[placeholder]").each((_, element) => {
     const node = $(element), value = placeholders[node.attr("placeholder")];
@@ -100,7 +124,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     node.attr("data-lc-phone", "true");
     const label = node.find("p").last();
     (label.length ? label : node).text(phone || "Email our team");
-    node.attr("href", phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "info@leatherculture.shop"}`);
+    node.attr("href", phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "contact@leatherculture.shop"}`);
     if (node.closest("footer").length && !phone) node.parent().attr("data-lc-phone-row", "true").attr("hidden", "");
   });
   $("a[href*='google.com/maps']").attr("href", `https://www.google.com/maps/search/${encodeURIComponent(settings.footer?.address || "Pakistan")}`);
@@ -257,10 +281,12 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
         else delete node.material;
         node.offers.price = String(priceValue(product.price));
         node.offers.priceCurrency = "PKR";
-        delete node.offers.hasMerchantReturnPolicy;
+        const returns = returnPolicy(settings.checkout, site);
+        if (returns) node.offers.hasMerchantReturnPolicy = returns;
+        else delete node.offers.hasMerchantReturnPolicy;
         node.offers.availability = !(product.variants || []).length || product.variants.some(v => v.enabled !== false && Number(v.stock) > 0)
           ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
-        if (node.offers.shippingDetails?.shippingRate) node.offers.shippingDetails.shippingRate.value = shippingFor(priceValue(product.price), settings.checkout || {});
+        node.offers.shippingDetails = shippingDetails(priceValue(product.price), settings.checkout);
       }
       if (node["@type"] === "FAQPage") {
         node.mainEntity = $("#faq details").map((_, el) => ({ "@type": "Question", name: normalize($(el).find("summary").text()), acceptedAnswer: { "@type": "Answer", text: normalize($(el).children("p").first().text()) } })).get();
@@ -269,6 +295,8 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
       if (types.includes("Organization")) {
         const brand = organization(settings, site);
         node.email = brand.email;
+        if (brand.hasMerchantReturnPolicy) node.hasMerchantReturnPolicy = brand.hasMerchantReturnPolicy;
+        else delete node.hasMerchantReturnPolicy;
         if (brand.sameAs) node.sameAs = brand.sameAs;
         else delete node.sameAs;
         if (phone) node.telephone = phone;
@@ -314,7 +342,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $(".site-header nav").each((_, element) => {
     if (!$(element).find(".lc-account-nav").length) $(element).append(accountMarkup);
   });
-  const email = escape(settings.footer?.email || "info@leatherculture.shop");
+  const email = escape(settings.footer?.email || "contact@leatherculture.shop");
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px/1.8 Arial,sans-serif">Customer enquiries: <a href="mailto:${email}">${email}</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a> · ${legalLinks.map(link => `<a href="${link.href}">${escape(link.label)}</a>`).join(" · ")}</div>`);
   repairRetiredProductLinks($, settings);
   // Every image needs alt text: curated text for the template's assets, else the label of its link.
@@ -394,7 +422,7 @@ function factsTable(settings) {
   const currency = checkout.currency || "Rs";
   const money = value => `${currency} ${Number(value).toLocaleString("en-PK")}`;
   const fee = Number(checkout.shippingFee) || 0, free = Number(checkout.freeShippingFrom) || 0;
-  const days = (String(checkout.codNote || "").match(/\d+\s*[-–]\s*\d+\s*working days/i) || [])[0];
+  const days = (String(checkout.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
   const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
   const rows = [
     ["Delivery area", "Anywhere in Pakistan"],
@@ -587,7 +615,7 @@ function llmsSmall(settings, site) {
     "",
     `- Shop: ${url("/shop")}`,
     `- Delivery and payment: ${checkout.codNote || "Cash on delivery across Pakistan."}`,
-    `- Contact: ${url("/contact")} or ${settings.footer?.email || "info@leatherculture.shop"}`,
+    `- Contact: ${url("/contact")} or ${settings.footer?.email || "contact@leatherculture.shop"}`,
     `- Full reference: ${url("/llms-full.txt")}`,
     ""
   ].join("\n");
@@ -688,7 +716,7 @@ function llmsText(settings, products, posts, site) {
     `- Returns and exchanges: ${checkout.returnsPolicy || fallbackPolicy}`,
     ...(prices.length ? [`- Price range: ${money(Math.min(...prices))} to ${money(Math.max(...prices))}.`] : []),
     "- Currency: PKR.",
-    `- Contact: ${settings.footer?.email || "info@leatherculture.shop"}`,
+    `- Contact: ${settings.footer?.email || "contact@leatherculture.shop"}`,
     "",
     "## Pages",
     ...[["/", "Home"], ["/shop", "Shop"], ["/about", "About"], ["/blog", "Journal"], ["/contact", "Contact"]].map(([pathname, label]) => `- [${label}](${url(pathname)})${pageInfo[pathname] ? `: ${firstSentence(pageInfo[pathname])}` : ""}`),

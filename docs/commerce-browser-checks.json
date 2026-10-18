@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-18T19:33:16.062Z",
+  "mode": "local with mocked API; no real orders or reviews submitted",
+  "checks": [
+    {
+      "test": "Local product page, no reviews",
+      "width": 360,
+      "overflow": false,
+      "guides": 3,
+      "related": 4
+    },
+    {
+      "test": "Local product page, no reviews",
+      "width": 1440,
+      "overflow": false,
+      "guides": 3,
+      "related": 4
+    },
+    {
+      "test": "Mock API review renders with matching schema",
+      "count": 1,
+      "rating": {
+        "@type": "AggregateRating",
+        "ratingValue": 2,
+        "reviewCount": 1,
+        "bestRating": 5,
+        "worstRating": 1
+      }
+    },
+    {
+      "test": "Review form selects purchased product; POST intercepted locally",
+      "productSlug": "the-heritage",
+      "rating": 4
+    }
+  ]
+}

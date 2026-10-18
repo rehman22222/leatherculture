@@ -62,11 +62,21 @@ async function main() {
   }
   const titles = new Map();
   for (const row of rows) {
+    row.internalLinkSources = rows.filter(other => other.path !== row.path && other.links?.includes(row.path)).map(other => other.path);
     if (titles.has(row.title)) row.problems.push(`Duplicate title with ${titles.get(row.title)}`);
     titles.set(row.title, row.path);
-    if (row.path !== "/" && !rows.some(other => other.path !== row.path && other.links?.includes(row.path))) row.problems.push("No inbound link from another sitemap page");
+    if (row.path !== "/" && !row.internalLinkSources.length) row.problems.push("No inbound link from another sitemap page");
   }
-  const report = { checkedAt: new Date().toISOString(), mode: live ? "live" : "build", site, pageCount: rows.length, pagesWithProblems: rows.filter(row => row.problems.length).length, pages: rows };
+  const distances = new Map([["/", 0]]), queue = ["/"];
+  for (let i = 0; i < queue.length; i++) {
+    const source = rows.find(row => row.path === queue[i]);
+    for (const target of source?.links || []) if (!distances.has(target)) { distances.set(target, distances.get(source.path) + 1); queue.push(target); }
+  }
+  for (const row of rows) {
+    row.clickDepthFromHome = distances.get(row.path) ?? null;
+    if (row.clickDepthFromHome === null) row.problems.push("Not reachable from home through public HTML links");
+  }
+  const report = { checkedAt: new Date().toISOString(), mode: live ? "live" : "build", site, pageCount: rows.length, internalLinkPairs: rows.reduce((sum, row) => sum + row.internalLinkSources.length, 0), maxClickDepth: Math.max(...distances.values()), pagesWithProblems: rows.filter(row => row.problems.length).length, pages: rows };
   const label = live ? process.argv.includes("--after") ? "production" : "live" : "build";
   const file = path.join(root, "docs", `seo-audit-${label}.json`);
   await fs.writeFile(file, JSON.stringify(report, null, 2) + "\n");

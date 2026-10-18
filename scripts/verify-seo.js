@@ -92,6 +92,8 @@ for (const url of urls) {
   }
   $("script,style").remove();
   const text = $("body").text();
+  if (settings?.checkout?.codNote?.includes("5-7 days")) assert(!/3-5 working days/.test(text), `${url.pathname}: stale delivery estimate`);
+  assert(!/Prices start at Rs 3,400|Every LeatherCulture jacket is made from genuine leather and finished by hand/.test($(".lc-answers").text()), `${url.pathname}: stale catalogue facts`);
   assert(!/test@gmail|London, England|England, London|234 567|thirty days|USD\s*\$|\$\d[\d,.]*/.test(text), url.pathname);
   assert.equal($("h1").length, 1, url.pathname);
   assert.equal($("link[rel='canonical']").attr("href"), url.href);

@@ -26,4 +26,27 @@
     status.textContent = "Added to your cart.";
   });
   update();
+  // Static reviews are readable without JavaScript. Refresh both visible reviews and their schema
+  // together so newly approved or hidden reviews are reflected without waiting for a rebuild.
+  (async () => {
+    const reviews = window.LeatherCultureReviews, section = document.getElementById("product-reviews");
+    if (!reviews || !section) return;
+    try {
+      const base = String(window.LEATHERCULTURE_API_BASE || "").replace(/\/$/, "");
+      const response = await fetch(`${base}/api/storefront/reviews?product=${encodeURIComponent(data.product.slug)}`, { signal: AbortSignal.timeout(12000) });
+      if (!response.ok) return;
+      const rows = await response.json();
+      if (!Array.isArray(rows)) return;
+      section.innerHTML = reviews.render(rows, data.product.slug);
+      document.querySelectorAll("script[type='application/ld+json']").forEach(script => {
+        const schema = JSON.parse(script.textContent);
+        for (const node of schema["@graph"] || [schema]) {
+          if (node["@type"] !== "Product") continue;
+          delete node.review; delete node.aggregateRating;
+          Object.assign(node, reviews.markup(rows, data.product.slug));
+        }
+        script.textContent = JSON.stringify(schema).replace(/</g, "\\u003c");
+      });
+    } catch (_) { /* Keep the last published reviews during an API outage. */ }
+  })();
 })();
