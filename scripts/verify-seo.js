@@ -3,7 +3,7 @@ const path = require("path");
 const assert = require("assert/strict");
 const cheerio = require("cheerio");
 const { materialize, publicPhone } = require("./build-storefront");
-const { legalLinks, profileUrl } = require("../lib/seo");
+const { legalLinks, profileUrl, cardImage } = require("../lib/seo");
 const typesOf = node => [].concat(node["@type"] || []);
 
 const output = path.join(__dirname, "..", "dist");
@@ -31,6 +31,20 @@ for (const url of urls) {
   const $ = cheerio.load(html);
   const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
+  if (url.pathname === "/" && settings) {
+    // Catalogue cards must work before the deferred Framer runtime or settings API loads.
+    const live = settings.products.filter(product => product.enabled !== false);
+    const cards = $("[data-framer-name='Best sellers'] a").filter((_, element) => $(element).find("img").length);
+    assert(cards.length > 0 || live.length === 0, "homepage: live catalogue cards missing from initial HTML");
+    cards.each((_, element) => {
+      const card = $(element);
+      const product = live.find(item => card.attr("href") === `/shop/${item.slug}`);
+      assert(product, "homepage: demo or retired product card in initial HTML");
+      assert(card.text().includes(product.name), "homepage: product name missing");
+      assert(card.text().includes(product.price), "homepage: product price missing");
+      assert.equal(card.find("img").first().attr("src"), cardImage(product.image), "homepage: product image does not match card");
+    });
+  }
   const productData = $("#lc-product-data").length ? JSON.parse($("#lc-product-data").text()).product : null;
   assert.equal($("body > #lc-account-link").length, 0, `${url.pathname}: legacy floating account link`);
   // Tools and crawlers that read only the start of a page must reach the structured data and the answers.

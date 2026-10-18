@@ -90,6 +90,34 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     else node.attr("href", "mailto:info@leatherculture.shop").text("Email our team");
   });
   $("a[href*='google.com/maps']").attr("href", `https://www.google.com/maps/search/${encodeURIComponent(settings.footer?.address || "Pakistan")}`);
+  // Resolve demo catalogue slots before rewriting retired links. Keep one assignment per
+  // template slug so desktop/mobile copies show the same live product without hydration.
+  const liveProducts = (settings.products || []).filter(item => item.enabled !== false);
+  const catalogSlots = $("a[data-lc-template-slug],a[href*='/shop/']").filter((_, element) => {
+    const node = $(element);
+    return node.find("img").length && /(?:^|\/)shop(?:\/|$)/.test(node.attr("href") || "");
+  });
+  const slotSlug = node => node.attr("data-lc-template-slug") || (node.attr("href") || "").split("/").pop();
+  const resolveProduct = slug => {
+    const destination = redirects.find(r => r.source === `/shop/${slug}`)?.destination;
+    return liveProducts.find(item => item.slug === slug || item.id === slug || `/shop/${item.slug}` === destination);
+  };
+  const groups = new Map();
+  catalogSlots.each((_, element) => {
+    const node = $(element), slug = slotSlug(node);
+    const section = node.closest("section")[0] || $.root()[0];
+    if (!groups.has(section)) {
+      const reserved = new Set(catalogSlots.toArray()
+        .filter(element => ($(element).closest("section")[0] || $.root()[0]) === section)
+        .map(element => resolveProduct(slotSlug($(element)))).filter(Boolean));
+      groups.set(section, { assignments: new Map(), spareProducts: liveProducts.filter(item => !reserved.has(item)) });
+    }
+    const { assignments, spareProducts } = groups.get(section);
+    if (!assignments.has(slug)) assignments.set(slug, resolveProduct(slug) || spareProducts.shift() || null);
+    const item = assignments.get(slug);
+    if (item) node.attr("data-lc-template-slug", item.slug);
+    else node.remove();
+  });
   // Resolve template cards before crawling, including all responsive variants.
   $("a[data-lc-template-slug],a[href*='/shop/']").each((_, element) => {
     const node = $(element);
@@ -105,7 +133,9 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     }
     node.attr("href", `/shop/${item.slug}`);
     node.removeAttr("data-lc-template-slug");
-    node.find("h2,h3,h4").first().text(item.name);
+    const name = node.find("h2,h3,h4").first();
+    if (name.length) name.text(item.name);
+    else node.find("p").filter((_, p) => !/^(?:USD\s*)?\$[\d,.]+/.test(normalize($(p).text())) && normalize($(p).text()).length > 12).first().text(item.name);
     node.find("[data-framer-name='Compared price']").remove();
     let priceSet = false;
     node.find("p").each((_, p) => {
