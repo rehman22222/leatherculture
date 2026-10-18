@@ -16,6 +16,8 @@ The screenshots confirm that the owner has a Search Console domain property. Thi
 - **Genuine product reviews:** signed delivery-email links now let customers select a jacket from their order or review the overall service. The backend checks delivery status, rating range and whether that product was purchased. Only approved, verified reviews explicitly tied to the selected product enter its visible reviews, `review` and `aggregateRating`. Hidden reviews and order-wide reviews do not. Both low and high approved ratings count. Public responses exclude order IDs and private customer fields. Static HTML includes available reviews at build time; browser rendering refreshes reviews and schema together.
 - **Internal links:** each jacket links to the other four jackets and to the price, size and care guides. These are ordinary HTML links that work without JavaScript. The audit now reports inbound source pages and click depth from the homepage.
 - **Old template copy:** replaced stale introductions that still advertised retired clothing, Rs 3,400 starting prices, and unverified handmade/material claims. The current introductions use the live catalogue and direct material questions to the team.
+- **Mobile policy pages:** the terms/privacy navigation now wraps within narrow screens. Local checks pass at 320px, 390px and 820px.
+- **Deployment timing:** the review form can still accept an overall order review if the frontend updates before the backend; it does not assign that review to a product. An empty rating is rejected before submission.
 
 There are **no customer reviews in the database** at this check. Review/rating schema is therefore correctly absent for now. The mechanism is ready for actual customer feedback; no ratings were fabricated. Product snippets can use valid offers without ratings, although Google may show optional review warnings. [Google product snippet requirements](https://developers.google.com/search/docs/appearance/structured-data/product-snippet).
 
@@ -23,7 +25,7 @@ There are **no customer reviews in the database** at this check. Review/rating s
 
 - Build, `npm run verify:seo`, and `npm run verify:commerce` pass.
 - All **17 public sitemap pages** pass the implemented local technical checks.
-- **192 unique source-to-target internal link pairs**, excluding self-links; maximum **2 clicks** from home. Each product has links from **7 other public pages**. These are our HTML-crawl measurements, not Search Console counts.
+- **193 unique source-to-target internal link pairs**, excluding self-links; maximum **2 clicks** from home. Each product has links from **7 other public pages**. These are our HTML-crawl measurements, not Search Console counts.
 - Browser checks at 360px and 1440px: no horizontal overflow, three guide links, four related jackets, and an honest empty-review state.
 - Local mocked API checks verify that a low-rated product review appears with matching schema and that the form submits the selected purchased product. **No test reviews or orders were submitted to production.** See [browser evidence](commerce-browser-checks.json).
 - Business settings were updated with a revision increment; prior public values are saved in [merchant-details-before.json](merchant-details-before.json).
@@ -34,4 +36,10 @@ Use URL Inspection in the existing Search Console property to test the live home
 
 Google needs to recrawl the site before its sampled links and enhancement reports can reflect these changes. Report counts and rich results are controlled by Google; no ranking, indexing or rich-result guarantee is made.
 
-Deployment verification is recorded below after the push.
+## Deployment verification
+
+Implementation commit `f82ef9b` was pushed to `main`. [Vercel deployment](https://vercel.com/ab-rehmans-projects/leatherculture/GYpwYeGWFRYt6ZKLuqaCxVv6HUxR) succeeded. All 17 production sitemap pages return HTTP 200 and pass the implemented crawl checks. All five live product pages contain the confirmed return policy and shipping rate/handling time, four related jackets and three guides. Their ratings remain absent because there are no real reviews.
+
+The Render backend's new `/api/reviews/products` route is live and returns the expected HTTP 403 response to a request without a signed review link. No review or order was created by this check. The local mocked checks cover purchased-product selection and submission.
+
+Evidence: [live crawl](seo-audit-production.json), [product schema checks](commerce-production-checks.json), [local review browser checks](commerce-browser-checks.json).

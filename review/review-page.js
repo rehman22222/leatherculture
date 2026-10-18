@@ -71,6 +71,7 @@
     const button = document.getElementById("submit");
     const error = document.getElementById("error");
     error.textContent = "";
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) { error.textContent = "Please choose a rating from 1 to 5."; return; }
     button.disabled = true;
     button.textContent = "Sending…";
     try {
@@ -112,6 +113,9 @@
   (async () => {
     try {
       const response = await fetch(api(`/api/reviews/products?${new URLSearchParams({ order: orderId, t: token })}`), { cache: "no-store" });
+      // The static frontend can deploy before the backend. Keep the existing order-review form
+      // usable during that rollout; it cannot claim a product rating without an explicit selection.
+      if (response.status === 404) { form(); return; }
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not load your order's products.");
       products = data;

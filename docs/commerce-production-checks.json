@@ -1,0 +1,85 @@
+{
+  "checkedAt": "2026-10-18T19:41:41.214Z",
+  "products": [
+    {
+      "slug": "the-blade",
+      "status": 200,
+      "returnDays": 7,
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+      "handling": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 2,
+        "unitCode": "DAY"
+      },
+      "shipping": 0,
+      "guides": 3,
+      "related": 4,
+      "hasRating": false
+    },
+    {
+      "slug": "the-heritage",
+      "status": 200,
+      "returnDays": 7,
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+      "handling": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 2,
+        "unitCode": "DAY"
+      },
+      "shipping": 0,
+      "guides": 3,
+      "related": 4,
+      "hasRating": false
+    },
+    {
+      "slug": "the-vibe",
+      "status": 200,
+      "returnDays": 7,
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+      "handling": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 2,
+        "unitCode": "DAY"
+      },
+      "shipping": 0,
+      "guides": 3,
+      "related": 4,
+      "hasRating": false
+    },
+    {
+      "slug": "the-nomad",
+      "status": 200,
+      "returnDays": 7,
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+      "handling": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 2,
+        "unitCode": "DAY"
+      },
+      "shipping": 0,
+      "guides": 3,
+      "related": 4,
+      "hasRating": false
+    },
+    {
+      "slug": "the-rune",
+      "status": 200,
+      "returnDays": 7,
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility",
+      "handling": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 2,
+        "unitCode": "DAY"
+      },
+      "shipping": 0,
+      "guides": 3,
+      "related": 4,
+      "hasRating": false
+    }
+  ]
+}
