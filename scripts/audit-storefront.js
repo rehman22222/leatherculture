@@ -1,5 +1,6 @@
 "use strict";
 // Read-only technical audit of every public sitemap page. --live checks deployed HTML.
+// Add --after to save deployment verification separately from the baseline report.
 const fs = require("fs/promises");
 const path = require("path");
 const cheerio = require("cheerio");
@@ -66,7 +67,8 @@ async function main() {
     if (row.path !== "/" && !rows.some(other => other.path !== row.path && other.links?.includes(row.path))) row.problems.push("No inbound link from another sitemap page");
   }
   const report = { checkedAt: new Date().toISOString(), mode: live ? "live" : "build", site, pageCount: rows.length, pagesWithProblems: rows.filter(row => row.problems.length).length, pages: rows };
-  const file = path.join(root, "docs", `seo-audit-${live ? "live" : "build"}.json`);
+  const label = live ? process.argv.includes("--after") ? "production" : "live" : "build";
+  const file = path.join(root, "docs", `seo-audit-${label}.json`);
   await fs.writeFile(file, JSON.stringify(report, null, 2) + "\n");
   console.log(JSON.stringify({ pageCount: report.pageCount, pagesWithProblems: report.pagesWithProblems, findings: rows.filter(row => row.problems.length).map(row => ({ path: row.path, problems: row.problems })), report: file }, null, 2));
 }

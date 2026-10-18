@@ -1,0 +1,471 @@
+{
+  "checkedAt": "2026-10-18T19:23:37.910Z",
+  "mode": "live",
+  "site": "https://www.leatherculture.shop",
+  "pageCount": 17,
+  "pagesWithProblems": 0,
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 743870,
+      "title": "Leather Jackets in Pakistan | LeatherCulture",
+      "titleLength": 44,
+      "descriptionLength": 144,
+      "h1": [
+        "Premium leather jackets for modern living"
+      ],
+      "schemaCount": 6,
+      "images": 207,
+      "links": [
+        "/contact",
+        "/blog/leather-jacket-care-pakistan",
+        "/blog/real-leather-vs-faux-leather",
+        "/about",
+        "/",
+        "/shop",
+        "/blog",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/minimal-street-style",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 372096,
+      "title": "About LeatherCulture | Jacket Store in Pakistan",
+      "titleLength": 47,
+      "descriptionLength": 128,
+      "h1": [
+        "More than leather"
+      ],
+      "schemaCount": 5,
+      "images": 95,
+      "links": [
+        "/blog/leather-jacket-care-pakistan",
+        "/about",
+        "/contact",
+        "/",
+        "/shop",
+        "/blog",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop",
+      "status": 200,
+      "bytes": 485745,
+      "title": "Leather Jacket Prices in Pakistan | LeatherCulture",
+      "titleLength": 50,
+      "descriptionLength": 151,
+      "h1": [
+        "Leather Jackets in Pakistan"
+      ],
+      "schemaCount": 6,
+      "images": 122,
+      "links": [
+        "/contact",
+        "/blog/leather-jacket-care-pakistan",
+        "/blog/real-leather-vs-faux-leather",
+        "/about",
+        "/",
+        "/shop",
+        "/blog",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog",
+      "status": 200,
+      "bytes": 407402,
+      "title": "Leather Jacket Buying, Care & Style Guides | LeatherCulture",
+      "titleLength": 59,
+      "descriptionLength": 147,
+      "h1": [
+        "Stories, style guides and leather care"
+      ],
+      "schemaCount": 5,
+      "images": 67,
+      "links": [
+        "/blog/leather-jacket-care-pakistan",
+        "/about",
+        "/contact",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/minimal-street-style",
+        "/blog/leather-jacket-size-guide",
+        "/blog/real-leather-vs-faux-leather",
+        "/",
+        "/shop",
+        "/blog",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/contact",
+      "status": 200,
+      "bytes": 337375,
+      "title": "Contact LeatherCulture | Sizing & Order Help in Pakistan",
+      "titleLength": 56,
+      "descriptionLength": 153,
+      "h1": [
+        "Questions about sizing, orders or leather care?"
+      ],
+      "schemaCount": 6,
+      "images": 56,
+      "links": [
+        "/contact",
+        "/blog/leather-jacket-care-pakistan",
+        "/blog/real-leather-vs-faux-leather",
+        "/about",
+        "/",
+        "/shop",
+        "/blog",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop/the-blade",
+      "status": 200,
+      "bytes": 14667,
+      "title": "The Blade Hooded Jacket | LeatherCulture Pakistan",
+      "titleLength": 49,
+      "descriptionLength": 141,
+      "h1": [
+        "The Blade Hooded Jacket"
+      ],
+      "schemaCount": 1,
+      "images": 8,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-size-guide",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop/the-heritage",
+      "status": 200,
+      "bytes": 18096,
+      "title": "The Heritage Collared Jacket | LeatherCulture Pakistan",
+      "titleLength": 54,
+      "descriptionLength": 154,
+      "h1": [
+        "The Heritage Collared Jacket"
+      ],
+      "schemaCount": 1,
+      "images": 11,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-size-guide",
+        "/shop/the-blade",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop/the-vibe",
+      "status": 200,
+      "bytes": 14915,
+      "title": "The Vibe Contrast Panel Jacket | LeatherCulture Pakistan",
+      "titleLength": 56,
+      "descriptionLength": 141,
+      "h1": [
+        "The Vibe Contrast Panel Jacket"
+      ],
+      "schemaCount": 1,
+      "images": 8,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-size-guide",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop/the-nomad",
+      "status": 200,
+      "bytes": 15009,
+      "title": "The Nomad Stand Collar Jacket | LeatherCulture Pakistan",
+      "titleLength": 55,
+      "descriptionLength": 153,
+      "h1": [
+        "The Nomad Stand Collar Jacket"
+      ],
+      "schemaCount": 1,
+      "images": 8,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-size-guide",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-rune",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/shop/the-rune",
+      "status": 200,
+      "bytes": 14696,
+      "title": "The Rune Asymmetric Jacket | LeatherCulture Pakistan",
+      "titleLength": 52,
+      "descriptionLength": 144,
+      "h1": [
+        "The Rune Asymmetric Jacket"
+      ],
+      "schemaCount": 1,
+      "images": 8,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-size-guide",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog/leather-jacket-price-pakistan",
+      "status": 200,
+      "bytes": 22114,
+      "title": "Leather Jacket Price in Pakistan: Buying Guide | LeatherCulture",
+      "titleLength": 63,
+      "descriptionLength": 155,
+      "h1": [
+        "Leather jacket price in Pakistan: what to check before you buy"
+      ],
+      "schemaCount": 1,
+      "images": 3,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-price-pakistan",
+        "/shop/the-blade",
+        "/shop/the-heritage",
+        "/shop/the-vibe",
+        "/shop/the-nomad",
+        "/shop/the-rune",
+        "/blog/real-leather-vs-faux-leather",
+        "/blog/leather-jacket-size-guide",
+        "/blog/leather-jacket-care-pakistan",
+        "/blog/minimal-street-style",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog/minimal-street-style",
+      "status": 200,
+      "bytes": 11816,
+      "title": "Style a Leather Jacket in Pakistan | The Best Simple Guide",
+      "titleLength": 58,
+      "descriptionLength": 142,
+      "h1": [
+        "How to build a simple wardrobe around one leather jacket"
+      ],
+      "schemaCount": 1,
+      "images": 2,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-care-pakistan",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/leather-jacket-size-guide",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog/leather-jacket-care-pakistan",
+      "status": 200,
+      "bytes": 13833,
+      "title": "Leather Jacket Care in Pakistan | The Best Simple Guide",
+      "titleLength": 55,
+      "descriptionLength": 138,
+      "h1": [
+        "How to look after a leather jacket in Pakistan"
+      ],
+      "schemaCount": 1,
+      "images": 2,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/minimal-street-style",
+        "/blog/leather-jacket-size-guide",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog/leather-jacket-size-guide",
+      "status": 200,
+      "bytes": 12427,
+      "title": "Leather Jacket Size Guide Pakistan | Get the Best Fit",
+      "titleLength": 53,
+      "descriptionLength": 146,
+      "h1": [
+        "Leather jacket sizing: how to get it right the first time"
+      ],
+      "schemaCount": 1,
+      "images": 2,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/minimal-street-style",
+        "/blog/leather-jacket-care-pakistan",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/blog/real-leather-vs-faux-leather",
+      "status": 200,
+      "bytes": 13709,
+      "title": "Real Leather vs Faux Leather | The Best Quick Test",
+      "titleLength": 50,
+      "descriptionLength": 138,
+      "h1": [
+        "Real leather or not? Four checks before you pay"
+      ],
+      "schemaCount": 1,
+      "images": 2,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/blog/leather-jacket-price-pakistan",
+        "/blog/minimal-street-style",
+        "/blog/leather-jacket-care-pakistan",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/privacy-policy",
+      "status": 200,
+      "bytes": 9558,
+      "title": "Privacy Policy | LeatherCulture Pakistan",
+      "titleLength": 40,
+      "descriptionLength": 117,
+      "h1": [
+        "Privacy Policy"
+      ],
+      "schemaCount": 1,
+      "images": 1,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/terms",
+        "/privacy-policy"
+      ],
+      "problems": []
+    },
+    {
+      "path": "/terms",
+      "status": 200,
+      "bytes": 8635,
+      "title": "Terms & Conditions | LeatherCulture Pakistan",
+      "titleLength": 44,
+      "descriptionLength": 141,
+      "h1": [
+        "Terms & Conditions"
+      ],
+      "schemaCount": 1,
+      "images": 1,
+      "links": [
+        "/",
+        "/about",
+        "/shop",
+        "/blog",
+        "/contact",
+        "/privacy-policy",
+        "/terms"
+      ],
+      "problems": []
+    }
+  ]
+}
