@@ -412,6 +412,50 @@ body.lc-light-header .lc-account-nav:focus-visible svg {
 }
 
 /* The hidden logo strip used to close the review card, so restore its bottom padding. */
+.lc-journal-index { max-width: 1100px; margin: 32px auto 0; }
+.lc-journal-index ul { padding-left: 22px; }
+.lc-journal-index li { margin-bottom: 20px; }
+.lc-journal-index a { color: inherit; font-weight: 700; }
+.lc-journal-index p { margin-top: 6px; }
+footer .lc-contact-list,
+footer .lc-contact-row {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+footer [data-lc-phone-row][hidden] { display: none !important; }
+footer a.lc-contact-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  color: #ccc !important;
+  text-decoration: none !important;
+}
+footer .lc-contact-link > [data-border] { flex: 0 0 40px !important; }
+footer .lc-contact-link > [data-framer-component-type='RichTextContainer'] {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+footer .lc-contact-link p {
+  font-size: clamp(16px, 1.4vw, 20px) !important;
+  line-height: 1.5 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  color: #ccc !important;
+}
+footer .lc-contact-link:hover p { color: #fff !important; }
+footer .lc-contact-icon { width: 20px !important; height: 20px !important; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+@media (min-width: 810px) {
+  footer .lc-contact-columns { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr) !important; gap: 24px !important; }
+  footer .lc-contact-columns > div { width: auto !important; min-width: 0 !important; }
+  footer .lc-contact-column { grid-column: 2 !important; grid-row: 1 !important; }
+  footer .lc-contact-link p { font-size: 16px !important; }
+}
+
 [data-framer-name="Reviews"] [data-framer-name="01 - Desktop"],
 [data-framer-name="Reviews"] [data-framer-name="01 - Phone"] {
   padding-bottom: 72px !important;

@@ -31,6 +31,21 @@ for (const url of urls) {
   const $ = cheerio.load(html);
   const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
   const settings = $("#lc-build-settings").length ? JSON.parse($("#lc-build-settings").text()) : null;
+  if (settings) {
+    const page = settings.pages?.find(page => page.path === url.pathname);
+    if (page?.metaTitle) assert.equal($("title").text(), page.metaTitle, `${url.pathname}: admin title missing from initial HTML`);
+    if (page?.metaDescription) assert.equal($("meta[name='description']").attr("content"), page.metaDescription, `${url.pathname}: admin description missing from initial HTML`);
+    $("a[href*='/blog/']").filter((_, e) => $(e).find("img").length).each((_, element) => {
+      const card = $(element), post = settings.blogPosts.find(post => `/blog/${post.slug}` === card.attr("href"));
+      assert(post && card.text().includes(post.title), `${url.pathname}: journal card title does not match its destination`);
+    });
+    $("footer .lc-contact-link").each((_, element) => {
+      assert($(element).find("svg path").length, `${url.pathname}: contact icon depends on a missing SVG symbol`);
+    });
+    if (!publicPhone(settings.footer?.phone)) {
+      $("footer a[data-lc-phone]").each((_, element) => assert($(element).parent().attr("hidden") !== undefined, `${url.pathname}: duplicate email fallback should be hidden`));
+    }
+  }
   if (url.pathname === "/" && settings) {
     // Catalogue cards must work before the deferred Framer runtime or settings API loads.
     const live = settings.products.filter(product => product.enabled !== false);

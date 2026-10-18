@@ -1082,10 +1082,14 @@
       // rendered cards decide the mapping; hidden breakpoint variants follow it
       .sort(([, , a], [, , b]) => (b ? 1 : 0) - (a ? 1 : 0));
     const bySlug = new Map(live.flatMap((item) => [[item.slug, item], [item.id, item]]).filter(([key]) => key));
-    const shown = new Set(cards.filter(([, slug, rendered]) => products.has(slug) && rendered).map(([, slug]) => (bySlug.get(slug) || {}).slug || slug));
-    const spare = live.filter((item) => !shown.has(item.slug));
-    const assigned = new Map();
+    const groups = new Map();
     cards.forEach(([link, slug, , images]) => {
+      const section = link.closest("section") || document.body;
+      if (!groups.has(section)) {
+        const shown = new Set(cards.filter(([card, key]) => (card.closest("section") || document.body) === section && products.has(key)).map(([, key]) => bySlug.get(key)?.slug || key));
+        groups.set(section, { spare: live.filter(item => !shown.has(item.slug)), assigned: new Map() });
+      }
+      const { spare, assigned } = groups.get(section);
       if (products.has(slug)) {
         fillProductCard(link, bySlug.get(slug), images);
         return;
@@ -1120,10 +1124,14 @@
       if (excerpt && post.excerpt) excerpt.textContent = post.excerpt;
       const date = texts.find((node) => /^(\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Z][a-z]{2} \d{1,2}, \d{4})$/.test(normalizeText(node.textContent)));
       if (date && post.date) date.textContent = formatDate(post.date);
+      const category = texts.find(node => /^(Style guide|Leather care|Buying guide)$/i.test(normalizeText(node.textContent)));
+      if (category) category.textContent = post.category || "Journal";
+      const readTime = texts.find(node => /^\d+\s*min\s*read$/i.test(normalizeText(node.textContent)));
+      if (readTime) readTime.textContent = post.readTime || "5 min read";
       if (post.coverImage) {
         link.querySelectorAll("img").forEach((img) => {
           img.removeAttribute("srcset");
-          img.setAttribute("src", mediaUrl(post.coverImage));
+          setCardImage(img, post.coverImage);
           img.setAttribute("alt", post.coverAlt || post.title || "");
         });
       }
@@ -1209,22 +1217,36 @@
     const policy = settings.checkout?.returnsPolicy?.trim() || "Contact info@leatherculture.shop for the current returns and exchange policy before ordering.";
     const phone = settings.footer?.phone || "";
     const placeholder = /234\s*567|123456789|3XX|XXXXX/i.test(phone);
-    document.querySelectorAll("[data-lc-phone]").forEach(node => {
+    document.querySelectorAll("[data-lc-phone], a[href^='tel:']").forEach(node => {
       const label = phone && !placeholder ? phone : "Email our team";
-      if (node.textContent !== label) node.textContent = label;
+      const text = node.querySelector("p") || node;
+      if (text.textContent !== label) text.textContent = label;
       if (node.tagName === "A") {
-        node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : "mailto:info@leatherculture.shop";
+        node.dataset.lcPhone = "true";
+        node.href = phone && !placeholder ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "info@leatherculture.shop"}`;
         node.setAttribute("aria-label", phone && !placeholder ? `Call LeatherCulture at ${phone}` : "Email our team at LeatherCulture");
+        if (node.closest("footer")) {
+          node.parentElement.dataset.lcPhoneRow = "true";
+          node.parentElement.hidden = !phone || placeholder;
+        }
       }
     });
-    if (!phone || placeholder) {
-      replaceText(["+001 234 567 890"], "Email our team");
-      document.querySelectorAll("a[href^='tel:']").forEach(link => {
-        link.href = "mailto:info@leatherculture.shop";
-        link.textContent = "Email our team";
-        link.setAttribute("aria-label", "Email our team at LeatherCulture");
-      });
-    }
+    document.querySelectorAll("footer a[href^='mailto:'],footer a[href^='tel:'],footer a[href*='google.com/maps']").forEach(link => {
+      if (!link.querySelector("svg")) return;
+      link.classList.add("lc-contact-link");
+      link.parentElement.classList.add("lc-contact-row");
+      link.parentElement.parentElement.classList.add("lc-contact-list");
+      link.parentElement.parentElement.parentElement.classList.add("lc-contact-column");
+      link.parentElement.parentElement.parentElement.parentElement.classList.add("lc-contact-columns");
+      const icon = link.querySelector("svg:has(use)");
+      if (icon) {
+        const kind = link.getAttribute("href").startsWith("mailto:") ? "email" : link.getAttribute("href").startsWith("tel:") ? "phone" : "location";
+        const shapes = { email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>', phone: '<path d="M5 3h4l2 5-3 2a14 14 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 5a2 2 0 0 1 2-2Z"/>', location: '<path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>' };
+        icon.setAttribute("class", "lc-contact-icon");
+        icon.setAttribute("aria-hidden", "true");
+        icon.innerHTML = shapes[kind];
+      }
+    });
     const product = currentProductFromPath();
     document.querySelectorAll("#faq details").forEach(detail => {
       const question = detail.querySelector("summary")?.textContent || "";

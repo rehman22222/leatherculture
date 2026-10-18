@@ -40,12 +40,24 @@ const privatePage = pathname => /^\/(account|order|review)(\/|$)/.test(pathname)
 function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
   site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
+  const brandStylesheet = [...(assets?.keys() || [])].find(file => file.startsWith("/assets/css/brand-"));
+  if (brandStylesheet && $("style[data-lc-brand]").length) {
+    $("style[data-lc-brand]").remove();
+    $("head").append(`<link rel="stylesheet" href="${brandStylesheet}" data-lc-brand>`);
+  }
   if (!$("link[href*='/account/nav.css']").length) $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
   // Pages from the product renderer already carry these tags.
   if (!$("meta[name='author']").length) $("head").append(`<meta name="author" content="${escape(settings.brand?.name || "LeatherCulture")}">`);
   if (!$("meta[name='google-site-verification'],meta[name='msvalidate.01']").length) $("head").append(verificationTags(settings));
   if (!privatePage(pathname) && !$("script[src*='googletagmanager.com/gtag/js']").length) $("head").append(analyticsTags(settings));
   const product = settings.products?.find(item => pathname === `/shop/${item.slug}`);
+  const pageSeo = product || settings.pages?.find(page => page.path === pathname);
+  if (pageSeo?.metaTitle) {
+    $("title").text(pageSeo.metaTitle);
+    $("meta[property='og:title'],meta[name='twitter:title']").attr("content", pageSeo.metaTitle);
+  }
+  if (pageSeo?.metaDescription) $("meta[name='description'],meta[property='og:description'],meta[name='twitter:description']").attr("content", pageSeo.metaDescription);
+  if (pageSeo?.keywords) $("meta[name='keywords']").attr("content", pageSeo.keywords);
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
   const phone = publicPhone(settings.footer?.phone);
   const redirects = require("../vercel.json").redirects || [];
@@ -86,10 +98,23 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $("a[href^='tel:']").each((_, element) => {
     const node = $(element);
     node.attr("data-lc-phone", "true");
-    if (phone) node.attr("href", `tel:${phone.replace(/[^+\d]/g, "")}`).text(phone);
-    else node.attr("href", "mailto:info@leatherculture.shop").text("Email our team");
+    const label = node.find("p").last();
+    (label.length ? label : node).text(phone || "Email our team");
+    node.attr("href", phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : `mailto:${settings.footer?.email || "info@leatherculture.shop"}`);
+    if (node.closest("footer").length && !phone) node.parent().attr("data-lc-phone-row", "true").attr("hidden", "");
   });
   $("a[href*='google.com/maps']").attr("href", `https://www.google.com/maps/search/${encodeURIComponent(settings.footer?.address || "Pakistan")}`);
+  $("footer a[href^='mailto:'],footer a[href^='tel:'],footer a[href*='google.com/maps']").each((_, element) => {
+    const link = $(element);
+    if (!link.find("svg").length) return;
+    link.addClass("lc-contact-link");
+    link.parent().addClass("lc-contact-row").parent().addClass("lc-contact-list");
+    link.parent().parent().parent().addClass("lc-contact-column").parent().addClass("lc-contact-columns");
+    const icon = link.find("svg").first();
+    const kind = link.attr("href").startsWith("mailto:") ? "email" : link.attr("href").startsWith("tel:") ? "phone" : "location";
+    const shapes = { email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>', phone: '<path d="M5 3h4l2 5-3 2a14 14 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 5a2 2 0 0 1 2-2Z"/>', location: '<path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>' };
+    icon.attr({ class: "lc-contact-icon", "aria-hidden": "true", fill: "none", stroke: "currentColor", "stroke-width": "1.6", "stroke-linecap": "round", "stroke-linejoin": "round" }).html(shapes[kind]);
+  });
   // Resolve demo catalogue slots before rewriting retired links. Keep one assignment per
   // template slug so desktop/mobile copies show the same live product without hydration.
   const liveProducts = (settings.products || []).filter(item => item.enabled !== false);
@@ -146,7 +171,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     });
     node.find("img").attr("src", cardImage(item.image)).attr("alt", item.alt || item.name).removeAttr("srcset");
   });
-  if (pathname === "/shop") $("h1").text("Leather Jackets and Modern Wear in Pakistan");
+  if (pathname === "/shop") $("h1").text("Leather Jackets in Pakistan");
   if (product) {
     $("h1").text(product.name);
     $("[data-framer-name='Pricing']").each((_, element) => {
@@ -163,15 +188,30 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     });
   }
   const blogSlugs = new Map();
-  $("a[data-lc-template-slug][href*='/blog']").each((_, element) => {
-    const node = $(element), slug = node.attr("data-lc-template-slug");
+  $("a[data-lc-template-slug][href*='/blog'],a[href*='/blog/']").filter((_, element) => $(element).find("img").length).each((_, element) => {
+    const node = $(element), slug = node.attr("data-lc-template-slug") || (node.attr("href") || "").split("/").pop();
     if (!blogSlugs.has(slug)) blogSlugs.set(slug, settings.blogPosts?.filter(p => p.status === "published")[blogSlugs.size]);
     const post = blogSlugs.get(slug);
     if (!post) { node.remove(); return; }
     node.attr("href", `/blog/${post.slug}`).removeAttr("data-lc-template-slug");
-    node.find("h2,h3,h4").first().text(post.title);
-    node.find("img").attr("src", post.coverImage).attr("alt", post.coverAlt || post.title).removeAttr("srcset");
+    const heading = node.find("h2,h3,h4").first();
+    if (heading.length) heading.text(post.title);
+    else node.find("p").filter((_, p) => normalize($(p).text()).length > 25).first().text(post.title);
+    node.find("p").each((_, element) => {
+      const p = $(element), text = normalize(p.text());
+      if (/^(Style guide|Leather care|Buying guide)$/i.test(text)) p.text(post.category || "Journal");
+      else if (/^\d+\s*min\s*read$/i.test(text)) p.text(post.readTime || "5 min read");
+      else if (/^(?:\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Z][a-z]{2}\s+\d{1,2},\s*\d{4})$/.test(text) && post.date) p.text(new Date(`${post.date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }));
+      else if (text.length > 60 && text !== post.title) p.text(post.excerpt || "");
+    });
+    node.find("[data-framer-name='Description'] p").text(post.excerpt || "");
+    node.find("img").attr("src", cardImage(post.coverImage)).attr("alt", post.coverAlt || post.title).removeAttr("srcset");
   });
+  if (pathname === "/blog") {
+    const posts = (settings.blogPosts || []).filter(post => post.status === "published" && post.slug);
+    const links = `<section class="lc-journal-index"><h2>All journal guides</h2><ul>${posts.map(post => `<li><a href="/blog/${escape(post.slug)}">${escape(post.title)}</a><p>${escape(post.excerpt)}</p></li>`).join("")}</ul></section>`;
+    $(".lc-answers .lc-answers-inner").length ? $(".lc-answers .lc-answers-inner").append(links) : $(".lc-answers").append(links);
+  }
   // Collection cards carry template prices ("$45.00"); show the live price range of each collection.
   const currency = settings.checkout?.currency || "Rs";
   for (const [name, includes] of collectionCards) {
@@ -205,6 +245,10 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     const data = JSON.parse($(element).text());
     const nodes = data["@graph"] || [data];
     for (const node of nodes) {
+      if (["WebPage", "CollectionPage", "AboutPage", "ContactPage"].includes(node["@type"]) && pageSeo) {
+        if (pageSeo.metaTitle) node.name = pageSeo.metaTitle;
+        if (pageSeo.metaDescription) node.description = pageSeo.metaDescription;
+      }
       if (node["@type"] === "Product" && product) {
         node.name = product.name;
         node.description = product.description;
@@ -476,11 +520,15 @@ async function buildStorefront(settings, posts, site) {
         const pathname = relative ? `/${relative}` : "/";
         if (pathname.startsWith("/blog/")) continue;
         const html = await fs.readFile(file, "utf8");
-        await fs.writeFile(file, materialize(html, settings, pathname, bindings, site, imageAlts, assets));
+        const rendered = materialize(html, settings, pathname, bindings, site, imageAlts, assets)
+          .replace(/\/store-override\.js(?:\?[^"']*)?/g, `/store-override.js?v=${crypto.createHash("sha256").update(source).digest("hex").slice(0, 12)}`);
+        await fs.writeFile(file, rendered);
       }
     }
   }
   const assets = new Map();
+  const brandCss = await fs.readFile(path.join(root, "brand-override.css"), "utf8");
+  assets.set(`/assets/css/brand-${crypto.createHash("sha256").update(brandCss).digest("hex").slice(0, 16)}.css`, brandCss);
   await transform(output);
   // Blog snapshots are generated just before this build and intentionally skip the Framer page
   // materializer. They still receive the same retired-product link protection.

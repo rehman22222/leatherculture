@@ -1,0 +1,532 @@
+{
+  "market": "Pakistan",
+  "language": "English",
+  "locationId": 2586,
+  "retrievedDate": "2026-10-19",
+  "keywordResearch": {
+    "searched_keywords": [
+      {
+        "keyword": "leather jacket price in pakistan",
+        "competition": 0.08,
+        "volume": 1600,
+        "cpc": 16.63424808,
+        "cpcDollars": 0.06,
+        "sd": 10,
+        "updated_at": 1788576816,
+        "pd": 8,
+        "searchIntent": [
+          3
+        ]
+      }
+    ],
+    "results": [
+      {
+        "keyword": "original leather jacket price in pakistan",
+        "competition": 0.13,
+        "volume": 260,
+        "cpc": 19.40662276,
+        "cpcDollars": 0.07,
+        "sd": 20,
+        "updated_at": 1785251742,
+        "pd": 13,
+        "searchIntent": [
+          3
+        ]
+      },
+      {
+        "keyword": "black leather jacket price in pakistan",
+        "competition": 0.03,
+        "volume": 110,
+        "cpc": 6.9309367,
+        "cpcDollars": 0.025,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 3,
+        "searchIntent": null
+      },
+      {
+        "keyword": "leather jacket price in pakistan sialkot",
+        "competition": 0.01,
+        "volume": 90,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 1,
+        "searchIntent": null
+      },
+      {
+        "keyword": "pure leather jacket price in pakistan",
+        "competition": 0.2,
+        "volume": 70,
+        "cpc": 8.31712404,
+        "cpcDollars": 0.03,
+        "sd": 12,
+        "updated_at": 1776279673,
+        "pd": 20,
+        "searchIntent": null
+      },
+      {
+        "keyword": "cow leather jacket price in pakistan",
+        "competition": 0.07,
+        "volume": 50,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 8,
+        "updated_at": 1776279673,
+        "pd": 7,
+        "searchIntent": null
+      },
+      {
+        "keyword": "sheep leather jacket price in pakistan",
+        "competition": 0.06,
+        "volume": 40,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 7,
+        "updated_at": 1776279673,
+        "pd": 6,
+        "searchIntent": null
+      },
+      {
+        "keyword": "crocodile leather jacket price in pakistan",
+        "competition": 0.01,
+        "volume": 30,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 1,
+        "searchIntent": null
+      },
+      {
+        "keyword": "sialkot jacket leather jacket price in pakistan",
+        "competition": 0.01,
+        "volume": 30,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 1,
+        "searchIntent": null
+      },
+      {
+        "keyword": "men leather jacket price in pakistan",
+        "competition": 0.09,
+        "volume": 20,
+        "cpc": 9.70331138,
+        "cpcDollars": 0.035,
+        "sd": 8,
+        "updated_at": 1776279673,
+        "pd": 9,
+        "searchIntent": null
+      },
+      {
+        "keyword": "ladies leather jacket price in pakistan",
+        "competition": 0,
+        "volume": 20,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 5,
+        "updated_at": 1776279673,
+        "pd": 1,
+        "searchIntent": null
+      },
+      {
+        "keyword": "real leather jacket price in pakistan",
+        "competition": 0.19,
+        "volume": 20,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 11,
+        "updated_at": 1776279673,
+        "pd": 19,
+        "searchIntent": null
+      },
+      {
+        "keyword": "faux leather jacket price in pakistan",
+        "competition": 0.03,
+        "volume": 20,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 3,
+        "searchIntent": null
+      },
+      {
+        "keyword": "suede leather jacket price in pakistan",
+        "competition": 0.1,
+        "volume": 20,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 9,
+        "updated_at": 1776279673,
+        "pd": 10,
+        "searchIntent": null
+      },
+      {
+        "keyword": "leather jacket price in pakistan women",
+        "competition": 0.1,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 9,
+        "updated_at": 1776279673,
+        "pd": 10,
+        "searchIntent": null
+      },
+      {
+        "keyword": "mens leather jacket price in pakistan sialkot",
+        "competition": 0.02,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 6,
+        "updated_at": 1776279673,
+        "pd": 2,
+        "searchIntent": null
+      },
+      {
+        "keyword": "pakistan leather jacket price in pakistan",
+        "competition": 0.06,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 7,
+        "updated_at": 1776279673,
+        "pd": 6,
+        "searchIntent": null
+      },
+      {
+        "keyword": "calvin klein leather jacket price in pakistan",
+        "competition": 0.13,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 9,
+        "updated_at": 1776279673,
+        "pd": 13,
+        "searchIntent": null
+      },
+      {
+        "keyword": "leather jacket price in pakistan 2024",
+        "competition": 0,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 5,
+        "updated_at": 1776279673,
+        "pd": 1,
+        "searchIntent": null
+      },
+      {
+        "keyword": "original leather jacket price in pakistan lahore",
+        "competition": 0.06,
+        "volume": 10,
+        "cpc": 0,
+        "cpcDollars": 0,
+        "sd": 7,
+        "updated_at": 1776279673,
+        "pd": 6,
+        "searchIntent": null
+      },
+      {
+        "keyword": "brown leather jacket price in pakistan"
+      },
+      {
+        "keyword": "genuine leather jacket price in pakistan"
+      },
+      {
+        "keyword": "leather jacket price in pakistan rawalpindi"
+      },
+      {
+        "keyword": "cheap leather jacket price in pakistan"
+      },
+      {
+        "keyword": "original leather jacket price in pakistan daraz"
+      },
+      {
+        "keyword": "men's leather jacket price in pakistan"
+      },
+      {
+        "keyword": "cafe racer leather jacket price in pakistan"
+      },
+      {
+        "keyword": "leather jacket price in pakistan 2025"
+      },
+      {
+        "keyword": "leather jacket price in pakistan ladies"
+      },
+      {
+        "keyword": "leather jacket price in pakistan for women"
+      },
+      {
+        "keyword": "women leather jacket price in pakistan sialkot"
+      },
+      {
+        "keyword": "long leather jacket price in pakistan"
+      },
+      {
+        "keyword": "leather jacket price in pakistan karachi"
+      },
+      {
+        "keyword": "bomber leather jacket price in pakistan"
+      },
+      {
+        "keyword": "leather jacket price in pakistan black"
+      },
+      {
+        "keyword": "motorbike leather jacket price in pakistan"
+      },
+      {
+        "keyword": "leather jacket price in pakistan for girls"
+      },
+      {
+        "keyword": "cow leather jacket price in pakistan olx"
+      },
+      {
+        "keyword": "girls leather jacket price in pakistan"
+      },
+      {
+        "keyword": "men cow leather jacket price in pakistan"
+      },
+      {
+        "keyword": "best leather jacket price in pakistan"
+      },
+      {
+        "keyword": "original cow leather jacket price in pakistan"
+      }
+    ]
+  },
+  "serp": {
+    "serpEntries": [
+      {
+        "url": "http://www.thejacketmaker.pk/collections/mens-leather-jackets",
+        "title": "Men's Leather Jackets & Coats | Timeless Styles",
+        "domain": "thejacketmaker.pk",
+        "position": 1,
+        "type": "organic",
+        "clicks": 519,
+        "domainAuthority": 14,
+        "facebookShares": null,
+        "pinterestShares": null,
+        "redditShares": null
+      },
+      {
+        "url": "http://outfitters.com.pk/pages/search-results-page?q=leather jackets ",
+        "title": "leather jackets",
+        "domain": "outfitters.com.pk",
+        "position": 2,
+        "type": "organic",
+        "clicks": 87,
+        "domainAuthority": 26,
+        "facebookShares": null,
+        "pinterestShares": null,
+        "redditShares": null
+      },
+      {
+        "url": "http://hub.com.pk/collections/jackets",
+        "title": "Leather Jackets",
+        "domain": "hub.com.pk",
+        "position": 3,
+        "type": "organic",
+        "clicks": 24,
+        "domainAuthority": 19,
+        "facebookShares": null,
+        "pinterestShares": null,
+        "redditShares": null
+      },
+      {
+        "url": "http://google.com/search?fir=Dril6PMrLcF0uM%2ChaO0_kgfobXZ9M%2C_%3BRS_vydQDKKZXQM%2CPNR9BWsCVbx-bM%2C_%3B8HD78hAe2RXDiM%2C12alZ5q9AezoUM%2C_%3BB9duCOevpt0prM%2Cq3159HIDNumXYM%2C_%3BZMsSBjpbmafUMM%2CbeeuYB_oKsn3pM%2C_%3BDaPY3pkyz9CCnM%2CHnUvq39555KoNM%2C_%3BebB0Pf31CA_5dM%2CrjzXrZ18iwFu7M%2C_%3BHWpdl_mO4ghaeM%2C4qSws0uu0IHIOM%2C_%3BrkERpVfah6VumM%2C9a5CdfMDIDRl7M%2C_%3BHESmfPP_LnFmtM%2Cqtw7i2MVYxGQUM%2C_%3Bns3KcsUU3_FPWM%2C9a5CdfMDIDRl7M%2C_%3BbdiExxqjza4_EM%2CyqUfe6Mhs2jElM%2C_&gl=PK&hl=en&q=leather jacket price in pakistan&sa=X&sca_esv=1bd958ff4625d605&source=univ&udm=2&usg=AI4_-kToM5X8kOe6O04oPFpToxQm_pzAUg&ved=2ahUKEwioi9P05NKWAxVCxQIHHbxtBXoQ7Al6BAgaEAU",
+        "title": null,
+        "domain": "google.com",
+        "position": 4,
+        "type": "images"
+      },
+      {
+        "url": "http://www.blackenwhiteofficial.com/collections/faux-leather-drop",
+        "title": "Faux Leather Jackets",
+        "domain": "blackenwhiteofficial.com",
+        "position": 5,
+        "type": "organic",
+        "clicks": 21,
+        "domainAuthority": 11,
+        "facebookShares": null,
+        "pinterestShares": null,
+        "redditShares": null
+      },
+      {
+        "url": "http://www.thejacketmaker.pk/",
+        "title": "The Jacket Maker | Finest Leather Jackets In Pakistan",
+        "domain": "thejacketmaker.pk",
+        "position": 7,
+        "type": "organic",
+        "clicks": 13,
+        "domainAuthority": 14,
+        "facebookShares": null,
+        "pinterestShares": null,
+        "redditShares": null
+      }
+    ],
+    "newData": false,
+    "keyword": "leather jacket price in pakistan",
+    "updated_at": "2026-09-05",
+    "limits": {
+      "monthly_keyword_metrics_updates_limits": 10,
+      "monthly_keyword_metrics_updates_used": 0
+    },
+    "location": "Pakistan",
+    "language": "English"
+  },
+  "domain": {
+    "domain": "leatherculture.shop",
+    "organic": 0,
+    "traffic": 0,
+    "paidKeywords": 0,
+    "paidTraffic": 0,
+    "domainAuthority": 5,
+    "backlinks": 40,
+    "refDomains": 20,
+    "follow": 20,
+    "noFollow": 20,
+    "domainTraffic": {
+      "202510": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202511": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202512": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202601": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202602": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202603": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202604": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202605": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202606": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202607": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202608": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      },
+      "202609": {
+        "paidTraffic": 0,
+        "searchTraffic": 0,
+        "paidKw": 0,
+        "searchKw": 0,
+        "topTier": 0,
+        "secondTier": 0,
+        "thirdTier": 0,
+        "fourthTier": 0
+      }
+    },
+    "organicKeywords": []
+  },
+  "speed": {
+    "source": "Ubersuggest pagespeed_audit; cached report returned without forceUpdate; no field INP supplied",
+    "desktop": {
+      "lcp": "819 ms",
+      "fcp": "662 ms",
+      "cls": 0,
+      "tbt": "0 ms"
+    },
+    "mobile": {
+      "lcp": "2.6 s",
+      "fcp": "2.5 s",
+      "cls": 0,
+      "tbt": "0 ms"
+    }
+  }
+}
