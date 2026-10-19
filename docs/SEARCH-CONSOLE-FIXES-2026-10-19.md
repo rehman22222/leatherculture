@@ -42,4 +42,6 @@ Implementation commit `f82ef9b` was pushed to `main`. [Vercel deployment](https:
 
 The Render backend's new `/api/reviews/products` route is live and returns the expected HTTP 403 response to a request without a signed review link. No review or order was created by this check. The local mocked checks cover purchased-product selection and submission.
 
+The final layout/rollout follow-up, commit `9f71b58`, also [deployed successfully](https://vercel.com/ab-rehmans-projects/leatherculture/9tU7wkDmXfuDQJUwSGm3RtT9sniP). Production browser checks pass on the homepage at 390px, product page at 360px/1440px, terms at 390px and privacy at 320px: no horizontal overflow or JavaScript page errors, and the current contact address is visible.
+
 Evidence: [live crawl](seo-audit-production.json), [product schema checks](commerce-production-checks.json), [local review browser checks](commerce-browser-checks.json).

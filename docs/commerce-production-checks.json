@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-18T19:41:41.214Z",
+  "checkedAt": "2026-10-19T10:52:10.330Z",
   "products": [
     {
       "slug": "the-blade",
@@ -81,5 +81,59 @@
       "related": 4,
       "hasRating": false
     }
-  ]
+  ],
+  "browser": [
+    {
+      "path": "/",
+      "width": 390,
+      "overflow": false,
+      "email": true,
+      "oldEmail": false,
+      "guides": 0,
+      "errors": []
+    },
+    {
+      "path": "/shop/the-blade",
+      "width": 360,
+      "overflow": false,
+      "email": true,
+      "oldEmail": false,
+      "guides": 3,
+      "emptyReviews": true,
+      "errors": []
+    },
+    {
+      "path": "/shop/the-blade",
+      "width": 1440,
+      "overflow": false,
+      "email": true,
+      "oldEmail": false,
+      "guides": 3,
+      "emptyReviews": true,
+      "errors": []
+    },
+    {
+      "path": "/terms",
+      "width": 390,
+      "overflow": false,
+      "email": true,
+      "oldEmail": false,
+      "guides": 0,
+      "errors": []
+    },
+    {
+      "path": "/privacy-policy",
+      "width": 320,
+      "overflow": false,
+      "email": true,
+      "oldEmail": false,
+      "guides": 0,
+      "errors": []
+    }
+  ],
+  "reviewEndpoint": {
+    "status": 403,
+    "message": "Please use the review link from your email.",
+    "note": "Expected rejection for request without a signed customer link; no order or review created."
+  }
 }
