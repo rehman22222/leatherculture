@@ -1268,9 +1268,10 @@ async function replaceCollection(name, items) {
     await collection.bulkWrite(
       items.map((item, index) => {
         const id = recordId(item, name, index);
+        // Records inserted by scripts can carry a generated _id, so match on either key.
         return {
           updateOne: {
-            filter: { _id: id },
+            filter: { $or: [{ _id: id }, { id }] },
             update: {
               $set: {
                 ...item,
@@ -1278,7 +1279,7 @@ async function replaceCollection(name, items) {
                 order: index,
                 updatedAt: now
               },
-              $setOnInsert: { createdAt: now }
+              $setOnInsert: { _id: id, createdAt: now }
             },
             upsert: true
           }
@@ -1287,7 +1288,7 @@ async function replaceCollection(name, items) {
     );
   }
 
-  await collection.deleteMany({ _id: { $nin: ids } });
+  await collection.deleteMany({ _id: { $nin: ids }, id: { $nin: ids } });
 }
 
 async function seedCollection(name, items) {
