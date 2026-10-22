@@ -358,7 +358,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $(".lc-answers .lc-meta a[href='/about']").attr("rel", "author");
   $("#lc-business-contact").remove();
   $("#lc-account-link").remove();
-  const accountMarkup = '<a class="lc-account-nav" href="/account" aria-label="My account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span></a>';
+  const accountMarkup = '<a class="lc-account-nav" href="/account" rel="nofollow" aria-label="My account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span></a>';
   $(".framer-149q19i-container [data-framer-name='Links wrapper']").each((_, element) => {
     if (!$(element).find(".lc-account-nav").length) $(element).append(`<div class="lc-account-nav-container">${accountMarkup}</div>`);
   });
@@ -474,6 +474,23 @@ function addCareHowTo($) {
 // structured data goes right after the title, Framer's 200 KB stylesheet becomes a cached file,
 // the answers section leads the body (CSS keeps it below the page content and store-override.js
 // moves it above the footer), and the settings blob goes to the end, next to the script that reads it.
+// The page script needs journal titles, excerpts and dates for its cards, never article bodies, and
+// only the editable-text entries that change this page. Every page used to carry all six articles.
+function pageSettingsSnapshot(settings, pathname) {
+  const clean = String(pathname || "/").replace(/\/$/, "") || "/";
+  const values = settings.content?.values || {};
+  const groups = (settings.content?.groups || [])
+    .filter(group => group.match === "all" || (group.match === "/shop/*" ? /^\/shop\/[^/]+$/.test(clean) : group.match === clean))
+    .map(group => ({ ...group, items: (group.items || []).filter(item => String(values[item.key] || "").trim()) }))
+    .filter(group => group.items.length);
+  return {
+    ...settings,
+    content: { ...settings.content, groups },
+    blogPosts: (settings.blogPosts || []).map(({ body, sources, ...post }) => post),
+    products: (settings.products || []).map(({ launchNotes, ...product }) => product)
+  };
+}
+
 function frontLoad($, settings, assets, pathname) {
   const title = $("head > title").first();
   const jsonLd = $("script[type='application/ld+json']");
@@ -515,7 +532,7 @@ function frontLoad($, settings, assets, pathname) {
   }
   const overrideScript = $("script[src*='store-override.js']").first();
   if (!overrideScript.length) return;
-  const settingsScript = `<script id="lc-build-settings" type="application/json">${JSON.stringify(settings).replace(/</g, "\\u003c")}</script>`;
+  const settingsScript = `<script id="lc-build-settings" type="application/json">${JSON.stringify(pageSettingsSnapshot(settings, pathname)).replace(/</g, "\\u003c")}</script>`;
   const firstScript = $("body script[src*='site-config.js']").first();
   (firstScript.length ? firstScript : overrideScript).before(settingsScript);
 }

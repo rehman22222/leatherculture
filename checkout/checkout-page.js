@@ -63,7 +63,7 @@
         <section>
           <div class="card">
             <h2>Delivery details</h2>
-            <p class="muted">${accountCustomer ? `Signed in as ${esc(accountCustomer.email)} · <a href="/account">My account</a>` : '<a href="/account">Sign in or create an account</a> to save your details and view orders. Guest checkout is also available.'}</p>
+            <p class="muted">${accountCustomer ? `Signed in as ${esc(accountCustomer.email)} · <a href="/account" rel="nofollow">My account</a>` : '<a href="/account" rel="nofollow">Sign in or create an account</a> to save your details and view orders. Guest checkout is also available.'}</p>
             <div class="grid2">
               <label>Full name<input name="name" required autocomplete="name" value="${esc(d.name)}"></label>
               <label>Phone (WhatsApp preferred)<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="03XX XXXXXXX" value="${esc(d.phone)}"></label>

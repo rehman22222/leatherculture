@@ -676,6 +676,7 @@
     const link = document.createElement("a");
     link.className = "lc-account-nav";
     link.href = "/account";
+    link.rel = "nofollow";
     link.setAttribute("aria-label", "My account");
     link.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>My account</span>';
     return link;
