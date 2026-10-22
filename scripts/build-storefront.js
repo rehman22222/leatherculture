@@ -289,6 +289,9 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     const data = JSON.parse($(element).text());
     const nodes = data["@graph"] || [data];
     for (const node of nodes) {
+      if (node["@type"] === "BreadcrumbList" && !node.name && Array.isArray(node.itemListElement)) {
+        node.name = node.itemListElement.map(item => item.name).filter(Boolean).join(" › ");
+      }
       if (["WebPage", "CollectionPage", "AboutPage", "ContactPage"].includes(node["@type"]) && pageSeo) {
         if (pageSeo.metaTitle) node.name = pageSeo.metaTitle;
         if (pageSeo.metaDescription) node.description = pageSeo.metaDescription;
