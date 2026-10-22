@@ -208,12 +208,22 @@
     video.dataset.lcParked = "true";
   }
 
+  // Sharper encodes made from the original uploads. The template copies were compressed to a fraction
+  // of their detail. Visitors asking to save data, or on 2G/3G, keep the light file.
+  const videoUpgrades = { "tZkQWQqHkaDjOS2aRu06UvSAiY.mp4": "/assets/video/leather-craft-hq.mp4" };
+  function videoSource(src) {
+    const upgrade = videoUpgrades[String(src || "").split(/[?#]/)[0].split("/").pop()];
+    const connection = navigator.connection || {};
+    if (!upgrade || connection.saveData || /^(slow-2g|2g|3g)$/.test(connection.effectiveType || "")) return src;
+    return upgrade;
+  }
+
   function wakeVideo(video) {
     video.dataset.lcActive = "true";
     if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
-    if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", video.dataset.lcSrc);
+    if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", videoSource(video.dataset.lcSrc));
     video.querySelectorAll("source[data-lc-src]").forEach((source) => {
-      if (!source.getAttribute("src")) source.setAttribute("src", source.dataset.lcSrc);
+      if (!source.getAttribute("src")) source.setAttribute("src", videoSource(source.dataset.lcSrc));
     });
   }
 
