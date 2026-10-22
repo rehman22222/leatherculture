@@ -2103,7 +2103,7 @@ async function requestHandler(req, res) {
       // The backend hostname only answers with redirects, the admin and the API; the storefront's own
       // robots.txt and sitemap live on the public site.
       if (redirectForeignHosts && isForeignHost(req)) return res.end("User-agent: *\nDisallow: /api/\nDisallow: /admin\n");
-      res.end(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /account/\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /review/\n\nSitemap: ${canonicalUrl("/sitemap.xml")}\n`);
+      res.end(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /account/\nAllow: /account/nav.css\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /order/\nDisallow: /review/\n\nSitemap: ${canonicalUrl("/sitemap.xml")}\n`);
       return;
     }
 

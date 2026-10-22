@@ -49,6 +49,7 @@
     }
   ],
   "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "leatherculture.vercel.app" }], "destination": "https://www.leatherculture.shop/:path*", "permanent": true },
     { "source": "/assets/jackets/the-blade-design.jpg", "destination": "/assets/jackets/the-blade-black-hooded-jacket-front.png", "permanent": true },
     { "source": "/assets/jackets/the-heritage-design.jpg", "destination": "/assets/jackets/the-heritage-brown-collared-jacket-front.png", "permanent": true },
     { "source": "/assets/jackets/the-vibe-design.jpg", "destination": "/assets/jackets/the-vibe-black-white-contrast-jacket-front.png", "permanent": true },

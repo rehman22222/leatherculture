@@ -706,6 +706,7 @@ function aiText(site) {
     "Disallow: /admin",
     "Disallow: /api/",
     "Disallow: /account",
+    "Allow: /account/nav.css",
     "Disallow: /cart",
     "Disallow: /checkout",
     "Disallow: /order",
