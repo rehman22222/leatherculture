@@ -217,6 +217,27 @@
     });
   }
 
+  // iPhone Low Power Mode (and data-saver settings) refuse muted autoplay. The poster stays up, and the
+  // visitor's next tap anywhere starts the videos on screen, since playback is allowed after a gesture.
+  const gestureVideos = new Set();
+  function playAfterGesture(video) {
+    if (gestureVideos.has(video)) return;
+    gestureVideos.add(video);
+    if (gestureVideos.size > 1) return;
+    const retry = () => {
+      window.removeEventListener("touchend", retry, true);
+      window.removeEventListener("click", retry, true);
+      const videos = [...gestureVideos];
+      gestureVideos.clear();
+      videos.forEach((item) => {
+        const box = item.getBoundingClientRect();
+        if (box.bottom > 0 && box.top < window.innerHeight) item.play().catch(() => {});
+      });
+    };
+    window.addEventListener("touchend", retry, { capture: true, passive: true });
+    window.addEventListener("click", retry, true);
+  }
+
   // Runs synchronously on every DOM change touching media, so a re-rendered <video autoplay>
   // is disarmed before the browser starts downloading it.
   const mediaObserver = new MutationObserver((records) => {
@@ -266,7 +287,7 @@
             const video = entry.target;
             if (entry.isIntersecting) {
               wakeVideo(video);
-              video.play().catch(() => {});
+              video.play().catch(() => playAfterGesture(video));
             } else {
               video.pause();
             }

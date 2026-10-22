@@ -38,6 +38,25 @@ const collectionCards = [
 // Order, review and password-reset links carry private tokens in the URL, so analytics stays off there.
 const privatePage = pathname => /^\/(account|order|review)(\/|$)/.test(pathname);
 
+// Framer renders "fade in on scroll" layers (product and journal cards) at opacity 0 and relies on its
+// runtime to reveal them. That runtime is deferred until the visitor interacts (or 15 s on inner
+// pages), which left whole sections blank on phones. Those layers are marked here and kept visible;
+// they lose the fade, nothing else. Intentionally hidden layers (search bar, menu, arrows) use other
+// styles and are untouched.
+function revealScrollAnimatedContent($) {
+  let marked = 0;
+  $("[style]").each((_, element) => {
+    const style = String($(element).attr("style")).replace(/\s+/g, "");
+    if (/(?:^|;)will-change:transform;/.test(style) && /(?:^|;)opacity:0;/.test(style) && /(?:^|;)transform:translateY\(/.test(style)) {
+      $(element).attr("data-lc-reveal", "");
+      marked += 1;
+    }
+  });
+  if (marked && !$("style[data-lc-reveal-style]").length) {
+    $("head").append("<style data-lc-reveal-style>[data-lc-reveal]{opacity:1!important;transform:none!important}</style>");
+  }
+}
+
 function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
   site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
@@ -47,6 +66,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     $("head").append(`<link rel="stylesheet" href="${brandStylesheet}" data-lc-brand>`);
   }
   if (!$("link[href*='/account/nav.css']").length) $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
+  revealScrollAnimatedContent($);
   // Pages from the product renderer already carry these tags.
   if (!$("meta[name='author']").length) $("head").append(`<meta name="author" content="${escape(settings.brand?.name || "LeatherCulture")}">`);
   if (!$("meta[name='google-site-verification'],meta[name='msvalidate.01']").length) $("head").append(verificationTags(settings));
