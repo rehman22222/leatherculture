@@ -236,7 +236,7 @@ function renderDashboard() {
         ${checkItem(!products.some((p) => /^\$/.test(p.price || "")), "Prices entered in PKR (no $ prices)", "#/products")}
         ${checkItem(!/^https:\/\/(instagram|facebook|youtube)\.com\/?$|^https:\/\/x\.com\/?$/.test(settings.footer?.socials?.instagram || "") && settings.footer?.socials?.instagram, "Social links point to your profiles", "#/appearance/footer")}
         ${checkItem(posts.some((p) => p.status === "published"), "At least one published blog post", "#/blog")}
-        ${checkItem(/^G-[A-Z0-9]{4,20}$/i.test(String(settings.seo?.googleAnalyticsId || "").trim()), "Google Analytics measurement ID added", "#/appearance/seo")}
+        ${checkItem(/^G-[A-Z0-9]{4,20}$/i.test(String(settings.seo?.googleAnalyticsId || "G-76HWVWFSTZ").trim()), "Google Analytics measurement ID added", "#/appearance/seo")}
         ${checkItem(Boolean(String(settings.seo?.googleSiteVerification || "").trim()), "Google Search Console code added (skip if you verified by DNS)", "#/appearance/seo")}
       </ul>
     </section>
@@ -551,7 +551,7 @@ const appearanceTabs = [
     ["footer.email", "Email"], ["footer.phone", "Phone"], ["footer.address", "Address"],
     ["footer.socials.instagram", "Instagram URL"], ["footer.socials.facebook", "Facebook URL"], ["footer.socials.twitter", "Twitter / X URL"], ["footer.socials.youtube", "YouTube URL"]] },
   { id: "seo", label: "SEO & analytics", fields: [
-    ["seo.googleAnalyticsId", "Google Analytics 4 measurement ID", "input", { placeholder: "G-XXXXXXXXXX", help: "From Google Analytics: Admin → Data streams → your website. Leave empty to turn analytics off." }],
+    ["seo.googleAnalyticsId", "Google Analytics 4 measurement ID", "input", { placeholder: "G-76HWVWFSTZ (default)", help: "From Google Analytics: Admin → Data streams → your website. Leave empty to use the store property G-76HWVWFSTZ." }],
     ["seo.googleSiteVerification", "Google Search Console verification", "input", { placeholder: "Code or the whole <meta> tag", help: "Search Console → Add property → URL prefix → HTML tag. Paste the code or the full tag." }],
     ["seo.bingSiteVerification", "Bing Webmaster Tools verification", "input", { placeholder: "Code or the whole <meta> tag", help: "Bing Webmaster Tools → Add site → HTML meta tag." }],
     ["seo.sameAs", "Other official profiles", "textarea", { placeholder: "https://www.tiktok.com/@yourbrand", help: "One link per line: TikTok, Google Business Profile, LinkedIn and so on. Together with the footer social links, these tell Google which profiles belong to the store." }]] },
