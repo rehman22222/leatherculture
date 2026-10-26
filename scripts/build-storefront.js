@@ -580,7 +580,9 @@ async function buildStorefront(settings, posts, site) {
   const source = await fs.readFile(path.join(root, "store-override.js"), "utf8");
   const bindings = JSON.parse(source.match(/const textBindings = (\[[\s\S]*?\n  \]);/)[1].replace(/,\s*]/g, "]"));
   const imageAlts = JSON.parse(source.match(/const imageAlts = (\{[\s\S]*?\n  \});/)[1].replace(/,\s*}/g, "}"));
-  const publicDirectories = ["assets", "about", "account", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
+  // The motion homepage is a static Next export. Its CSS and client runtime live in /_next,
+  // so Vercel must receive that directory alongside the existing public storefront routes.
+  const publicDirectories = ["_next", "assets", "about", "account", "admin", "blog", "cart", "checkout", "contact", "order", "review", "shop"];
   for (const name of publicDirectories) await fs.cp(path.join(root, name), path.join(output, name), { recursive: true });
   // The source tree contains retired Framer product templates. Do not copy them
   // into a deployment after they have been removed from the live catalogue.
