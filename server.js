@@ -2043,7 +2043,7 @@ async function createReview(body) {
 
 // The app root also holds server code, scripts and .env, so only these top-level entries are served.
 const publicEntries = new Set([
-  "index.html", "404.html", "llms.txt", "cart.js", "site-config.js", "store-override.js", "store.css", "brand-override.css",
+  "index.html", "404.html", "llms.txt", "cart.js", "site-config.js", "store-override.js", "store.css", "brand-override.css", "_next",
   "about", "account", "admin", "assets", "blog", "cart", "checkout", "contact", "order", "review", "shop"
 ]);
 
