@@ -236,22 +236,44 @@
 
   function wakeVideo(video) {
     video.dataset.lcActive = "true";
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("muted", "");
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.preload = "metadata";
+    let restoredSource = false;
     const replacement = videoReplacement(video.dataset.lcSrc || video.querySelector("source[data-lc-src]")?.dataset.lcSrc);
     if (replacement) {
       video.dataset.lcPoster = replacement.poster;
       video.setAttribute("data-lc-reel", "");
     }
     if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
-    if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", videoSource(video.dataset.lcSrc));
+    if (video.dataset.lcSrc && !video.getAttribute("src")) {
+      video.setAttribute("src", videoSource(video.dataset.lcSrc));
+      restoredSource = true;
+    }
     video.querySelectorAll("source[data-lc-src]").forEach((source) => {
-      if (!source.getAttribute("src")) source.setAttribute("src", videoSource(source.dataset.lcSrc));
+      if (!source.getAttribute("src")) {
+        source.setAttribute("src", videoSource(source.dataset.lcSrc));
+        restoredSource = true;
+      }
     });
+    if (restoredSource) {
+      try { video.load(); } catch (_) { /* browser will load on play */ }
+    }
   }
 
   // iPhone Low Power Mode (and data-saver settings) refuse muted autoplay. The poster stays up, and the
   // visitor's next tap anywhere starts the videos on screen, since playback is allowed after a gesture.
   const gestureVideos = new Set();
+  function enableManualVideoPlayback(video) {
+    video.controls = true;
+    video.setAttribute("aria-label", "Play LeatherCulture hanging reel");
+  }
   function playAfterGesture(video) {
+    enableManualVideoPlayback(video);
     if (gestureVideos.has(video)) return;
     gestureVideos.add(video);
     if (gestureVideos.size > 1) return;
@@ -309,8 +331,13 @@
       if (!video.dataset.lcParked) parkVideo(video);
     });
 
-    if (prefersReducedMotion) return;
-    if (!("IntersectionObserver" in window)) return;
+    if (!("IntersectionObserver" in window)) {
+      videos.forEach((video) => {
+        wakeVideo(video);
+        enableManualVideoPlayback(video);
+      });
+      return;
+    }
     if (!videoObserver) {
       videoObserver = new IntersectionObserver(
         (entries) => {
@@ -318,6 +345,10 @@
             const video = entry.target;
             if (entry.isIntersecting) {
               wakeVideo(video);
+              if (prefersReducedMotion) {
+                enableManualVideoPlayback(video);
+                return;
+              }
               video.play().catch(() => playAfterGesture(video));
             } else {
               video.pause();
