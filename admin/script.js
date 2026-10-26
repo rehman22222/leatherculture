@@ -1294,11 +1294,11 @@ function addItem(type) {
   }
   if (type === "category") {
     settings.categories ||= [];
-    settings.categories.push({ id: makeId("category"), name: "New category", slug: "new-category", description: "", image: "", alt: "", metaTitle: "", metaDescription: "", keywords: "", canonicalPath: "/shop?category=new-category", enabled: true });
+    settings.categories.push({ id: makeId("category"), name: "New category", slug: "new-category", description: "", image: "", alt: "", metaTitle: "", metaDescription: "", keywords: "", canonicalPath: "/collections/new-category", enabled: true });
   }
   if (type === "product") {
     settings.products ||= [];
-    settings.products.push({ id: makeId("product"), name: "New product", slug: "new-product", category: settings.categories?.[0]?.id || "men", price: "Rs 0", compareAtPrice: "", material: "", care: "", warranty: "", badge: "", image: "", alt: "", enabled: false, description: "", metaTitle: "", metaDescription: "", keywords: "", canonicalPath: "/shop/new-product", variants: [{ id: makeId("variant"), name: "Black", color: "#111111", sku: "", stock: 0, image: "", alt: "", enabled: true }] });
+    settings.products.push({ id: makeId("product"), name: "New product", slug: "new-product", category: settings.categories?.[0]?.id || "leather-jackets", price: "Rs 0", compareAtPrice: "", material: "", care: "", warranty: "", badge: "", image: "", alt: "", enabled: false, description: "", metaTitle: "", metaDescription: "", keywords: "", canonicalPath: "/shop/new-product", variants: [{ id: makeId("variant"), name: "Black", color: "#111111", sku: "", stock: 0, image: "", alt: "", enabled: true }] });
   }
   if (type === "blog") {
     settings.blogPosts ||= [];
@@ -1320,7 +1320,9 @@ function normalizeBeforeSave() {
   });
   (settings.categories || []).forEach((category) => {
     category.slug = slugify(category.slug || category.name);
-    category.canonicalPath = category.canonicalPath || `/shop?category=${category.slug}`;
+    if (!category.canonicalPath || /^\/shop\?category=/.test(category.canonicalPath)) {
+      category.canonicalPath = `/collections/${category.slug}`;
+    }
   });
   (settings.products || []).forEach((product) => {
     product.slug = slugify(product.slug || product.name);

@@ -8,6 +8,8 @@ const { MongoClient } = require("mongodb");
 const { createMailer } = require("./lib/mailer");
 const { renderBlogPost } = require("./lib/blog-renderer");
 const { renderPolicyPage, policyPaths } = require("./lib/policy-pages");
+const { CATEGORY_CATALOG, normalizeStoreCategories, categoryIsIndexable } = require("./lib/category-catalog");
+const { renderCategoryPage } = require("./lib/category-renderer");
 const { siteUrl: canonicalSite } = require("./lib/seo");
 const { createCustomerAccounts } = require("./lib/customers");
 const jacketCollection = require("./lib/jacket-collection");
@@ -1143,6 +1145,9 @@ const defaultSettings = {
 // jacket designs. Keeping this assignment next to the defaults also makes a
 // new database start with the same catalogue as the deployed store.
 defaultSettings.products = jacketCollection;
+// New deployments start with the product-led collection structure. Existing MongoDB records are
+// normalised in readSettings below without silently writing or deleting the owner's data.
+defaultSettings.categories = CATEGORY_CATALOG.map(category => ({ ...category }));
 
 function mergeDefaults(source, defaults) {
   if (Array.isArray(defaults)) return Array.isArray(source) ? source : defaults;
@@ -1182,7 +1187,7 @@ async function readSettings() {
     collections.blogs.find({}).sort({ order: 1, date: -1 }).toArray()
   ]);
 
-  return {
+  return normalizeStoreCategories({
     ...settingsOnly(settings),
     revision: Number(document && document.revision) || 0,
     pages: pages.map(publicRecord),
@@ -1190,7 +1195,7 @@ async function readSettings() {
     categories: categories.map(publicRecord),
     products: products.map(publicRecord),
     blogPosts: blogPosts.map(publicRecord)
-  };
+  });
 }
 
 /**
@@ -1227,7 +1232,7 @@ function recordId(item, fallbackPrefix, index) {
 function normalizeSeo(item, type) {
   const normalized = { ...item };
   const name = normalized.name || normalized.title || normalized.heading || "LeatherCulture";
-  const pathPrefix = type === "product" ? "/shop/" : type === "blog" ? "/blog/" : type === "category" ? "/shop?category=" : "/";
+  const pathPrefix = type === "product" ? "/shop/" : type === "blog" ? "/blog/" : type === "category" ? "/collections/" : "/";
 
   if (type !== "page") normalized.slug = slugify(normalized.slug || name);
   if (type === "page") {
@@ -1250,7 +1255,7 @@ function withNumericStock(variant) {
 }
 
 function normalizeStoreData(data) {
-  const normalized = { ...data };
+  const normalized = normalizeStoreCategories(data);
   normalized.pages = (normalized.pages || []).map((item) => normalizeSeo(item, "page"));
   normalized.categories = (normalized.categories || []).map((item) => normalizeSeo(item, "category"));
   normalized.products = (normalized.products || []).map((item) => normalizeSeo(Array.isArray(item.variants) ? { ...item, variants: item.variants.map(withNumericStock) } : item, "product"));
@@ -1706,11 +1711,11 @@ function metaTags({ title, description, keywords, canonicalPath, image }, req) {
 }
 
 async function sitemap(req) {
-  const [settings, products, blogs] = await Promise.all([
+  const [settings, blogs] = await Promise.all([
     readSettings(),
-    publicRecords("products", { enabled: { $ne: false } }),
     publicRecords("blogs", { status: "published" })
   ]);
+  const products = (settings.products || []).filter(product => product.enabled !== false);
   // Only list routes that this application actually serves. Admin page settings can contain
   // drafts or legacy paths, neither of which belongs in a public sitemap.
   const publicPages = ["/", "/about", "/shop", "/blog", "/contact"];
@@ -1721,6 +1726,7 @@ async function sitemap(req) {
   };
   const entries = [
     ...publicPages.map(pathname => [pathname]),
+    ...(settings.categories || []).filter(category => categoryIsIndexable(settings, category)).map(category => [`/collections/${category.slug}`]),
     ...products.filter(product => validSlug(product.slug)).map(product => [`/shop/${product.slug}`, date(product.updatedAt || product.createdAt)]),
     ...blogs.filter(blog => validSlug(blog.slug)).map(blog => [`/blog/${blog.slug}`, date(blog.dateModified || blog.date || blog.updatedAt || blog.createdAt)]),
     ...Object.values(policyPaths).map(pathname => [pathname])
@@ -2134,7 +2140,8 @@ async function requestHandler(req, res) {
 
     if (url.pathname === "/api/storefront/categories" && req.method === "GET") {
       await ensureDbReady();
-      return writeJson(res, 200, await publicRecords("categories", { enabled: { $ne: false } }));
+      const settings = await readSettings();
+      return writeJson(res, 200, (settings.categories || []).filter(category => category.enabled !== false));
     }
 
     if (url.pathname === "/api/storefront/banners" && req.method === "GET") {
@@ -2157,6 +2164,22 @@ async function requestHandler(req, res) {
         res.end(renderBlogPost(post, settings, req));
         return;
       }
+    }
+
+    if (url.pathname.startsWith("/collections/") && req.method === "GET") {
+      await ensureDbReady();
+      const collectionPath = url.pathname.split("/").filter(Boolean);
+      const slug = collectionPath.length === 2 && collectionPath[0] === "collections" ? collectionPath[1] : "";
+      const settings = await readSettings();
+      const category = (settings.categories || []).find(item => item.enabled !== false && item.slug === slug);
+      if (category) {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "referrer-policy": "strict-origin-when-cross-origin" });
+        res.end(renderCategoryPage(category, settings));
+        return;
+      }
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      res.end("Collection not found");
+      return;
     }
 
     // "/shop/" has no slug and falls through to the static shop page

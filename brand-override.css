@@ -460,3 +460,48 @@ footer .lc-contact-icon { width: 20px !important; height: 20px !important; fill:
 [data-framer-name="Reviews"] [data-framer-name="01 - Phone"] {
   padding-bottom: 72px !important;
 }
+
+/* LeatherCulture hanging reel (4:5) in the homepage video band: shown whole on its own beige. */
+video[data-lc-reel] {
+  object-fit: contain !important;
+  background-color: #e9ded1 !important;
+}
+/* The reel carries its own lettering and message, so the template's dark layer and overlaid copy are removed. */
+[data-framer-name="Video"] [data-framer-name="Over lay"],
+[data-framer-name="Video"] [data-framer-name="Text content"] {
+  display: none !important;
+}
+
+/* Homepage hero — phones get one considered, still editorial frame instead of the
+   desktop 7-card moving rail. The rail needs much more horizontal room and was
+   clipping both the headline and edge cards on small screens. */
+@media (max-width: 809px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  header[data-framer-name="Hero Section"],
+  header[data-framer-name="Hero Section"] [data-framer-name="04 - Phone"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  header[data-framer-name="Hero Section"] {
+    min-height: min(760px, 100svh) !important;
+  }
+
+  /* Keep the mobile hero image, but remove the desktop-style moving thumbnail rail. */
+  header[data-framer-name="Hero Section"] [data-framer-name="Hero Carousel"] {
+    display: none !important;
+  }
+
+  header[data-framer-name="Hero Section"] [data-framer-name="04 - Phone"] > div:first-child img {
+    object-position: 58% center !important;
+    transform: scale(1.035);
+  }
+
+}

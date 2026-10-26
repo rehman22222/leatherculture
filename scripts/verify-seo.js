@@ -4,6 +4,7 @@ const assert = require("assert/strict");
 const cheerio = require("cheerio");
 const { materialize, publicPhone } = require("./build-storefront");
 const { legalLinks, profileUrl, cardImage } = require("../lib/seo");
+const { CATEGORY_CATALOG, categoryIsIndexable } = require("../lib/category-catalog");
 const typesOf = node => [].concat(node["@type"] || []);
 
 const output = path.join(__dirname, "..", "dist");
@@ -20,6 +21,26 @@ for (const url of urls) {
   assert.equal(url.search, "", `sitemap.xml: query URL ${url.href}`);
   assert.equal(url.hash, "", `sitemap.xml: fragment URL ${url.href}`);
   assert(fs.existsSync(outputFileFor(url.pathname)), `sitemap.xml: dead URL ${url.pathname}`);
+}
+// Every configured collection must be rendered, including empty launch-soon collections.
+// Only a collection with live stock belongs in the sitemap; the rest must explicitly noindex.
+const collectionsRoot = path.join(output, "collections");
+const collectionPaths = fs.existsSync(collectionsRoot)
+  ? fs.readdirSync(collectionsRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && fs.existsSync(path.join(collectionsRoot, entry.name, "index.html")))
+    .map(entry => `/collections/${entry.name}`)
+  : [];
+assert(collectionPaths.length > 0, "collections: no rendered collection pages");
+for (const pathname of collectionPaths) {
+  const html = fs.readFileSync(outputFileFor(pathname), "utf8");
+  const $ = cheerio.load(html);
+  const schemas = $("script[type='application/ld+json']").map((_, element) => JSON.parse($(element).text())).get().flatMap(data => data["@graph"] || [data]);
+  const isInSitemap = urls.some(url => url.pathname === pathname);
+  const robotsValue = $("meta[name='robots']").attr("content") || "";
+  assert.equal($("h1").length, 1, `${pathname}: expected one H1`);
+  assert.equal($("link[rel='canonical']").attr("href"), `${siteOrigin}${pathname}`, `${pathname}: incorrect canonical`);
+  assert(schemas.some(node => node["@type"] === "CollectionPage"), `${pathname}: missing CollectionPage schema`);
+  assert.equal(/\bnoindex\b/i.test(robotsValue), !isInSitemap, `${pathname}: sitemap/noindex mismatch`);
 }
 const robots = fs.readFileSync(path.join(output, "robots.txt"), "utf8");
 assert(robots.includes(`Sitemap: ${siteOrigin}/sitemap.xml`), "robots.txt: canonical sitemap missing");
@@ -121,18 +142,23 @@ for (const url of urls) {
     } else assert($(".product-page").length, `${url.pathname}: missing FAQ for restored template`);
   }
   if (url.pathname.startsWith("/blog/")) assert(schemas.some(node => node["@type"] === "BlogPosting"));
+  if (url.pathname.startsWith("/collections/")) assert(schemas.some(node => node["@type"] === "CollectionPage"), `${url.pathname}: missing CollectionPage schema`);
   console.log(`Verified ${url.pathname}`);
 }
 for (const link of legalLinks) assert(urls.some(url => url.pathname === link.href), `sitemap.xml: ${link.href} missing`);
 const llms = fs.readFileSync(path.join(output, "llms.txt"), "utf8");
 for (const url of urls.filter(url => url.pathname.startsWith("/shop/"))) assert(llms.includes(url.href), `llms.txt: ${url.pathname} missing`);
 const llmsFull = fs.readFileSync(path.join(output, "llms-full.txt"), "utf8");
-for (const url of urls.filter(url => /^\/(shop|blog)\//.test(url.pathname))) assert(llmsFull.includes(url.href), `llms-full.txt: ${url.pathname} missing`);
+for (const url of urls.filter(url => /^\/(shop|blog|collections)\//.test(url.pathname))) assert(llmsFull.includes(url.href), `llms-full.txt: ${url.pathname} missing`);
 assert(fs.readFileSync(path.join(output, "llms-small.txt"), "utf8").includes("llms-full.txt"), "llms-small.txt: no link to the full reference");
 assert(/^User-Agent: \*$/m.test(fs.readFileSync(path.join(output, ".well-known", "ai.txt"), "utf8")), ".well-known/ai.txt missing");
 for (const name of [".env", "server.js", "package.json", ".git", ".kilo"]) assert(!fs.existsSync(path.join(output, name)));
 assert.equal(publicPhone("+001 234 567 890"), "");
 assert.equal(publicPhone("+92 300 9876543"), "+92 300 9876543");
+const bags = CATEGORY_CATALOG.find(category => category.id === "leather-bags");
+assert(bags, "catalogue: leather-bags category missing");
+assert.equal(categoryIsIndexable({ products: [] }, bags), false, "catalogue: empty future category must remain noindex");
+assert.equal(categoryIsIndexable({ products: [{ category: "leather-bags", enabled: true }] }, bags), true, "catalogue: stocked future category must become indexable");
 const fixture = { products: [], footer: { phone: "+92 300 9876543", email: "info@leatherculture.shop" }, checkout: { returnsPolicy: "Exchange within 14 days with original tags." }, content: { values: {} } };
 const result = cheerio.load(materialize('<html><head></head><body><p>+001 234 567 890</p><a href="tel:001234567890">Call</a><section id="faq"><details><summary>Can I exchange an item?</summary><p>Old policy</p></details></section></body></html>', fixture, "/contact", [], "https://www.leatherculture.shop"));
 assert.equal(result("a[href^='tel:']").text(), fixture.footer.phone);

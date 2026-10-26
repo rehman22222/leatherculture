@@ -5,6 +5,8 @@ const cheerio = require("cheerio");
 const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, legalLinks } = require("../lib/seo");
 const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
 const { renderProductPage } = require("../lib/product-renderer");
+const { renderCategoryPage, categoryDirectory, categoryStyles } = require("../lib/category-renderer");
+const { normalizeStoreCategories, categoryIsIndexable } = require("../lib/category-catalog");
 const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
 const { sourcesFor } = require("../lib/citations");
 
@@ -28,13 +30,6 @@ function repairRetiredProductLinks($, settings) {
 
 const assetId = src => (/\/assets\/cdn\/images\/([A-Za-z0-9]+)-[0-9a-f]{8}\./.exec(src || "") || [])[1] || "";
 const priceValue = value => { const match = String(value || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/); return match ? Number(match[0]) : 0; };
-// The homepage collection cards and the products each one covers. The store repurposed the template's
-// "Children's wear" card as a winter jackets card, so it lists jackets and coats while its text says so.
-const collectionCards = [
-  ["Men's wear", item => item.category === "men"],
-  ["Women's wear", item => item.category === "women"],
-  ["Children's wear", item => /jacket|coat/i.test(item.name || "")]
-];
 // Order, review and password-reset links carry private tokens in the URL, so analytics stays off there.
 const privatePage = pathname => /^\/(account|order|review)(\/|$)/.test(pathname);
 
@@ -55,6 +50,53 @@ function revealScrollAnimatedContent($) {
   if (marked && !$("style[data-lc-reveal-style]").length) {
     $("head").append("<style data-lc-reveal-style>[data-lc-reveal]{opacity:1!important;transform:none!important}</style>");
   }
+}
+
+// The source template has a fixed Men/Women/Children collection component. Replace it at build
+// time with the product-led directory, which remains valid as bags, shoes and accessories launch.
+function injectCategoryDirectory($, settings, pathname) {
+  if (pathname !== "/" && pathname !== "/shop") return;
+  if ($(".lc-collection-directory").length) return;
+  const directory = categoryDirectory(settings);
+  if (!directory) return;
+  if (!$("style[data-lc-category-style]").length) $("head").append(categoryStyles());
+
+  const legacyTitle = normalize(settings.sections?.collections?.title || "Modern collections defined by simplicity");
+  $("h1,h2,h3,h4,p,span").filter((_, element) => normalize($(element).text()) === legacyTitle).each((_, element) => {
+    const section = $(element).closest("section");
+    if (section.length) section.attr("data-lc-legacy-collections", "").css("display", "none");
+  });
+
+  if (pathname === "/") {
+    // Categories belong directly below the in-page lookbook reel, before the next homepage block.
+    const video = $("section[data-framer-name='Video']").first();
+    if (video.length) {
+      video.after(directory);
+      return;
+    }
+  }
+
+  if (pathname === "/shop") {
+    // The exported Shop template still has non-functional Men/Women/Children tabs. The product-led
+    // collection directory takes their place and links to the real collection URLs.
+    $("section[data-framer-name='Shop'] [data-framer-name='Tabs']").attr("data-lc-legacy-category-tabs", "").attr("aria-hidden", "true").css("display", "none");
+    const shop = $("section[data-framer-name='Shop']").first();
+    if (shop.length) {
+      shop.before(directory);
+      return;
+    }
+  }
+
+  const answers = $(".lc-answers .lc-answers-inner").first();
+  if (answers.length) {
+    answers.append(directory);
+    return;
+  }
+  const main = $("#main").first();
+  if (!main.length) return;
+  const footer = main.find("footer").last();
+  if (footer.length) footer.before(directory);
+  else main.append(directory);
 }
 
 function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
@@ -83,16 +125,17 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
   const deliveryEstimate = (String(settings.checkout?.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
   const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
-  const priceText = prices.length ? ` Current jacket prices start at Rs ${Math.min(...prices).toLocaleString("en-US")}.` : "";
+  const priceText = prices.length ? ` Current collection prices start at Rs ${Math.min(...prices).toLocaleString("en-US")}.` : "";
   const deliveryText = deliveryEstimate ? ` Estimated delivery across Pakistan takes ${escape(deliveryEstimate)}.` : "";
   const leadCopy = {
-    "/": `Explore the current <a href="/shop">LeatherCulture jacket collection</a> in Pakistan.${escape(priceText)}${deliveryText} Pay the courier in cash when your order arrives. For sizing, materials or order questions, <a href="/contact">contact our team</a>.`,
-    "/shop": `Compare the current LeatherCulture jackets and choose a style for your wardrobe.${escape(priceText)}${deliveryText} Read the <a href="/blog/leather-jacket-price-pakistan">jacket buying guide</a> and <a href="/contact">ask our team</a> about measurements or materials before ordering.`,
-    "/about": 'LeatherCulture sells jackets online in Pakistan with cash on delivery. Explore the <a href="/shop">current collection</a>, or <a href="/contact">contact the team</a> for product measurements, material details and order support.',
+    "/": `Explore the current <a href="/shop">LeatherCulture leather collection</a> in Pakistan.${escape(priceText)}${deliveryText} Jackets are available now, with bags, shoes and accessories planned for future releases. For sizing, materials or order questions, <a href="/contact">contact our team</a>.`,
+    "/shop": `Browse the current LeatherCulture leather collection and choose a style for your wardrobe.${escape(priceText)}${deliveryText} Jackets are available now; bags, shoes and accessories are being prepared for future releases. Read the <a href="/blog/leather-jacket-price-pakistan">jacket buying guide</a> and <a href="/contact">ask our team</a> about measurements or materials before ordering.`,
+    "/about": 'LeatherCulture is building a leather-goods collection for Pakistan, beginning with jackets and expanding to bags, shoes and accessories. Explore the <a href="/shop">current collection</a>, or <a href="/contact">contact the team</a> for product measurements, material details and order support.',
     "/contact": `Contact LeatherCulture at <a href="mailto:${escape(settings.footer?.email || "contact@leatherculture.shop")}">${escape(settings.footer?.email || "contact@leatherculture.shop")}</a> for sizing, product details, order updates and returns.${deliveryText} See our <a href="/terms#returns">returns and refund policy</a> before sending an item back.`,
     "/blog": 'Practical jacket buying, sizing, styling and care guides from the LeatherCulture team. Browse the guides below and explore the <a href="/shop">current jacket collection</a>.'
   };
   if (leadCopy[pathname]) $(".lc-answers .lc-lede").first().html(leadCopy[pathname]);
+  injectCategoryDirectory($, settings, pathname);
   $(".lc-answers p").each((_, element) => {
     const node = $(element);
     if (/Every LeatherCulture jacket is made from genuine leather and finished by hand/i.test(node.text())) node.html('Check the individual product details and <a href="/contact">ask our team to confirm the shell material, lining and construction</a> before ordering.');
@@ -215,7 +258,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     });
     node.find("img").attr("src", cardImage(item.image)).attr("alt", item.alt || item.name).removeAttr("srcset");
   });
-  if (pathname === "/shop") $("h1").text("Leather Jackets in Pakistan");
+  if (pathname === "/shop") $("h1").text("Leather Goods in Pakistan");
   if (product) {
     $("h1").text(product.name);
     $("[data-framer-name='Pricing']").each((_, element) => {
@@ -257,23 +300,6 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     $(".lc-answers .lc-answers-inner").length ? $(".lc-answers .lc-answers-inner").append(links) : $(".lc-answers").append(links);
   }
   // Collection cards carry template prices ("$45.00"); show the live price range of each collection.
-  const currency = settings.checkout?.currency || "Rs";
-  for (const [name, includes] of collectionCards) {
-    const card = $(`[data-framer-name="${name}"]`);
-    if (!card.length || (name === "Children's wear" && !/jacket|coat/i.test(card.text()))) continue;
-    const prices = (settings.products || []).filter(item => item.enabled !== false && includes(item)).map(item => priceValue(item.price)).filter(Boolean);
-    if (!prices.length) continue;
-    const low = Math.min(...prices), high = Math.max(...prices);
-    card.find("[data-framer-name='Pricing']").each((_, element) => {
-      const texts = $(element).find("p");
-      texts.eq(0).text(`${currency} ${low.toLocaleString("en-PK")}`);
-      texts.eq(1).text(`${currency} ${high.toLocaleString("en-PK")}`);
-      if (low === high) {
-        texts.eq(1).css("display", "none");
-        $(element).find("[data-framer-name='Line']").css("display", "none");
-      }
-    });
-  }
   $("p").each((_, element) => {
     if (/^(?:USD\s*)?\$[\d,.]+$/.test(normalize($(element).text()))) $(element).text("View current prices in our shop");
   });
@@ -538,7 +564,7 @@ function frontLoad($, settings, assets, pathname) {
 }
 
 async function buildStorefront(settings, posts, site) {
-  settings = structuredClone(settings);
+  settings = normalizeStoreCategories(structuredClone(settings));
   // The page text groups are defined in server.js: use the version being deployed, not whichever version
   // the backend happens to run while this build fetches its data.
   const serverSource = await fs.readFile(path.join(root, "server.js"), "utf8");
@@ -575,6 +601,16 @@ async function buildStorefront(settings, posts, site) {
       await fs.mkdir(folder, { recursive: true });
       await fs.writeFile(path.join(folder, "index.html"), renderProductPage(product, settings));
     }
+  }
+  // Product-led collection pages use clean, stable URLs. Empty future categories are rendered so
+  // customers can see the roadmap, but are deliberately noindex and kept out of the sitemap.
+  const collectionsOutput = path.join(output, "collections");
+  await fs.mkdir(collectionsOutput, { recursive: true });
+  for (const category of (settings.categories || []).filter(category => category.enabled !== false)) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(category.slug)) throw new Error(`Invalid category slug: ${category.slug}`);
+    const folder = path.join(collectionsOutput, category.slug);
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(path.join(folder, "index.html"), renderCategoryPage(category, settings));
   }
   for (const name of ["index.html", "404.html", "brand-override.css", "store.css", "store-override.js", "cart.js", "site-config.js", "robots.txt", "sitemap.xml", "llms.txt"]) {
     await fs.copyFile(path.join(root, name), path.join(output, name));
@@ -617,7 +653,8 @@ async function buildStorefront(settings, posts, site) {
   const products = (settings.products || []).filter(p => p.enabled !== false);
   const pages = ["/", "/about", "/shop", "/blog", "/contact"];
   // lastmod only where the date is known: journal posts and the policies.
-  const entries = [...pages.map(p => [p]), ...products.map(p => [`/shop/${p.slug}`]), ...posts.map(p => [`/blog/${p.slug}`, p.dateModified || p.date]), ...Object.values(policyPaths).map(p => [p, POLICY_UPDATED])];
+  const indexableCategories = (settings.categories || []).filter(category => categoryIsIndexable(settings, category));
+  const entries = [...pages.map(p => [p]), ...indexableCategories.map(category => [`/collections/${category.slug}`]), ...products.map(p => [`/shop/${p.slug}`]), ...posts.map(p => [`/blog/${p.slug}`, p.dateModified || p.date]), ...Object.values(policyPaths).map(p => [p, POLICY_UPDATED])];
   const seen = new Set();
   const uniqueEntries = entries.filter(([pathname]) => !seen.has(pathname) && seen.add(pathname));
   // A sitemap URL must always resolve to a generated HTML page. Fail the deployment rather than
@@ -744,6 +781,7 @@ function llmsText(settings, products, posts, site) {
   const firstSentence = text => (String(text || "").replace(/\s+/g, " ").trim().match(/^.*?[.!?](?=\s|$)/) || [String(text || "").trim()])[0];
   const prices = products.map(p => priceValue(p.price)).filter(Boolean);
   const pageInfo = Object.fromEntries((settings.pages || []).map(page => [page.path, page.metaDescription || page.excerpt || ""]));
+  const categories = (settings.categories || []).filter(category => category.enabled !== false);
   const fee = Number(checkout.shippingFee) || 0, free = Number(checkout.freeShippingFrom) || 0;
   return [
     `# ${settings.brand?.name || "LeatherCulture"}`,
@@ -758,6 +796,12 @@ function llmsText(settings, products, posts, site) {
     ...(prices.length ? [`- Price range: ${money(Math.min(...prices))} to ${money(Math.max(...prices))}.`] : []),
     "- Currency: PKR.",
     `- Contact: ${settings.footer?.email || "contact@leatherculture.shop"}`,
+    "",
+    "## Collections",
+    ...categories.map(category => {
+      const count = products.filter(product => product.category === category.id).length;
+      return `- [${category.name}](${url(`/collections/${category.slug}`)}): ${count ? `${count} product${count === 1 ? "" : "s"} available.` : "Coming soon."}`;
+    }),
     "",
     "## Pages",
     ...[["/", "Home"], ["/shop", "Shop"], ["/about", "About"], ["/blog", "Journal"], ["/contact", "Contact"]].map(([pathname, label]) => `- [${label}](${url(pathname)})${pageInfo[pathname] ? `: ${firstSentence(pageInfo[pathname])}` : ""}`),

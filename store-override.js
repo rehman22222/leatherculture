@@ -160,6 +160,12 @@
   const isHomePage = location.pathname === "/" || location.pathname === "/index.html";
   const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobileViewport = window.matchMedia && window.matchMedia("(max-width: 809px)").matches;
+  const categoryBlueprint = [
+    { id: "leather-jackets", name: "Leather Jackets", slug: "leather-jackets", description: "Explore LeatherCulture leather jackets for everyday layering and statement looks in Pakistan.", image: "/assets/categories/leather-jackets.webp", alt: "Brown leather jacket displayed on a store rack" },
+    { id: "leather-bags", name: "Leather Bags", slug: "leather-bags", description: "Leather bags for work, travel and everyday carry are coming to LeatherCulture.", image: "/assets/categories/leather-bags.webp", alt: "Brown leather tote bag displayed with other bags on a shop shelf" },
+    { id: "leather-shoes", name: "Leather Shoes", slug: "leather-shoes", description: "Leather shoes will join the LeatherCulture collection in a future release.", image: "/assets/categories/leather-shoes.webp", alt: "Leather shoes arranged on a wooden display shelf" },
+    { id: "leather-accessories", name: "Leather Accessories", slug: "leather-accessories", description: "Leather wallets, belts and small accessories are planned for a future LeatherCulture release.", image: "/assets/categories/leather-accessories.webp", alt: "Leather wallets, belts and keychains on a display table" }
+  ];
 
   function apiUrl(path) {
     return `${apiBase}${path}`;
@@ -208,18 +214,33 @@
     video.dataset.lcParked = "true";
   }
 
-  // Sharper encodes made from the original uploads. The template copies were compressed to a fraction
-  // of their detail. Visitors asking to save data, or on 2G/3G, keep the light file.
-  const videoUpgrades = { "tZkQWQqHkaDjOS2aRu06UvSAiY.mp4": "/assets/video/leather-craft-hq.mp4" };
+  // The template's video slot now plays LeatherCulture's own hanging-jacket reel (4:5, beige background).
+  // Phones, Save-Data and 2G/3G visitors get the 720 px encode; everyone else the 1080 px one.
+  const videoReplacements = {
+    "tZkQWQqHkaDjOS2aRu06UvSAiY.mp4": {
+      src: "/assets/video/leatherculture-hanging-reel.mp4",
+      lightSrc: "/assets/video/leatherculture-hanging-reel-720.mp4",
+      poster: "/assets/video/leatherculture-hanging-reel-poster.webp"
+    }
+  };
+  function videoReplacement(src) {
+    return videoReplacements[String(src || "").split(/[?#]/)[0].split("/").pop()] || null;
+  }
   function videoSource(src) {
-    const upgrade = videoUpgrades[String(src || "").split(/[?#]/)[0].split("/").pop()];
+    const replacement = videoReplacement(src);
+    if (!replacement) return src;
     const connection = navigator.connection || {};
-    if (!upgrade || connection.saveData || /^(slow-2g|2g|3g)$/.test(connection.effectiveType || "")) return src;
-    return upgrade;
+    const light = connection.saveData || /^(slow-2g|2g|3g)$/.test(connection.effectiveType || "") || window.matchMedia("(max-width: 809px)").matches;
+    return light ? replacement.lightSrc : replacement.src;
   }
 
   function wakeVideo(video) {
     video.dataset.lcActive = "true";
+    const replacement = videoReplacement(video.dataset.lcSrc || video.querySelector("source[data-lc-src]")?.dataset.lcSrc);
+    if (replacement) {
+      video.dataset.lcPoster = replacement.poster;
+      video.setAttribute("data-lc-reel", "");
+    }
     if (video.dataset.lcPoster && !video.getAttribute("poster")) video.setAttribute("poster", video.dataset.lcPoster);
     if (video.dataset.lcSrc && !video.getAttribute("src")) video.setAttribute("src", videoSource(video.dataset.lcSrc));
     video.querySelectorAll("source[data-lc-src]").forEach((source) => {
@@ -814,39 +835,96 @@
     return match ? Number(match[0]) : 0;
   }
 
-  // The collection cards ship template prices ("$45.00"); show the live range of each collection instead.
-  // The template's "Children's wear" card is used as a winter jackets card, so it covers jackets and coats.
-  const collectionCards = [
-    ["Men's wear", (product) => product.category === "men"],
-    ["Women's wear", (product) => product.category === "women"],
-    ["Children's wear", (product) => /jacket|coat/i.test(product.name || "")],
-  ];
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
+  }
 
-  function syncCollectionPrices() {
-    if (!settings || !settings.products) return;
-    const currency = get("checkout.currency") || "Rs";
-    collectionCards.forEach(([name, includes]) => {
-      const prices = settings.products
-        .filter((product) => product.enabled !== false && includes(product))
-        .map((product) => parsePrice(product.price))
-        .filter(Boolean);
-      if (!prices.length) return;
-      const low = Math.min(...prices);
-      const high = Math.max(...prices);
-      document.querySelectorAll(`[data-framer-name="${name}"]`).forEach((card) => {
-        if (name === "Children's wear" && !/jacket|coat/i.test(card.textContent || "")) return;
-        const pricing = card.querySelector("[data-framer-name='Pricing']");
-        if (!pricing) return;
-        const [first, second] = pricing.querySelectorAll("p");
-        const line = pricing.querySelector("[data-framer-name='Line']");
-        const lowText = `${currency} ${low.toLocaleString("en-PK")}`;
-        const highText = `${currency} ${high.toLocaleString("en-PK")}`;
-        if (first && first.textContent !== lowText) first.textContent = lowText;
-        if (second && second.textContent !== highText) second.textContent = highText;
-        if (second) (second.closest("[data-framer-component-type='RichTextContainer']") || second).style.display = low === high ? "none" : "";
-        if (line) line.style.display = low === high ? "none" : "";
-      });
+  function categoryForProduct(product) {
+    const direct = String(product && product.category || "").toLowerCase();
+    if (categoryBlueprint.some((category) => category.id === direct || category.slug === direct)) return direct;
+    if ((settings?.categories || []).some((category) => category && (category.id === direct || category.slug === direct))) return direct;
+    const detail = `${product?.name || ""} ${product?.slug || ""} ${direct}`.toLowerCase();
+    if (/\b(wallet|belt|key\s*chain|card\s*holder|accessor)/.test(detail)) return "leather-accessories";
+    if (/\b(shoe|boot|loafer|sandal|footwear)/.test(detail)) return "leather-shoes";
+    if (/\b(bag|tote|satchel|duffel|briefcase|backpack|carry)/.test(detail)) return "leather-bags";
+    return "leather-jackets";
+  }
+
+  // The production database still contains legacy Men/Women category records. This is a
+  // display-only compatibility layer; it never writes to the database and keeps the storefront
+  // on the new leather-product taxonomy while the owner adds future stock in Admin.
+  function normalizeStoreCategories() {
+    if (!settings) return;
+    const supplied = Array.isArray(settings.categories) ? settings.categories : [];
+    const catalog = categoryBlueprint.map((category) => {
+      const saved = supplied.find((item) => item && (item.id === category.id || item.slug === category.slug));
+      return { ...category, ...(saved || {}), image: saved?.image || category.image, alt: saved?.alt || category.alt, id: category.id, slug: category.slug };
     });
+    const legacy = new Set(["men", "women", "mens-wear", "womens-wear", "men's-wear", "women's-wear"]);
+    const extra = supplied.filter((category) => {
+      const id = String(category?.id || category?.slug || "").toLowerCase();
+      return id && !legacy.has(id) && !categoryBlueprint.some((item) => item.id === id || item.slug === id);
+    });
+    settings.categories = [...catalog, ...extra];
+    settings.products = (settings.products || []).map((product) => ({ ...product, category: categoryForProduct(product) }));
+  }
+
+  function categoryProducts(category) {
+    return (settings?.products || []).filter((product) => product.enabled !== false && product.category === category.id);
+  }
+
+  function categoryImage(category, products) {
+    return category.image || products[0]?.image || "";
+  }
+
+  function ensureCategoryDirectoryStyle() {
+    if (document.getElementById("lc-category-directory-style")) return;
+    const style = document.createElement("style");
+    style.id = "lc-category-directory-style";
+    style.textContent = ".lc-collection-directory{max-width:1180px;margin:64px auto;padding:0 24px;font-family:Inter,Arial,sans-serif}.lc-collection-directory h2{font-size:clamp(28px,4vw,48px);margin:0 0 24px;letter-spacing:-.04em}.lc-collection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.lc-collection-card{position:relative;min-height:290px;border-radius:12px;overflow:hidden;background:#181816;color:#fff;text-decoration:none;isolation:isolate;display:flex;align-items:flex-end}.lc-collection-card:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 34%,rgba(0,0,0,.76));z-index:-1}.lc-collection-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform .25s ease}.lc-collection-card:hover img{transform:scale(1.03)}.lc-collection-placeholder{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(135deg,#332b21,#0b0b0a);color:#dfd0b2;font-weight:800;letter-spacing:.09em;font-size:12px;text-transform:uppercase}.lc-collection-card-copy{position:relative;display:grid;gap:4px;padding:20px}.lc-collection-card strong{font-size:22px;line-height:1.1}.lc-collection-card small{font-size:14px;opacity:.82}.lc-collection-card:focus-visible{outline:3px solid #0a67ff;outline-offset:4px}@media(max-width:800px){.lc-collection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lc-collection-card{min-height:230px}}@media(max-width:440px){.lc-collection-directory{padding:0 18px;margin:48px auto}.lc-collection-grid{gap:10px}.lc-collection-card{min-height:190px}.lc-collection-card strong{font-size:18px}.lc-collection-card-copy{padding:14px}}";
+    document.head.appendChild(style);
+  }
+
+  function syncCategoryDirectory() {
+    if (!settings || (location.pathname !== "/" && location.pathname !== "/shop" && location.pathname !== "/index.html")) return;
+    ensureCategoryDirectoryStyle();
+    if (location.pathname === "/shop") {
+      document.querySelectorAll("section[data-framer-name='Shop'] [data-framer-name='Tabs']").forEach((tabs) => {
+        tabs.style.display = "none";
+        tabs.setAttribute("aria-hidden", "true");
+      });
+    }
+    const title = normalizeText(get("sections.collections.title") || "Modern collections defined by simplicity");
+    let anchor = null;
+    findBlocks(title).forEach((heading) => {
+      const section = heading.closest("section");
+      if (!section) return;
+      section.style.display = "none";
+      anchor ||= section;
+    });
+    const directory = document.getElementById("lc-category-directory");
+    const categories = (settings.categories || []).filter((category) => category.enabled !== false);
+    if (!categories.length) return;
+    const markup = `<h2>Shop leather categories</h2><div class="lc-collection-grid">${categories.map((category) => {
+      const products = categoryProducts(category);
+      const image = categoryImage(category, products);
+      const visual = image ? `<img src="${escapeHtml(mediaUrl(cardImage(image)))}" alt="${escapeHtml(category.alt || category.name)}" width="720" height="900" loading="lazy" decoding="async">` : '<span class="lc-collection-placeholder" aria-hidden="true">LeatherCulture</span>';
+      return `<a class="lc-collection-card" href="/collections/${escapeHtml(category.slug)}">${visual}<span class="lc-collection-card-copy"><strong>${escapeHtml(category.name)}</strong><small>${products.length ? `${products.length} ${products.length === 1 ? "piece" : "pieces"}` : "Coming soon"}</small></span></a>`;
+    }).join("")}</div>`;
+    if (directory) {
+      if (directory.innerHTML !== markup) directory.innerHTML = markup;
+      const video = (location.pathname === "/" || location.pathname === "/index.html") && document.querySelector("section[data-framer-name='Video']");
+      if (video?.parentElement && directory.previousElementSibling !== video) video.insertAdjacentElement("afterend", directory);
+      return;
+    }
+    const next = document.createElement("section");
+    next.id = "lc-category-directory";
+    next.className = "lc-collection-directory";
+    next.innerHTML = markup;
+    const video = (location.pathname === "/" || location.pathname === "/index.html") && document.querySelector("section[data-framer-name='Video']");
+    if (video?.parentElement) video.insertAdjacentElement("afterend", next);
+    else if (anchor?.parentElement) anchor.insertAdjacentElement("afterend", next);
+    else (document.querySelector("#main footer") || document.querySelector("footer") || document.body).insertAdjacentElement("beforebegin", next);
   }
 
   // Privacy and terms links sit in the contact strip at the very bottom of every page (the build adds
@@ -1224,6 +1302,7 @@
 
   function applySettings() {
     if (!settings) return;
+    normalizeStoreCategories();
     if (settings.content?.values) settings.content.values["6f2c3442a7"] = "Quality checked";
     if (window.LeatherCultureCart) window.LeatherCultureCart.configure(settings);
     setLogoBrand();
@@ -1234,7 +1313,7 @@
     setImageData();
     setProductData();
     syncCatalogLinks();
-    syncCollectionPrices();
+    syncCategoryDirectory();
     syncProductSchema();
     syncBusinessDetails();
     applyCustomerReviews();
