@@ -99,6 +99,50 @@ function injectCategoryDirectory($, settings, pathname) {
   else main.append(directory);
 }
 
+// The exported Journal template has visual-only demo tabs and placeholder story links.
+// Replace that block with the published journal, real filters and valid article URLs.
+function journalGroups(post) {
+  const context = [normalize(post.category), normalize(post.title), String(post.slug || "")].join(" ").toLowerCase();
+  const groups = ["all"];
+  if (/style|wear|outfit|minimal/.test(context)) groups.push("style");
+  if (/buying|online|price|real.leather|choose|gift/.test(context)) groups.push("buying");
+  if (/care|size/.test(context)) groups.push("care");
+  return groups;
+}
+
+function journalDirectoryStyles() {
+  return '<style data-lc-journal-style>' +
+    '.lc-journal-directory{max-width:1440px;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(18px,4vw,64px);background:#f8f8f8;color:#0d0d0d}' +
+    '.lc-journal-directory *{box-sizing:border-box}.lc-journal-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:0 0 30px}.lc-journal-eyebrow{margin:0 0 8px;color:#735d3e;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.lc-journal-heading h2{margin:0;font-size:clamp(34px,4vw,62px);line-height:.98;letter-spacing:-.055em}.lc-journal-count{margin:0;color:#666;font-size:14px;white-space:nowrap}' +
+    '.lc-journal-filters{display:flex;gap:8px;overflow-x:auto;padding:9px;margin:0 0 34px;border-radius:999px;background:#e9e8e5;scrollbar-width:none}.lc-journal-filters::-webkit-scrollbar{display:none}.lc-journal-filter{appearance:none;flex:1 0 max(150px,22%);min-height:50px;border:0;border-radius:999px;background:transparent;color:#111;cursor:pointer;font:700 15px/1 Inter,Arial,sans-serif;transition:background-color .2s ease,color .2s ease,transform .2s ease}.lc-journal-filter:hover{background:#fff}.lc-journal-filter:focus-visible{outline:3px solid #a77b38;outline-offset:2px}.lc-journal-filter[aria-pressed="true"]{background:#090909;color:#fff}' +
+    '.lc-journal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.lc-journal-card{display:flex;min-width:0;overflow:hidden;border:1px solid #e5e2dc;border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(24,18,12,.05);transition:transform .22s ease,box-shadow .22s ease}.lc-journal-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px rgba(24,18,12,.12)}.lc-journal-card a{display:flex;flex-direction:column;width:100%;color:inherit;text-decoration:none}.lc-journal-card img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:#ebe8e1}.lc-journal-card-copy{display:flex;min-height:206px;flex-direction:column;padding:20px}.lc-journal-card-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px;color:#775e3d;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.lc-journal-card h3{margin:0 0 12px;font-size:22px;line-height:1.14;letter-spacing:-.035em}.lc-journal-card p{margin:0;color:#5a5752;font-size:14px;line-height:1.55}.lc-journal-read{margin-top:auto;padding-top:18px;color:#111;font-size:13px;font-weight:800}.lc-journal-empty{margin:0;padding:54px 22px;border:1px dashed #c9c3bb;border-radius:18px;color:#5a5752;text-align:center}.lc-journal-empty button{border:0;background:none;color:#111;cursor:pointer;font:inherit;font-weight:800;text-decoration:underline}' +
+    '@media(max-width:900px){.lc-journal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.lc-journal-directory{padding:54px 18px}.lc-journal-heading{align-items:start;flex-direction:column;gap:8px}.lc-journal-filters{margin-right:-18px;border-radius:18px 0 0 18px}.lc-journal-filter{flex-basis:136px}.lc-journal-grid{grid-template-columns:1fr;gap:14px}.lc-journal-card{border-radius:14px}.lc-journal-card a{display:grid;grid-template-columns:38% 1fr}.lc-journal-card img{height:100%;min-height:178px;aspect-ratio:auto}.lc-journal-card-copy{min-height:178px;padding:16px}.lc-journal-card h3{font-size:18px}.lc-journal-card p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.lc-journal-read{padding-top:10px}}' +
+    '</style>';
+}
+
+function journalDirectory(posts) {
+  const filters = [["all", "All Blogs"], ["style", "Style Guides"], ["buying", "Buying Guides"], ["care", "Care & Fit"]];
+  const sorted = [...posts].sort((a, b) => String(b.dateModified || b.date || "").localeCompare(String(a.dateModified || a.date || "")));
+  const date = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(String(value) + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
+  const cards = sorted.map(post => {
+    const category = normalize(post.category) || "Leather guide";
+    return '<article class="lc-journal-card" data-lc-journal-card data-lc-groups="' + escape(journalGroups(post).join(" ")) + '"><a href="/blog/' + escape(post.slug) + '"><img src="' + escape(cardImage(post.coverImage)) + '" alt="' + escape(post.coverAlt || post.title) + '" width="800" height="600" loading="lazy" decoding="async"><div class="lc-journal-card-copy"><div class="lc-journal-card-meta"><span>' + escape(category) + '</span><time datetime="' + escape(post.date || "") + '">' + escape(date(post.date)) + '</time></div><h3>' + escape(post.title) + '</h3><p>' + escape(post.excerpt || "") + '</p><span class="lc-journal-read">Read guide <span aria-hidden="true">&#8594;</span></span></div></a></article>';
+  }).join("");
+  const buttons = filters.map((filter, index) => '<button class="lc-journal-filter" type="button" data-lc-journal-filter="' + filter[0] + '" aria-pressed="' + String(index === 0) + '">' + filter[1] + '</button>').join("");
+  const script = '<script data-lc-journal-filter-script>(function(){const root=document.currentScript.closest("[data-lc-journal-directory]");if(!root)return;const buttons=[...root.querySelectorAll("[data-lc-journal-filter]")],cards=[...root.querySelectorAll("[data-lc-journal-card]")],count=root.querySelector("[data-lc-journal-count]"),empty=root.querySelector("[data-lc-journal-empty]");function select(group){let visible=0;cards.forEach(card=>{const show=group==="all"||card.dataset.lcGroups.split(" ").includes(group);card.hidden=!show;if(show)visible+=1});buttons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.lcJournalFilter===group)));count.textContent=visible===1?"1 guide":visible+" guides";empty.hidden=visible!==0}buttons.forEach(button=>button.addEventListener("click",()=>select(button.dataset.lcJournalFilter)));root.querySelector("[data-lc-journal-reset]").addEventListener("click",()=>select("all"));select("all")})();</script>';
+  return '<section class="lc-journal-directory" data-lc-journal-directory aria-labelledby="lc-journal-title"><div class="lc-journal-heading"><div><p class="lc-journal-eyebrow">LeatherCulture journal</p><h2 id="lc-journal-title">Guides worth keeping</h2></div><p class="lc-journal-count" data-lc-journal-count>' + sorted.length + ' guides</p></div><div class="lc-journal-filters" role="group" aria-label="Filter journal guides">' + buttons + '</div><div class="lc-journal-grid" data-lc-journal-grid>' + cards + '</div><p class="lc-journal-empty" data-lc-journal-empty hidden>No guides in this section yet. <button type="button" data-lc-journal-reset>Show all guides</button></p>' + script + '</section>';
+}
+
+function injectJournalDirectory($, settings, pathname) {
+  if (pathname !== "/blog" || $("[data-lc-journal-directory]").length) return;
+  const posts = (settings.blogPosts || []).filter(post => post.status === "published" && post.slug);
+  if (!posts.length) return;
+  if (!$("style[data-lc-journal-style]").length) $("head").append(journalDirectoryStyles());
+  const legacy = $("section#animate,section[data-framer-name='Blog']").filter((_, element) => $(element).find("[data-framer-name='Tabs']").length).first();
+  if (legacy.length) legacy.replaceWith(journalDirectory(posts));
+  else $("#main footer").first().before(journalDirectory(posts));
+}
+
 function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
   site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
@@ -109,6 +153,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   }
   if (!$("link[href*='/account/nav.css']").length) $("head").append('<link rel="stylesheet" href="/account/nav.css?v=2">');
   revealScrollAnimatedContent($);
+  injectJournalDirectory($, settings, pathname);
   // Pages from the product renderer already carry these tags.
   if (!$("meta[name='author']").length) $("head").append(`<meta name="author" content="${escape(settings.brand?.name || "LeatherCulture")}">`);
   if (!$("meta[name='google-site-verification'],meta[name='msvalidate.01']").length) $("head").append(verificationTags(settings));
@@ -294,11 +339,6 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     node.find("[data-framer-name='Description'] p").text(post.excerpt || "");
     node.find("img").attr("src", cardImage(post.coverImage)).attr("alt", post.coverAlt || post.title).removeAttr("srcset");
   });
-  if (pathname === "/blog") {
-    const posts = (settings.blogPosts || []).filter(post => post.status === "published" && post.slug);
-    const links = `<section class="lc-journal-index"><h2>All journal guides</h2><ul>${posts.map(post => `<li><a href="/blog/${escape(post.slug)}">${escape(post.title)}</a><p>${escape(post.excerpt)}</p></li>`).join("")}</ul></section>`;
-    $(".lc-answers .lc-answers-inner").length ? $(".lc-answers .lc-answers-inner").append(links) : $(".lc-answers").append(links);
-  }
   // Collection cards carry template prices ("$45.00"); show the live price range of each collection.
   $("p").each((_, element) => {
     if (/^(?:USD\s*)?\$[\d,.]+$/.test(normalize($(element).text()))) $(element).text("View current prices in our shop");
