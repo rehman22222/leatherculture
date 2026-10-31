@@ -55,6 +55,8 @@ All media was generated for this article. Nothing is a stock photo or a photogra
 | On phones, the sticky article header covered about a fifth of the screen | The header scrolls away on phones |
 | Generated pages mixed `en` and `en-PK` | Storefront pages now use `en-PK` |
 | Journal cards loaded full-size covers for the two newest guides | Added 800 x 600 card images |
+| In browser tests no Google Analytics hit left the page, because the security policy blocked `analytics.google.com`, `www.google.com` and `stats.g.doubleclick.net` | Added those three hosts to `connect-src`, with a check in `verify:seo` |
+| `/favicon.ico` returned 404 while the homepage linked to it. Google shows this icon beside results | Added a real `favicon.ico` made from the brand mark |
 
 The new guide was added to every product page's guide list. It has 14 inbound internal links, and the lowest count for any guide rose from 3 to 4.
 
@@ -68,8 +70,18 @@ The new guide was added to every product page's guide list. It has 14 inbound in
 - `scripts/audit-storefront.js` reports only links to the three "coming soon" collections. Those pages are deliberately `noindex` and stay out of the sitemap.
 - Browser checks at 360, 390 and 1440 pixels on eight key pages found no horizontal overflow, no failed local requests and exactly one H1 on each page. The article was also checked at 820 pixels, and the video plays.
 
+## Production Lighthouse results
+
+Simulated mobile run on the live site, before the Analytics and favicon fix. These are lab figures, not real-user data.
+
+| Page | Performance | Accessibility | Best practices | SEO | LCP | CLS |
+|---|---:|---:|---:|---:|---:|---:|
+| Guide | 99 | 100 | 93 | 100 | 2.0 s | 0 |
+| Homepage | 81 | 99 | 93 | 100 | 3.1 s | 0 |
+
 ## Known and not changed
 
+- Homepage LCP on simulated mobile is 3.1 seconds, above the 2.5-second target.
 - The homepage logs React error 418, a hydration mismatch. It is also present on the live site from before this work. The final page content is correct.
 - Four older guides still use leftover template covers, including a hoodie on the real-versus-faux guide.
 

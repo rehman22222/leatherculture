@@ -154,6 +154,10 @@ for (const url of urls.filter(url => /^\/(shop|blog|collections)\//.test(url.pat
 assert(fs.readFileSync(path.join(output, "llms-small.txt"), "utf8").includes("llms-full.txt"), "llms-small.txt: no link to the full reference");
 assert(/^User-Agent: \*$/m.test(fs.readFileSync(path.join(output, ".well-known", "ai.txt"), "utf8")), ".well-known/ai.txt missing");
 for (const name of [".env", "server.js", "package.json", ".git", ".kilo"]) assert(!fs.existsSync(path.join(output, name)));
+assert(fs.existsSync(path.join(output, "favicon.ico")), "favicon.ico missing: the homepage links to it and Google shows it in results");
+// Google Analytics posts to these bare hosts, which a *.analytics.google.com wildcard does not cover.
+const policy = require("../vercel.json").headers[0].headers.find(header => header.key === "Content-Security-Policy").value;
+for (const host of ["https://analytics.google.com", "https://www.google.com", "https://stats.g.doubleclick.net"]) assert(policy.includes(host), `CSP blocks Google Analytics host ${host}`);
 assert.equal(publicPhone("+001 234 567 890"), "");
 assert.equal(publicPhone("+92 300 9876543"), "+92 300 9876543");
 const bags = CATEGORY_CATALOG.find(category => category.id === "leather-bags");

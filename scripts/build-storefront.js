@@ -670,7 +670,7 @@ async function buildStorefront(settings, posts, site) {
     await fs.mkdir(folder, { recursive: true });
     await fs.writeFile(path.join(folder, "index.html"), renderCategoryPage(category, settings));
   }
-  for (const name of ["index.html", "404.html", "brand-override.css", "store.css", "store-override.js", "cart.js", "site-config.js", "robots.txt", "sitemap.xml", "llms.txt"]) {
+  for (const name of ["index.html", "404.html", "favicon.ico", "brand-override.css", "store.css", "store-override.js", "cart.js", "site-config.js", "robots.txt", "sitemap.xml", "llms.txt"]) {
     await fs.copyFile(path.join(root, name), path.join(output, name));
   }
   async function transform(directory) {
