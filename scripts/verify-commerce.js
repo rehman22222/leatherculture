@@ -60,7 +60,7 @@ for (const match of sitemap.matchAll(/<loc>(.*?)<\/loc>/g)) {
   assert.deepEqual(productSchema.offers.shippingDetails, shippingDetails(Number(productSchema.offers.price), data.checkout));
   assert.deepEqual(productSchema.offers.hasMerchantReturnPolicy || null, returnPolicy(data.checkout));
   assert.equal(page(".product-related a[href^='/shop/']").length, 4);
-  assert.equal(page(".product-guides a[href^='/blog/']").length, 3);
+  assert.equal(page(".product-guides a[href^='/blog/']").length, 4);
   assert(page("#product-reviews").length);
   assert(page(".product-info details").text().includes(data.checkout.returnsPolicy));
 }

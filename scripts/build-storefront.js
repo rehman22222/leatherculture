@@ -2,7 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const cheerio = require("cheerio");
-const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, legalLinks } = require("../lib/seo");
+const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, shareImage, legalLinks } = require("../lib/seo");
 const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
 const { renderProductPage } = require("../lib/product-renderer");
 const { renderCategoryPage, categoryDirectory, categoryStyles } = require("../lib/category-renderer");
@@ -167,6 +167,19 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   }
   if (pageSeo?.metaDescription) $("meta[name='description'],meta[property='og:description'],meta[name='twitter:description']").attr("content", pageSeo.metaDescription);
   if (pageSeo?.keywords) $("meta[name='keywords']").attr("content", pageSeo.keywords);
+  $("html").attr("lang", "en-PK");
+  // The sitemap names the homepage with its trailing slash, so the canonical must match it exactly.
+  if (pathname === "/") {
+    $("link[rel='canonical']").attr("href", `${site}/`);
+    $("meta[property='og:url']").attr("content", `${site}/`);
+  }
+  // WhatsApp and other link previews do not reliably show WebP, so share the JPEG rendition if there is one.
+  $("meta[property='og:image'],meta[name='twitter:image']").each((_, element) => {
+    const tag = $(element), current = String(tag.attr("content") || "");
+    const local = current.startsWith(site) ? current.slice(site.length) : current;
+    const preferred = shareImage(local);
+    if (preferred && preferred !== local) tag.attr("content", `${site}${preferred}`);
+  });
   const policy = settings.checkout?.returnsPolicy?.trim() || fallbackPolicy;
   const deliveryEstimate = (String(settings.checkout?.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
   const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
@@ -212,6 +225,9 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $("p,h1,h2,h3,h4,h5,h6,span").each((_, element) => {
     const node = $(element);
     if (node.find("p,h1,h2,h3,h4,h5,h6").length) return;
+    // Motion headlines wrap each word in its own span. A saved phrase must never replace one word of a
+    // headline: the word "Premium" once became "Premium leather", printing "leather" twice in the H1.
+    if (node.is("[data-m='hw']")) return;
     if (normalize(node.text()) === "+001 234 567 890") node.attr("data-lc-phone", "true");
     const value = replacements.get(normalize(node.text()));
     if (typeof value === "string" && value) node.text(value);
