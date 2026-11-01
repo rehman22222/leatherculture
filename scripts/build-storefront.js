@@ -1,4 +1,5 @@
 const fs = require("fs/promises");
+const fsSync = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const cheerio = require("cheerio");
@@ -11,6 +12,10 @@ const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
 const { sourcesFor } = require("../lib/citations");
 
 const root = path.resolve(__dirname, "..");
+const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+const HERO_PHOTO = "g813yVl0fq2gEobS7kOZx537SY";
+// On phones up to a 2x screen this size is enough for the hero, and it is about half the bytes. 3x screens and desktops still get the full photo.
+const HERO_SIZES = "(max-width: 900px) 540px, max(100vw, 100vh)";
 const normalize = value => String(value || "").replace(/\s+/g, " ").trim();
 const get = (object, key) => key.split(".").reduce((value, part) => value?.[part], object);
 const escape = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -573,9 +578,63 @@ function pageSettingsSnapshot(settings, pathname) {
   };
 }
 
+function heroSrcset(src) {
+  const compact = src.replace(/\.webp$/, "-1080.webp");
+  const local = compact.replace(/^https?:\/\/[^/]+/, "");
+  return fsSync.existsSync(path.join(root, local)) ? `${compact} 1080w, ${src} 1600w` : "";
+}
+
+// The hero stacks seven photos and React shows the fourth one first, while the CSS alone shows the first one.
+// So the page used to paint one photo, swap to another when React started, and fetch all seven during first paint.
+// Now the photo that stays on screen is the one painted and prioritised. The others wait for the page to finish
+// loading or for the visitor to scroll, swipe or press a key, whichever comes first.
+function prioritiseHomepageHero($) {
+  const frames = $(".hero-frame > img[data-m='flip']");
+  const hero = frames.filter((_, element) => ($(element).attr("src") || "").includes(HERO_PHOTO)).first();
+  if (!hero.length) return;
+  const heroSrc = hero.attr("src");
+  const srcset = heroSrcset(heroSrc);
+  frames.each((_, element) => {
+    const image = $(element);
+    const source = image.attr("src");
+    if (element === hero[0]) return;
+    const set = heroSrcset(source);
+    image.attr("style", "opacity:0").attr("data-lc-src", source).attr("src", BLANK_IMAGE).attr("fetchpriority", "low");
+    if (set) image.attr("data-lc-srcset", set);
+  });
+  hero.attr("style", "opacity:1").attr("fetchpriority", "high").attr("loading", "eager");
+  if (srcset) hero.attr("srcset", srcset).attr("sizes", HERO_SIZES);
+  $("link[rel='preload'][as='image']").each((_, element) => {
+    const link = $(element);
+    const href = link.attr("href") || "";
+    // The header logo is small and must not compete with the hero for the first bytes.
+    if (href.includes("leather-culture-logo-white")) link.remove();
+    else if (link.attr("imagesizes")) {
+      link.attr("href", heroSrc);
+      if (srcset) link.attr("imagesrcset", srcset).attr("imagesizes", HERO_SIZES);
+    }
+  });
+  // The brand film sits far below the fold and starts when it scrolls into view, so it need not download up front.
+  $("video[data-m='bandVid']").attr("preload", "none");
+  $("body").append('<script data-lc-hero-frames>(function(){var done=false;function load(){if(done)return;done=true;document.querySelectorAll("img[data-lc-src]").forEach(function(i){var s=i.getAttribute("data-lc-srcset");if(s){i.setAttribute("sizes",' + JSON.stringify(HERO_SIZES) + ');i.srcset=s}i.src=i.getAttribute("data-lc-src");i.removeAttribute("data-lc-src");i.removeAttribute("data-lc-srcset")})}["pointerdown","touchstart","keydown"].forEach(function(e){addEventListener(e,load,{once:true,passive:true})});addEventListener("scroll",function(){if(window.scrollY>20)load()},{passive:true});function later(){(window.requestIdleCallback||function(f){setTimeout(f,300)})(load,{timeout:1500})}if(document.readyState==="complete")later();else addEventListener("load",later,{once:true})})();</script>');
+}
+
+function smallLogoSources($) {
+  $("img[src*='leather-culture-logo-white.webp']").each((_, element) => {
+    const image = $(element);
+    const width = Number(image.attr("width"));
+    if (!width || width > 200) return;
+    const source = image.attr("src");
+    image.attr("srcset", `${source.replace(".webp", "-282.webp")} 282w, ${source.replace(".webp", "-423.webp")} 423w, ${source} 964w`).attr("sizes", `${width}px`);
+  });
+}
+
 function frontLoad($, settings, assets, pathname) {
   const title = $("head > title").first();
-  const jsonLd = $("script[type='application/ld+json']");
+  // The React homepage renders its JSON-LD as the first child of <body>. Moving that script makes hydration fail,
+  // which re-renders the whole page and discards everything React does not know about, so it has to stay put.
+  const reactOwned = $("script").toArray().some(element => $(element).html()?.includes("self.__next_f"));
+  const jsonLd = $(reactOwned ? "head script[type='application/ld+json']" : "script[type='application/ld+json']");
   if (title.length) title.after(jsonLd);
   const ssr = $("style[data-framer-css-ssr-minified]").first();
   if (assets && ssr.length && ssr.text().length > 20000) {
@@ -607,6 +666,8 @@ function frontLoad($, settings, assets, pathname) {
       image.attr("loading", "lazy");
     }
   });
+  if (pathname === "/") prioritiseHomepageHero($);
+  smallLogoSources($);
   const answers = $("body > .lc-answers").first();
   if (answers.length && $("body > #main").length) {
     $("body").prepend(answers);
