@@ -89,21 +89,14 @@ The guide scored 98, 100, 100 and 100 in the simulated run, with a 2.0-second la
 
 `scripts/publish-article.js` inserted the guide.
 
-**`scripts/update-seo-city-guide.js` has not been run.** Auto mode blocked this write to existing production posts. To apply it, run this from the repository root:
-
-```
-node scripts/update-seo-city-guide.js --apply
-```
-
-It adds links from six older guides, switches four guides to new covers, removes retired products from older posts and corrects an old price range. It stops without writing if an anchor is missing, can be run again safely, and saves replaced text to `docs/seo-updates-before-2026-11-02.json`. Until it runs, the new cover files are deployed but unused.
+The owner ran `scripts/update-seo-city-guide.js --apply` on 2 November 2026, after auto mode had blocked that write for the assistant. It updated nine posts: links from six older guides, new covers on four guides, retired products removed from two posts and an old price range corrected. Replaced text and previous covers are in `seo-updates-before-2026-11-02.json`.
 
 ## Needs the owner
 
-1. **Run or approve the update script above.** The hoodie and trench coat covers, retired product links and the "Rs 3,400 for a tee" line stay live until then.
-2. **Decide two live claims, which no script changes:**
+1. **Decide two live claims, which no script changes:**
    - `/blog/real-leather-vs-faux-leather` says "Everything we make is genuine leather, cut and finished by hand here in Pakistan". Product records do not confirm this.
    - `/blog/leather-jacket-care-pakistan` says "the stitching and hardware are covered for 12 months". This appears nowhere in the terms or product records. If it is not a real promise, it should come out.
-3. **Confirm each jacket's hide, layer and finish.** The Heritage lookbook images print "Genuine leather" and "Premium leather", while the guides say records do not name a hide.
-4. **Add a real phone or WhatsApp number and a city in admin, plus social links.** The contact page shows only "Pakistan". Local details and a Google Business Profile are stronger location signals than anything in the page code.
-5. **Request indexing in Search Console** for the guide. This environment has no Search Console access, and the site settings hold no verification tag.
-6. **Earn links from Pakistani sites.** Run a commercial checker if a certified plagiarism figure is needed.
+2. **Confirm each jacket's hide, layer and finish.** The Heritage lookbook images print "Genuine leather" and "Premium leather", while the guides say records do not name a hide.
+3. **Add a real phone or WhatsApp number and a city in admin, plus social links.** The contact page shows only "Pakistan". Local details and a Google Business Profile are stronger location signals than anything in the page code.
+4. **Request indexing in Search Console** for the guide. This environment has no Search Console access, and the site settings hold no verification tag.
+5. **Earn links from Pakistani sites.** Run a commercial checker if a certified plagiarism figure is needed.

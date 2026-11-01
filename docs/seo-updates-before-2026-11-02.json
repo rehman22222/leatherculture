@@ -1,0 +1,90 @@
+{
+  "savedAt": "2026-11-01T21:54:15.222Z",
+  "replacedText": [
+    {
+      "slug": "pure-leather-types-pakistan",
+      "from": "its leather apparel factories sit mainly in Karachi and Sialkot.",
+      "to": "its leather apparel factories sit mainly in Karachi and Sialkot. Our <a href=\"/blog/where-to-buy-original-leather-pakistan\">city guide to buying original leather</a> explains what that means for shoppers."
+    },
+    {
+      "slug": "leather-jacket-price-pakistan",
+      "from": "instead of choosing between two similar black jackets on appearance alone.",
+      "to": "instead of choosing between two similar black jackets on appearance alone. Our <a href=\"/blog/where-to-buy-original-leather-pakistan\">city-by-city guide to original leather</a> shows what jackets were listed for in Sialkot, Lahore and Rawalpindi."
+    },
+    {
+      "slug": "original-leather-online-pakistan-checklist",
+      "from": "a seller should be able to tell you what they are selling when that information affects your purchase.",
+      "to": "a seller should be able to tell you what they are selling when that information affects your purchase. Our <a href=\"/blog/where-to-buy-original-leather-pakistan\">guide to where to buy original leather in Pakistan</a> explains what a city name can and cannot tell you."
+    },
+    {
+      "slug": "how-to-choose-leather-jacket-pakistan",
+      "from": "lists measurements and states what the jacket is made of.",
+      "to": "lists measurements and states what the jacket is made of. Comparing markets? See <a href=\"/blog/where-to-buy-original-leather-pakistan\">where to buy original leather in Pakistan</a>."
+    },
+    {
+      "slug": "original-leather-vs-faux-leather-pakistan",
+      "from": "should always take priority over broad material assumptions.",
+      "to": "should always take priority over broad material assumptions. The same goes for city names, as our <a href=\"/blog/where-to-buy-original-leather-pakistan\">Sialkot, Karachi and Lahore buying guide</a> shows."
+    },
+    {
+      "slug": "real-leather-vs-faux-leather",
+      "from": "Our range runs from Rs 3,400 for a tee to Rs 24,900 for a structured coat, all cash on delivery. Have a look at the <a href=\"/shop\">full collection</a>, or <a href=\"/contact\">ask us anything</a> before you order.",
+      "to": "Our current collection is leather jackets listed at Rs 15,000 each, all cash on delivery. Have a look at the <a href=\"/shop\">current collection</a>, or <a href=\"/contact\">ask us anything</a> before you order. Shopping in a bazaar instead? Use our <a href=\"/blog/where-to-buy-original-leather-pakistan#market-test\">ten-minute market test</a>."
+    },
+    {
+      "slug": "leather-jacket-size-guide",
+      "from": "Our <a href=\"/shop/heavyweight-oversized-hoodie\">Heavyweight Oversized Hoodie</a> is cut roomy already, so plan the jacket around it.",
+      "to": "A heavy or oversized hoodie takes up even more room, so measure over the layer you will actually wear."
+    },
+    {
+      "slug": "leather-jacket-size-guide",
+      "from": "Our men's pieces are cut straighter through the waist with a wider shoulder. Women's pieces like the <a href=\"/shop/structured-trench-coat\">Structured Trench Coat</a> are shaped at the waist with a narrower shoulder and a shorter sleeve. If your measurements fall between the two, pick by shoulder first. Everything else has some room in it.",
+      "to": "Men's cuts are usually straighter through the waist with a wider shoulder. Women's cuts are usually shaped at the waist with a narrower shoulder and a shorter sleeve. If your measurements fall between the two, pick by shoulder first."
+    },
+    {
+      "slug": "minimal-street-style",
+      "from": "Ours that people reach for most is the <a href=\"/shop/structured-trench-coat\">Structured Trench Coat</a> for a smarter look, or a plain leather jacket if you want something easier.",
+      "to": "In our current collection, <a href=\"/shop/the-heritage\">The Heritage</a> is the closest to that brief: chocolate brown, with a plain collar and a central zip."
+    },
+    {
+      "slug": "minimal-street-style",
+      "from": "A <a href=\"/shop/classic-boxy-tee\">heavy cotton tee</a> under a jacket",
+      "to": "A heavy cotton tee under a jacket"
+    },
+    {
+      "slug": "minimal-street-style",
+      "from": "<a href=\"/shop/pleated-smart-trousers\">Pleated trousers</a> or plain cargos",
+      "to": "Pleated trousers or plain cargos"
+    }
+  ],
+  "covers": {
+    "real-leather-vs-faux-leather": {
+      "coverImage": "/assets/images/heavyweight-oversized-hoodie-1.webp",
+      "coverAlt": "Close-up of leather texture on a LeatherCulture jacket",
+      "coverWidth": null,
+      "coverHeight": null,
+      "dateModified": null
+    },
+    "leather-jacket-care-pakistan": {
+      "coverImage": "/assets/images/premium-wear-for-modern-living-3.webp",
+      "coverAlt": "Man wearing a black LeatherCulture leather jacket",
+      "coverWidth": null,
+      "coverHeight": null,
+      "dateModified": null
+    },
+    "leather-jacket-size-guide": {
+      "coverImage": "/assets/images/structured-trench-coat-1.webp",
+      "coverAlt": "Structured trench coat from LeatherCulture",
+      "coverWidth": null,
+      "coverHeight": null,
+      "dateModified": null
+    },
+    "minimal-street-style": {
+      "coverImage": "/assets/images/woman-in-minimalist-setting.webp",
+      "coverAlt": "Minimal street style outfit",
+      "coverWidth": null,
+      "coverHeight": null,
+      "dateModified": null
+    }
+  }
+}
