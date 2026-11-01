@@ -15,3 +15,15 @@
 - The leather textures are procedural illustrations made from noise and lighting. The article captions them as illustrations, not as photographs of real samples.
 - The layer diagram and video are simplified teaching graphics. Their definitions come from the Leather Working Group list cited in the article.
 - Set in Inter, using the font file already in `assets/fonts`.
+
+`assets/blog/where-to-buy-original-leather-pakistan*`, `leather-ads-claims-chart`, `leather-cities-two-counts`, `leather-jacket-asking-prices-chart`, `leather-jacket-five-stops*` (cover, charts, diagram, explainer video and poster)
+
+- Generated for the city buying guide on 2 November 2026. No stock photographs, third-party images or product photographs were used.
+- The charts read their figures from the counts saved in `docs/seo-research-2026-11-02.json`.
+- The route on the cover and in the diagram is a schematic, not a map, and deliberately draws no borders.
+- The leather backgrounds are procedural illustrations. Set in Inter, using the font file already in `assets/fonts`.
+
+`assets/blog/real-leather-vs-faux-leather*`, `leather-jacket-care-pakistan*`, `leather-jacket-size-guide*`, `minimal-street-style*` (covers)
+
+- Illustrations generated on 2 November 2026 to replace leftover template photographs on four older guides. They show no specific product and imply no material for any product.
+- They go live on those guides when `scripts/update-seo-city-guide.js --apply` is run.
