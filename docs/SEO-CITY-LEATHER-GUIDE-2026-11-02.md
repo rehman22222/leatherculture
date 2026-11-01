@@ -91,6 +91,14 @@ The guide scored 98, 100, 100 and 100 in the simulated run, with a 2.0-second la
 
 The owner ran `scripts/update-seo-city-guide.js --apply` on 2 November 2026, after auto mode had blocked that write for the assistant. It updated nine posts: links from six older guides, new covers on four guides, retired products removed from two posts and an old price range corrected. Replaced text and previous covers are in `seo-updates-before-2026-11-02.json`.
 
+## Search Console indexing
+
+The owner's Page indexing export, last updated 23 October 2026, showed 4 pages indexed and 16 not indexed: 12 discovered but not crawled, 1 crawled but not indexed, 2 redirects and 1 noindex.
+
+A check of all 26 sitemap URLs with a Googlebot user agent on 2 November found every one returning 200 with a self-referencing canonical and no noindex. `robots.txt` blocks only private paths. The four host and protocol variants redirect to `https://www.leatherculture.shop/`, which fits the two redirect entries and needs no fix. Private and coming-soon pages carry noindex on purpose. The individual URLs behind each reason were not available.
+
+Two weak signals were fixed in code. The homepage's raw HTML linked to one jacket and two guides, and now links to all five jackets and the six newest guides. The collection page grew from 107 to 338 words, taken from product records and checkout settings. Indexing remains Google's decision, and the site is new with few external links.
+
 ## Needs the owner
 
 1. **Decide two live claims, which no script changes:**

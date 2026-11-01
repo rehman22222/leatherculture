@@ -455,6 +455,14 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $(".site-header nav").each((_, element) => {
     if (!$(element).find(".lc-account-nav").length) $(element).append(accountMarkup);
   });
+  // The homepage's jacket rail and journal are driven by buttons and scripts, so its raw HTML linked to only one jacket and
+  // two guides. These visible links sit outside the React root and give crawlers and visitors a direct path to each page.
+  if (pathname === "/") {
+    const jackets = (settings.products || []).filter(item => item.enabled !== false && item.slug);
+    const guides = (settings.blogPosts || []).filter(post => post.status === "published" && post.slug).sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).slice(0, 6);
+    const list = items => items.map(([href, label]) => `<li style="margin:0 0 6px"><a href="${href}" style="color:inherit">${escape(label)}</a></li>`).join("");
+    $("body").append(`<nav id="lc-home-links" aria-label="Explore LeatherCulture" style="background:#fff;color:#111;padding:40px 20px 16px;font:15px/1.6 Arial,sans-serif"><div style="max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:24px 64px"><div style="flex:1 1 260px"><h2 style="font-size:18px;margin:0 0 10px"><a href="/collections/leather-jackets" style="color:inherit">Leather jackets in Pakistan</a></h2><ul style="list-style:none;margin:0;padding:0">${list(jackets.map(item => [`/shop/${escape(item.slug)}`, item.name]))}</ul></div><div style="flex:2 1 320px"><h2 style="font-size:18px;margin:0 0 10px"><a href="/blog" style="color:inherit">Latest buying guides</a></h2><ul style="list-style:none;margin:0;padding:0">${list(guides.map(post => [`/blog/${escape(post.slug)}`, post.title]))}</ul></div></div></nav>`);
+  }
   const email = escape(settings.footer?.email || "contact@leatherculture.shop");
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px/1.8 Arial,sans-serif">Customer enquiries: <a href="mailto:${email}">${email}</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a> · ${legalLinks.map(link => `<a href="${link.href}">${escape(link.label)}</a>`).join(" · ")}</div>`);
   repairRetiredProductLinks($, settings);
