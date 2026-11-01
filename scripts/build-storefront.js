@@ -11,6 +11,7 @@ const { normalizeStoreCategories, categoryIsIndexable } = require("../lib/catego
 const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
 const { sourcesFor } = require("../lib/citations");
 const { socialWidget } = require("../lib/social-links");
+const { siteFooterParts } = require("../lib/site-footer");
 
 const root = path.resolve(__dirname, "..");
 const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -456,14 +457,6 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   $(".site-header nav").each((_, element) => {
     if (!$(element).find(".lc-account-nav").length) $(element).append(accountMarkup);
   });
-  // The homepage's jacket rail and journal are driven by buttons and scripts, so its raw HTML linked to only one jacket and
-  // two guides. These visible links sit outside the React root and give crawlers and visitors a direct path to each page.
-  if (pathname === "/") {
-    const jackets = (settings.products || []).filter(item => item.enabled !== false && item.slug);
-    const guides = (settings.blogPosts || []).filter(post => post.status === "published" && post.slug).sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).slice(0, 6);
-    const list = items => items.map(([href, label]) => `<li style="margin:0 0 6px"><a href="${href}" style="color:inherit">${escape(label)}</a></li>`).join("");
-    $("body").append(`<nav id="lc-home-links" aria-label="Explore LeatherCulture" style="background:#fff;color:#111;padding:40px 20px 16px;font:15px/1.6 Arial,sans-serif"><div style="max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:24px 64px"><div style="flex:1 1 260px"><h2 style="font-size:18px;margin:0 0 10px"><a href="/collections/leather-jackets" style="color:inherit">Leather jackets in Pakistan</a></h2><ul style="list-style:none;margin:0;padding:0">${list(jackets.map(item => [`/shop/${escape(item.slug)}`, item.name]))}</ul></div><div style="flex:2 1 320px"><h2 style="font-size:18px;margin:0 0 10px"><a href="/blog" style="color:inherit">Latest buying guides</a></h2><ul style="list-style:none;margin:0;padding:0">${list(guides.map(post => [`/blog/${escape(post.slug)}`, post.title]))}</ul></div></div></nav>`);
-  }
   const email = escape(settings.footer?.email || "contact@leatherculture.shop");
   $("body").append(`<div id="lc-business-contact" style="padding:20px;text-align:center;font:14px/1.8 Arial,sans-serif">Customer enquiries: <a href="mailto:${email}">${email}</a> · Orders: <a href="mailto:orders@leatherculture.shop">orders@leatherculture.shop</a> · ${legalLinks.map(link => `<a href="${link.href}">${escape(link.label)}</a>`).join(" · ")}</div>`);
   repairRetiredProductLinks($, settings);
@@ -773,21 +766,24 @@ async function buildStorefront(settings, posts, site) {
     repairRetiredProductLinks(blog, settings);
     await fs.writeFile(file, blog.html());
   }
-  // Every public page gets the social links and the mobile side tab. Checkout and account pages stay free of distractions.
+  // Every public page gets the shared footer, the back-to-top button and the mobile social tab, which also replace the
+  // older footer and contact strips. Checkout and account pages stay free of distractions.
   const widget = socialWidget(settings, settings.brand?.name || "LeatherCulture");
-  async function addSocialWidget(directory) {
+  const footer = siteFooterParts(settings);
+  async function addSiteChrome(directory) {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const file = path.join(directory, entry.name);
       const pathname = "/" + path.relative(output, file).split(path.sep).join("/");
-      if (entry.isDirectory()) { if (!/^\/(admin|account|assets|_next|cart|checkout|order|review)$/.test(pathname)) await addSocialWidget(file); }
+      if (entry.isDirectory()) { if (!/^\/(admin|account|assets|_next|cart|checkout|order|review)$/.test(pathname)) await addSiteChrome(file); }
       else if (entry.name === "index.html") {
-        const html = await fs.readFile(file, "utf8");
-        const end = html.lastIndexOf("</body>");
-        if (end > 0) await fs.writeFile(file, html.slice(0, end) + widget + html.slice(end));
+        const page = cheerio.load(await fs.readFile(file, "utf8"));
+        page(".lc-site-footer,#lc-business-contact").remove();
+        page("head").append(footer.head);
+        page("body").append(footer.body + widget);
+        await fs.writeFile(file, page.html());
       }
     }
   }
-  if (widget) await addSocialWidget(output);
   for (const [file, css] of assets) {
     await fs.mkdir(path.join(output, path.dirname(file)), { recursive: true });
     await fs.writeFile(path.join(output, file), css);
@@ -796,6 +792,7 @@ async function buildStorefront(settings, posts, site) {
     await fs.mkdir(path.join(output, pathname.slice(1)), { recursive: true });
     await fs.writeFile(path.join(output, pathname.slice(1), "index.html"), renderPolicyPage(kind, settings));
   }
+  await addSiteChrome(output);
   const products = (settings.products || []).filter(p => p.enabled !== false);
   const pages = ["/", "/about", "/shop", "/blog", "/contact"];
   // lastmod only where the date is known: journal posts and the policies.
