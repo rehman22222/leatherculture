@@ -105,6 +105,6 @@ Two weak signals were fixed in code. The homepage's raw HTML linked to one jacke
    - `/blog/real-leather-vs-faux-leather` says "Everything we make is genuine leather, cut and finished by hand here in Pakistan". Product records do not confirm this.
    - `/blog/leather-jacket-care-pakistan` says "the stitching and hardware are covered for 12 months". This appears nowhere in the terms or product records. If it is not a real promise, it should come out.
 2. **Confirm each jacket's hide, layer and finish.** The Heritage lookbook images print "Genuine leather" and "Premium leather", while the guides say records do not name a hide.
-3. **Add a real phone or WhatsApp number and a city in admin, plus social links.** The contact page shows only "Pakistan". Local details and a Google Business Profile are stronger location signals than anything in the page code.
+3. **Add a real phone or WhatsApp number and a city in admin.** The contact page shows only "Pakistan". Local details and a Google Business Profile are stronger location signals than anything in the page code.
 4. **Request indexing in Search Console** for the guide. This environment has no Search Console access, and the site settings hold no verification tag.
 5. **Earn links from Pakistani sites.** Run a commercial checker if a certified plagiarism figure is needed.

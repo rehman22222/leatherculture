@@ -10,6 +10,7 @@ const { renderCategoryPage, categoryDirectory, categoryStyles } = require("../li
 const { normalizeStoreCategories, categoryIsIndexable } = require("../lib/category-catalog");
 const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
 const { sourcesFor } = require("../lib/citations");
+const { socialWidget } = require("../lib/social-links");
 
 const root = path.resolve(__dirname, "..");
 const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -772,6 +773,21 @@ async function buildStorefront(settings, posts, site) {
     repairRetiredProductLinks(blog, settings);
     await fs.writeFile(file, blog.html());
   }
+  // Every public page gets the social links and the mobile side tab. Checkout and account pages stay free of distractions.
+  const widget = socialWidget(settings, settings.brand?.name || "LeatherCulture");
+  async function addSocialWidget(directory) {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      const pathname = "/" + path.relative(output, file).split(path.sep).join("/");
+      if (entry.isDirectory()) { if (!/^\/(admin|account|assets|_next|cart|checkout|order|review)$/.test(pathname)) await addSocialWidget(file); }
+      else if (entry.name === "index.html") {
+        const html = await fs.readFile(file, "utf8");
+        const end = html.lastIndexOf("</body>");
+        if (end > 0) await fs.writeFile(file, html.slice(0, end) + widget + html.slice(end));
+      }
+    }
+  }
+  if (widget) await addSocialWidget(output);
   for (const [file, css] of assets) {
     await fs.mkdir(path.join(output, path.dirname(file)), { recursive: true });
     await fs.writeFile(path.join(output, file), css);
