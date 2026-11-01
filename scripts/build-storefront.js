@@ -127,7 +127,8 @@ function journalDirectoryStyles() {
 
 function journalDirectory(posts) {
   const filters = [["all", "All Blogs"], ["style", "Style Guides"], ["buying", "Buying Guides"], ["care", "Care & Fit"]];
-  const sorted = [...posts].sort((a, b) => String(b.dateModified || b.date || "").localeCompare(String(a.dateModified || a.date || "")));
+  // Cards show the published date, so they sort by it too. A later correction should not move an old guide to the top.
+  const sorted = [...posts].sort((a, b) => String(b.date || b.dateModified || "").localeCompare(String(a.date || a.dateModified || "")));
   const date = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? new Date(String(value) + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
   const cards = sorted.map(post => {
     const category = normalize(post.category) || "Leather guide";
@@ -341,7 +342,9 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     });
   }
   const blogSlugs = new Map();
-  $("a[data-lc-template-slug][href*='/blog'],a[href*='/blog/']").filter((_, element) => $(element).find("img").length).each((_, element) => {
+  // This pass fills template cards by position. Journal cards are already built from their own post, and remapping
+  // them put each title and link beside another post's date and category once the two sort orders differed.
+  $("a[data-lc-template-slug][href*='/blog'],a[href*='/blog/']").filter((_, element) => $(element).find("img").length && !$(element).closest("[data-lc-journal-card]").length).each((_, element) => {
     const node = $(element), slug = node.attr("data-lc-template-slug") || (node.attr("href") || "").split("/").pop();
     if (!blogSlugs.has(slug)) blogSlugs.set(slug, settings.blogPosts?.filter(p => p.status === "published")[blogSlugs.size]);
     const post = blogSlugs.get(slug);

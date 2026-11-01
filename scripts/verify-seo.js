@@ -118,6 +118,13 @@ for (const url of urls) {
   assert(!/Prices start at Rs 3,400|Every LeatherCulture jacket is made from genuine leather and finished by hand/.test($(".lc-answers").text()), `${url.pathname}: stale catalogue facts`);
   assert(!/test@gmail|London, England|England, London|234 567|thirty days|USD\s*\$|\$\d[\d,.]*(?![\d,.]|\s*million)/.test(text), url.pathname);
   assert.equal($("h1").length, 1, url.pathname);
+  $("[data-lc-journal-card]").each((_, element) => {
+    const card = $(element), slug = (card.find("a").attr("href") || "").split("/").pop();
+    const post = (settings?.blogPosts || []).find(item => item.slug === slug);
+    assert(post, `${url.pathname}: journal card for unknown post ${slug}`);
+    assert.equal(card.find("h3").text(), post.title, `${url.pathname}: journal card title does not match ${slug}`);
+    assert.equal(card.find("time").attr("datetime"), post.date, `${url.pathname}: journal card date does not match ${slug}`);
+  });
   assert.equal(new URL($("link[rel='canonical']").attr("href") || siteOrigin).href, url.href);
   $("a[href]").each((_, anchor) => {
     const href = String($(anchor).attr("href") || "").trim();
