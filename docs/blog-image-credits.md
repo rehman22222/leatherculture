@@ -27,3 +27,8 @@
 
 - Illustrations generated on 2 November 2026 to replace leftover template photographs on four older guides. They show no specific product and imply no material for any product.
 - They go live on those guides when `scripts/update-seo-city-guide.js --apply` is run.
+
+`assets/blog/original-leather-bags-pakistan*`, `leather-bag-weak-points*`, `leather-bag-ads-chart.webp` (cover, numbered map, chart, video and poster)
+
+- The bag photograph was supplied by the owner on 3 November 2026. It is used to show a planned style, with no material claimed. The owner should confirm its use.
+- The numbered labels, text, chart and video edit were added for the bag guide. The chart reads from the counts in `docs/seo-research-2026-11-03.json`.
