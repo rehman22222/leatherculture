@@ -32,3 +32,8 @@
 
 - The bag photograph was supplied by the owner on 3 November 2026. It is used to show a planned style, with no material claimed. The owner should confirm its use.
 - The numbered labels, text, chart and video edit were added for the bag guide. The chart reads from the counts in `docs/seo-research-2026-11-03.json`.
+
+`assets/blog/original-leather-wallets-belts-pakistan*`, `leather-wallet-belt-checks*`, `leather-wallet-belt-ads-chart.webp` (cover, numbered map, chart, video and poster)
+
+- The wallet, belt and keychain photograph was supplied by the owner on 6 November 2026. It is used to show planned styles, with no material claimed. The owner should confirm its use.
+- The numbered labels, text, chart and video edit were added for the wallet and belt guide. The chart reads from the counts in `docs/seo-research-2026-11-06.json`.
