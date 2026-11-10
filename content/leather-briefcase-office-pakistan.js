@@ -138,7 +138,7 @@ module.exports = {
 
 <p>A polished front image is useful for style, but it cannot answer the questions above. Before you order an <strong>original leather office bag in Pakistan</strong>, look for front, back, side, interior and base photos. Ask for a close view of the handle attachment, shoulder-strap hardware and laptop sleeve if any of those are missing.</p>
 
-<p>Do not use flame, water or scratch tests on a new purchase. They can damage a bag and make an exchange difficult. Online, the better evidence is a material statement, detailed photographs, dimensions, a video of the hardware where needed and a seller who answers normal questions plainly. For broader material checks, read our guide to <a href="/blog/real-leather-vs-faux-leather-pakistan">original leather versus faux leather in Pakistan</a>.</p>
+<p>Do not use flame, water or scratch tests on a new purchase. They can damage a bag and make an exchange difficult. Online, the better evidence is a material statement, detailed photographs, dimensions, a video of the hardware where needed and a seller who answers normal questions plainly. For broader material checks, read our guide to <a href="/blog/original-leather-vs-faux-leather-pakistan">original leather versus faux leather in Pakistan</a>.</p>
 
 <h2 id="care">Looking after a briefcase in Pakistan</h2>
 
