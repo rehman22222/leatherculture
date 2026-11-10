@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const { renderBlogPost } = require("../lib/blog-renderer");
 const { buildStorefront } = require("./build-storefront");
+const staticBlogOverrides = require("../content/static-blog-overrides");
 
 // Fetch only public content. Builds must fail instead of publishing empty articles.
 async function fetchJson(url) {
@@ -18,6 +19,21 @@ async function fetchJson(url) {
   throw failure;
 }
 
+// A small, explicit set of reviewed articles can be shipped directly from the repository when
+// the same content has not yet been written to the headless CMS. Keeping this list opt-in avoids
+// accidentally treating every local draft as published content.
+function localPublishedArticles() {
+  if (!Array.isArray(staticBlogOverrides)) throw new Error("Static blog overrides must be an array.");
+  return staticBlogOverrides.map((slug) => {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error(`Invalid static blog override: ${slug}`);
+    const article = require(path.join(__dirname, "..", "content", slug));
+    if (article.slug !== slug || article.status !== "published" || !article.title || !article.body) {
+      throw new Error(`Static blog override is incomplete: ${slug}`);
+    }
+    return article;
+  });
+}
+
 async function main() {
   const api = process.env.BLOG_API_BASE || "https://leatherculture-backend.onrender.com";
   const site = process.env.SITE_URL || "https://www.leatherculture.shop";
@@ -29,6 +45,14 @@ async function main() {
   settings.productReviews = productReviews.filter(review => review.productSlug && review.status === "approved" && review.verified === true).map(require("../lib/review-input").storefrontReview);
   if (!Array.isArray(posts) || !posts.length) throw new Error("No published blog posts returned");
   const published = posts.filter(post => post.status === "published");
+  for (const article of localPublishedArticles()) {
+    const existing = published.findIndex(post => post.slug === article.slug);
+    if (existing === -1) published.unshift(article);
+    else published.splice(existing, 1, article);
+  }
+  // buildStorefront uses the same list for the static Journal page and its embedded settings
+  // snapshot, so local override pages have discoverable links as well as direct URLs.
+  settings.blogPosts = published;
   for (const post of published) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(post.slug) || !post.title || !post.body) {
       throw new Error(`Invalid or empty article: ${post.slug}`);
