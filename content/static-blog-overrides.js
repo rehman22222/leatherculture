@@ -5,5 +5,6 @@
 // not yet received the same record, while allowing the normal CMS workflow for every other post.
 module.exports = [
   "original-leather-bags-pakistan",
-  "leather-briefcase-office-pakistan"
+  "leather-briefcase-office-pakistan",
+  "original-leather-craft-pakistan"
 ];
