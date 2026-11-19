@@ -151,6 +151,50 @@ function injectJournalDirectory($, settings, pathname) {
   else $("#main footer").first().before(journalDirectory(posts));
 }
 
+// A short, genuinely useful guide panel gives the key commercial and service pages
+// clear paths into the editorial hub. Articles already have related-reading cards,
+// so this deliberately excludes article pages to avoid repeating navigation.
+function discoveryGuideLinks(settings, pathname) {
+  if (pathname === "/blog" || pathname.startsWith("/blog/") || /^\/(?:admin|account|cart|checkout|order|review)(?:\/|$)/.test(pathname)) return [];
+  const published = new Set((settings.blogPosts || []).filter(post => post.status === "published").map(post => post.slug));
+  const link = (slug, label) => published.has(slug) ? { href: `/blog/${slug}`, label } : null;
+  let candidates;
+  if (pathname === "/" || pathname === "/shop" || pathname.startsWith("/collections/") || pathname.startsWith("/shop/")) {
+    candidates = [
+      link("how-to-choose-leather-jacket-pakistan", "How to choose a leather jacket"),
+      link("leather-jacket-size-guide", "Leather jacket size guide"),
+      link("leather-jacket-care-pakistan", "Leather jacket care in Pakistan")
+    ];
+  } else if (pathname === "/about" || pathname === "/contact") {
+    candidates = [
+      link("pure-leather-types-pakistan", "Pure leather types explained"),
+      link("real-leather-vs-faux-leather", "Real leather vs faux leather"),
+      link("original-leather-bags-pakistan", "How to check original leather bags")
+    ];
+  } else {
+    candidates = [
+      link("original-leather-wallets-belts-pakistan", "Original leather wallets and belts"),
+      link("minimal-street-style", "Minimal leather jacket style"),
+      link("how-to-wear-leather-jacket-men-pakistan", "How to wear a leather jacket")
+    ];
+  }
+  return candidates.filter(Boolean);
+}
+
+function injectDiscoveryGuideLinks($, settings, pathname) {
+  if ($("[data-lc-discovery-guides]").length) return;
+  const guides = discoveryGuideLinks(settings, pathname);
+  if (!guides.length) return;
+  if (!$("style[data-lc-discovery-guides]").length) {
+    $("head").append('<style data-lc-discovery-guides>.lc-discovery-guides{max-width:1180px;margin:0 auto;padding:0 24px 56px;font:16px/1.55 Inter,Arial,sans-serif;color:#111}.lc-discovery-guides-inner{padding:26px 28px;border:1px solid #dedbd5;border-radius:16px;background:#f3f1ed}.lc-discovery-guides p{margin:0 0 14px;color:#625e57;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.lc-discovery-guides h2{margin:0 0 18px;font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}.lc-discovery-guides ul{display:flex;flex-wrap:wrap;gap:10px 22px;margin:0;padding:0;list-style:none}.lc-discovery-guides a{color:#111;font-weight:750;text-underline-offset:3px}@media(max-width:640px){.lc-discovery-guides{padding:0 18px 40px}.lc-discovery-guides-inner{padding:22px}.lc-discovery-guides ul{display:grid;gap:12px}}</style>');
+  }
+  const links = guides.map(guide => `<li><a href="${escape(guide.href)}">${escape(guide.label)}</a></li>`).join("");
+  const block = `<aside class="lc-discovery-guides" data-lc-discovery-guides aria-labelledby="lc-discovery-guides-title"><div class="lc-discovery-guides-inner"><p>LeatherCulture journal</p><h2 id="lc-discovery-guides-title">Read before you buy</h2><ul>${links}<li><a href="/blog">Browse all leather guides</a></li></ul></div></aside>`;
+  const footer = $("#lc-footer").first();
+  if (footer.length) footer.before(block);
+  else $("body").append(block);
+}
+
 function materialize(html, settings, pathname, bindings, site, imageAlts = {}, assets = null) {
   site = String(site).replace(/\/+$/, "");
   const $ = cheerio.load(html);
@@ -777,9 +821,12 @@ async function buildStorefront(settings, posts, site) {
       if (entry.isDirectory()) { if (!/^\/(admin|account|assets|_next|cart|checkout|order|review)$/.test(pathname)) await addSiteChrome(file); }
       else if (entry.name === "index.html") {
         const page = cheerio.load(await fs.readFile(file, "utf8"));
+        const relativeDirectory = path.relative(output, path.dirname(file)).split(path.sep).join("/");
+        const pagePathname = relativeDirectory ? `/${relativeDirectory}` : "/";
         page(".lc-site-footer,#lc-business-contact").remove();
         page("head").append(footer.head);
         page("body").append(footer.body + widget);
+        injectDiscoveryGuideLinks(page, settings, pagePathname);
         await fs.writeFile(file, page.html());
       }
     }
