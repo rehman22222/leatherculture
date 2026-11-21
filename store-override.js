@@ -918,9 +918,6 @@
 
   function syncCategoryDirectory() {
     if (!settings || (location.pathname !== "/" && location.pathname !== "/shop" && location.pathname !== "/index.html")) return;
-    // /shop is server-rendered. Its catalogue is already complete, so do not attach
-    // the compatibility directory intended for the legacy Framer export.
-    if (document.querySelector("[data-lc-shop-page]")) return;
     ensureCategoryDirectoryStyle();
     if (location.pathname === "/shop") {
       document.querySelectorAll("section[data-framer-name='Shop'] [data-framer-name='Tabs']").forEach((tabs) => {
@@ -1816,6 +1813,9 @@
   }
 
   function scheduleFramerRuntime() {
+    // The shop is fully materialized during the deployment. Starting Framer later can
+    // replace those live cards with its old CMS snapshot and reintroduce the empty carousel.
+    if (location.pathname === "/shop" && document.querySelector("#main[data-lc-static-shop]")) return;
     if (runtimeScheduled) return;
     runtimeScheduled = true;
     const start = (event) => {
@@ -1868,7 +1868,7 @@
     // soon as an individual product page loads, rather than waiting for a visitor interaction
     // or the 15-second deferred Framer runtime. This keeps an admin price edit visible on the
     // live product page and avoids showing a stale static-build price before checkout.
-    if (currentProductFromPath() || document.querySelector("[data-lc-shop-page]")) loadSettings();
+    if (currentProductFromPath()) loadSettings();
     scheduleFramerRuntime();
   });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
