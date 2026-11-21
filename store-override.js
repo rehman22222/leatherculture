@@ -1861,6 +1861,11 @@
   });
   window.addEventListener("load", () => {
     pageLoaded = true;
+    // Product prices are confirmed by the Render storefront API at checkout. Refresh them as
+    // soon as an individual product page loads, rather than waiting for a visitor interaction
+    // or the 15-second deferred Framer runtime. This keeps an admin price edit visible on the
+    // live product page and avoids showing a stale static-build price before checkout.
+    if (currentProductFromPath()) loadSettings();
     scheduleFramerRuntime();
   });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
