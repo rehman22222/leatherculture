@@ -186,6 +186,9 @@ function discoveryGuideLinks(settings, pathname) {
 }
 
 function injectDiscoveryGuideLinks($, settings, pathname) {
+  // The standalone shop has a designed guide section inside its own buying-help panel.
+  // Do not add the generic block a second time below it.
+  if (pathname === "/shop" && $("[data-lc-shop-page]").length) return;
   if ($("[data-lc-discovery-guides]").length) return;
   const guides = discoveryGuideLinks(settings, pathname);
   if (!guides.length) return;
