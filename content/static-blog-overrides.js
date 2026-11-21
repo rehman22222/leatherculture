@@ -8,5 +8,6 @@ module.exports = [
   "leather-briefcase-office-pakistan",
   "original-leather-craft-pakistan",
   "leather-briefcase-vs-backpack-pakistan",
-  "slim-wallet-vs-bifold-pakistan"
+  "slim-wallet-vs-bifold-pakistan",
+  "leather-laptop-backpack-pakistan"
 ];
