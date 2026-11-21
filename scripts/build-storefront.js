@@ -6,7 +6,6 @@ const cheerio = require("cheerio");
 const { profileUrl, organization, verificationTags, analyticsTags, displayImage, cardImage, shareImage, legalLinks } = require("../lib/seo");
 const { renderPolicyPage, policyPaths, POLICY_UPDATED } = require("../lib/policy-pages");
 const { renderProductPage } = require("../lib/product-renderer");
-const { renderShopPage } = require("../lib/shop-renderer");
 const { renderCategoryPage, categoryDirectory, categoryStyles } = require("../lib/category-renderer");
 const { normalizeStoreCategories, categoryIsIndexable } = require("../lib/category-catalog");
 const { shippingDetails, returnPolicy } = require("../shop/commerce-schema");
@@ -64,9 +63,6 @@ function revealScrollAnimatedContent($) {
 // time with the product-led directory, which remains valid as bags, shoes and accessories launch.
 function injectCategoryDirectory($, settings, pathname) {
   if (pathname !== "/" && pathname !== "/shop") return;
-  // /shop is now rendered as a complete server-side catalogue. The category helper is
-  // only for the old Framer layouts and must not append a second section to this page.
-  if (pathname === "/shop" && $("[data-lc-shop-page]").length) return;
   if ($(".lc-collection-directory").length) return;
   const directory = categoryDirectory(settings);
   if (!directory) return;
@@ -108,6 +104,15 @@ function injectCategoryDirectory($, settings, pathname) {
   const footer = main.find("footer").last();
   if (footer.length) footer.before(directory);
   else main.append(directory);
+}
+
+// Keep the original Framer shop composition (hero, categories and product cards), but
+// remove the large decorative community carousel that follows it. With its animation
+// runtime deferred it leaves a tall blank band on a direct /shop visit.
+function removeEmptyShopSection($, pathname) {
+  if (pathname !== "/shop") return;
+  $("#main").attr("data-lc-static-shop", "");
+  $("section.framer-15nik8h").remove();
 }
 
 // The exported Journal template has visual-only demo tabs and placeholder story links.
@@ -253,6 +258,8 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   };
   if (leadCopy[pathname]) $(".lc-answers .lc-lede").first().html(leadCopy[pathname]);
   injectCategoryDirectory($, settings, pathname);
+  if (pathname === "/shop") $("#lc-category-directory h2").first().text("Shop leather categories");
+  removeEmptyShopSection($, pathname);
   $(".lc-answers p").each((_, element) => {
     const node = $(element);
     if (/Every LeatherCulture jacket is made from genuine leather and finished by hand/i.test(node.text())) node.html('Check the individual product details and <a href="/contact">ask our team to confirm the shell material, lining and construction</a> before ordering.');
@@ -378,9 +385,7 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
     });
     node.find("img").attr("src", cardImage(item.image)).attr("alt", item.alt || item.name).removeAttr("srcset");
   });
-  // The server-rendered shop has its own accurate H1. The legacy Framer template
-  // still needs this replacement when it is used in older build snapshots.
-  if (pathname === "/shop" && !$("[data-lc-shop-page]").length) $("h1").text("Leather Goods in Pakistan");
+  if (pathname === "/shop") $("h1").text("Leather Goods in Pakistan");
   if (product) {
     $("h1").text(product.name);
     $("[data-framer-name='Pricing']").each((_, element) => {
@@ -779,9 +784,6 @@ async function buildStorefront(settings, posts, site) {
       await fs.writeFile(path.join(folder, "index.html"), renderProductPage(product, settings));
     }
   }
-  // Do not ship Framer's demo catalogue at /shop. This must happen before materialize(),
-  // so direct navigation and a browser refresh both receive the live catalogue as HTML.
-  await fs.writeFile(path.join(shopOutput, "index.html"), renderShopPage(settings));
   // Product-led collection pages use clean, stable URLs. Empty future categories are rendered so
   // customers can see the roadmap, but are deliberately noindex and kept out of the sitemap.
   const collectionsOutput = path.join(output, "collections");

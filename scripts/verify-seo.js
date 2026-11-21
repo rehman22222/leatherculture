@@ -90,11 +90,8 @@ for (const url of urls) {
     const answersAt = html.indexOf('class="lc-answers"');
     assert(answersAt > 0 && answersAt < 100000, `${url.pathname}: answers section starts at byte ${answersAt}`);
     assert.equal($("style[data-framer-css-ssr-minified]").text(), "", `${url.pathname}: Framer CSS is still inline`);
-    // The shop is intentionally a standalone server-rendered catalogue, not a Framer page.
-    if (!$("#main[data-lc-shop-page]").length) {
-      const sheet = $("link[rel='stylesheet'][href^='/assets/css/framer-']").attr("href");
-      assert(sheet && fs.existsSync(path.join(output, sheet)), `${url.pathname}: Framer stylesheet missing`);
-    }
+    const sheet = $("link[rel='stylesheet'][href^='/assets/css/framer-']").attr("href");
+    assert(sheet && fs.existsSync(path.join(output, sheet)), `${url.pathname}: Framer stylesheet missing`);
   }
   if ($(".framer-149q19i-container").length) {
     assert($("link[href*='/account/nav.css']").length, `${url.pathname}: account navigation stylesheet missing`);
