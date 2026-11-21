@@ -918,6 +918,9 @@
 
   function syncCategoryDirectory() {
     if (!settings || (location.pathname !== "/" && location.pathname !== "/shop" && location.pathname !== "/index.html")) return;
+    // /shop is server-rendered. Its catalogue is already complete, so do not attach
+    // the compatibility directory intended for the legacy Framer export.
+    if (document.querySelector("[data-lc-shop-page]")) return;
     ensureCategoryDirectoryStyle();
     if (location.pathname === "/shop") {
       document.querySelectorAll("section[data-framer-name='Shop'] [data-framer-name='Tabs']").forEach((tabs) => {
@@ -1865,7 +1868,7 @@
     // soon as an individual product page loads, rather than waiting for a visitor interaction
     // or the 15-second deferred Framer runtime. This keeps an admin price edit visible on the
     // live product page and avoids showing a stale static-build price before checkout.
-    if (currentProductFromPath()) loadSettings();
+    if (currentProductFromPath() || document.querySelector("[data-lc-shop-page]")) loadSettings();
     scheduleFramerRuntime();
   });
   window.addEventListener("scroll", scheduleHeaderContrast, { passive: true });
