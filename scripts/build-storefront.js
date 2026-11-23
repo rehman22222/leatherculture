@@ -24,6 +24,16 @@ const escape = value => String(value || "").replace(/[&<>"']/g, char => ({ "&": 
 const publicPhone = value => /234\s*567|123456789|3XX|XXXXX/i.test(value || "") ? "" : String(value || "").trim();
 const fallbackPolicy = "Contact contact@leatherculture.shop for the current returns and exchange policy before ordering.";
 
+function localizePakistaniPageMetadata(settings) {
+  if (!Array.isArray(settings?.pages)) return;
+  settings.pages = settings.pages.map(page => page?.path === "/blog" ? {
+    ...page,
+    metaTitle: "Leather Buying Guides for Pakistan | LeatherCulture Journal",
+    metaDescription: "Read practical Pakistan-focused guides on leather jackets, original leather, sizing, prices, care and ordering online from LeatherCulture.",
+    keywords: "leather buying guide Pakistan, original leather Pakistan, leather jacket care Pakistan, leather jacket price Pakistan, leather jacket size guide"
+  } : page);
+}
+
 // Product pages are generated only for enabled products. Old Framer content and older journal
 // articles can retain a product URL after an item is retired; send those visitors to the live shop.
 function repairRetiredProductLinks($, settings) {
@@ -129,7 +139,7 @@ function journalGroups(post) {
 function journalDirectoryStyles() {
   return '<style data-lc-journal-style>' +
     '.lc-journal-directory{max-width:1440px;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(18px,4vw,64px);background:#f8f8f8;color:#0d0d0d}' +
-    '.lc-journal-directory *{box-sizing:border-box}.lc-journal-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:0 0 30px}.lc-journal-eyebrow{margin:0 0 8px;color:#735d3e;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.lc-journal-heading h2{margin:0;font-size:clamp(34px,4vw,62px);line-height:.98;letter-spacing:-.055em}.lc-journal-count{margin:0;color:#666;font-size:14px;white-space:nowrap}' +
+    '.lc-journal-directory *{box-sizing:border-box}.lc-journal-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:0 0 14px}.lc-journal-eyebrow{margin:0 0 8px;color:#735d3e;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.lc-journal-heading h2{margin:0;font-size:clamp(34px,4vw,62px);line-height:.98;letter-spacing:-.055em}.lc-journal-count{margin:0;color:#666;font-size:14px;white-space:nowrap}.lc-journal-intro{max-width:710px;margin:0 0 30px;color:#5a5752;font-size:16px;line-height:1.55}' +
     '.lc-journal-filters{display:flex;gap:8px;overflow-x:auto;padding:9px;margin:0 0 34px;border-radius:999px;background:#e9e8e5;scrollbar-width:none}.lc-journal-filters::-webkit-scrollbar{display:none}.lc-journal-filter{appearance:none;flex:1 0 max(150px,22%);min-height:50px;border:0;border-radius:999px;background:transparent;color:#111;cursor:pointer;font:700 15px/1 Inter,Arial,sans-serif;transition:background-color .2s ease,color .2s ease,transform .2s ease}.lc-journal-filter:hover{background:#fff}.lc-journal-filter:focus-visible{outline:3px solid #a77b38;outline-offset:2px}.lc-journal-filter[aria-pressed="true"]{background:#090909;color:#fff}' +
     '.lc-journal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.lc-journal-card{display:flex;min-width:0;overflow:hidden;border:1px solid #e5e2dc;border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(24,18,12,.05);transition:transform .22s ease,box-shadow .22s ease}.lc-journal-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px rgba(24,18,12,.12)}.lc-journal-card a{display:flex;flex-direction:column;width:100%;color:inherit;text-decoration:none}.lc-journal-card img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:#ebe8e1}.lc-journal-card-copy{display:flex;min-height:206px;flex-direction:column;padding:20px}.lc-journal-card-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px;color:#775e3d;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.lc-journal-card h3{margin:0 0 12px;font-size:22px;line-height:1.14;letter-spacing:-.035em}.lc-journal-card p{margin:0;color:#5a5752;font-size:14px;line-height:1.55}.lc-journal-read{margin-top:auto;padding-top:18px;color:#111;font-size:13px;font-weight:800}.lc-journal-empty{margin:0;padding:54px 22px;border:1px dashed #c9c3bb;border-radius:18px;color:#5a5752;text-align:center}.lc-journal-empty button{border:0;background:none;color:#111;cursor:pointer;font:inherit;font-weight:800;text-decoration:underline}' +
     '@media(max-width:900px){.lc-journal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.lc-journal-directory{padding:54px 18px}.lc-journal-heading{align-items:start;flex-direction:column;gap:8px}.lc-journal-filters{margin-right:-18px;border-radius:18px 0 0 18px}.lc-journal-filter{flex-basis:136px}.lc-journal-grid{grid-template-columns:1fr;gap:14px}.lc-journal-card{border-radius:14px}.lc-journal-card a{display:grid;grid-template-columns:38% 1fr}.lc-journal-card img{height:100%;min-height:178px;aspect-ratio:auto}.lc-journal-card-copy{min-height:178px;padding:16px}.lc-journal-card h3{font-size:18px}.lc-journal-card p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.lc-journal-read{padding-top:10px}}' +
@@ -147,7 +157,7 @@ function journalDirectory(posts) {
   }).join("");
   const buttons = filters.map((filter, index) => '<button class="lc-journal-filter" type="button" data-lc-journal-filter="' + filter[0] + '" aria-pressed="' + String(index === 0) + '">' + filter[1] + '</button>').join("");
   const script = '<script data-lc-journal-filter-script>(function(){const root=document.currentScript.closest("[data-lc-journal-directory]");if(!root)return;const buttons=[...root.querySelectorAll("[data-lc-journal-filter]")],cards=[...root.querySelectorAll("[data-lc-journal-card]")],count=root.querySelector("[data-lc-journal-count]"),empty=root.querySelector("[data-lc-journal-empty]");function select(group){let visible=0;cards.forEach(card=>{const show=group==="all"||card.dataset.lcGroups.split(" ").includes(group);card.hidden=!show;if(show)visible+=1});buttons.forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.lcJournalFilter===group)));count.textContent=visible===1?"1 guide":visible+" guides";empty.hidden=visible!==0}buttons.forEach(button=>button.addEventListener("click",()=>select(button.dataset.lcJournalFilter)));root.querySelector("[data-lc-journal-reset]").addEventListener("click",()=>select("all"));select("all")})();</script>';
-  return '<section class="lc-journal-directory" data-lc-journal-directory aria-labelledby="lc-journal-title"><div class="lc-journal-heading"><div><p class="lc-journal-eyebrow">LeatherCulture journal</p><h2 id="lc-journal-title">Guides worth keeping</h2></div><p class="lc-journal-count" data-lc-journal-count>' + sorted.length + ' guides</p></div><div class="lc-journal-filters" role="group" aria-label="Filter journal guides">' + buttons + '</div><div class="lc-journal-grid" data-lc-journal-grid>' + cards + '</div><p class="lc-journal-empty" data-lc-journal-empty hidden>No guides in this section yet. <button type="button" data-lc-journal-reset>Show all guides</button></p>' + script + '</section>';
+  return '<section class="lc-journal-directory" data-lc-journal-directory aria-labelledby="lc-journal-title"><div class="lc-journal-heading"><div><p class="lc-journal-eyebrow">LeatherCulture journal / Pakistan</p><h2 id="lc-journal-title">Leather buying guides for Pakistan</h2></div><p class="lc-journal-count" data-lc-journal-count>' + sorted.length + ' guides</p></div><p class="lc-journal-intro">Practical help with original leather, fit, care, prices in rupees and ordering online in Pakistan.</p><div class="lc-journal-filters" role="group" aria-label="Filter leather buying guides">' + buttons + '</div><div class="lc-journal-grid" data-lc-journal-grid>' + cards + '</div><p class="lc-journal-empty" data-lc-journal-empty hidden>No guides in this section yet. <button type="button" data-lc-journal-reset>Show all guides</button></p>' + script + '</section>';
 }
 
 function injectJournalDirectory($, settings, pathname) {
@@ -198,10 +208,10 @@ function injectDiscoveryGuideLinks($, settings, pathname) {
   const guides = discoveryGuideLinks(settings, pathname);
   if (!guides.length) return;
   if (!$("style[data-lc-discovery-guides]").length) {
-    $("head").append('<style data-lc-discovery-guides>.lc-discovery-guides{max-width:1180px;margin:0 auto;padding:0 24px 56px;font:16px/1.55 Inter,Arial,sans-serif;color:#111}.lc-discovery-guides-inner{padding:26px 28px;border:1px solid #dedbd5;border-radius:16px;background:#f3f1ed}.lc-discovery-guides p{margin:0 0 14px;color:#625e57;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.lc-discovery-guides h2{margin:0 0 18px;font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}.lc-discovery-guides ul{display:flex;flex-wrap:wrap;gap:10px 22px;margin:0;padding:0;list-style:none}.lc-discovery-guides a{color:#111;font-weight:750;text-underline-offset:3px}@media(max-width:640px){.lc-discovery-guides{padding:0 18px 40px}.lc-discovery-guides-inner{padding:22px}.lc-discovery-guides ul{display:grid;gap:12px}}</style>');
+    $("head").append('<style data-lc-discovery-guides>.lc-discovery-guides{max-width:1180px;margin:0 auto;padding:0 24px 56px;font:16px/1.55 Inter,Arial,sans-serif;color:#111}.lc-discovery-guides-inner{padding:26px 28px;border:1px solid #dedbd5;border-radius:16px;background:#f3f1ed}.lc-discovery-guides p{margin:0 0 14px;color:#625e57;font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.lc-discovery-guides h2{margin:0 0 10px;font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}.lc-discovery-guides-copy{max-width:760px!important;margin:0 0 18px!important;color:#4f4a43!important;font-size:15px!important;font-weight:400!important;letter-spacing:0!important;line-height:1.6;text-transform:none!important}.lc-discovery-guides ul{display:flex;flex-wrap:wrap;gap:10px 22px;margin:0;padding:0;list-style:none}.lc-discovery-guides a{color:#111;font-weight:750;text-underline-offset:3px}@media(max-width:640px){.lc-discovery-guides{padding:0 18px 40px}.lc-discovery-guides-inner{padding:22px}.lc-discovery-guides ul{display:grid;gap:12px}}</style>');
   }
   const links = guides.map(guide => `<li><a href="${escape(guide.href)}">${escape(guide.label)}</a></li>`).join("");
-  const block = `<aside class="lc-discovery-guides" data-lc-discovery-guides aria-labelledby="lc-discovery-guides-title"><div class="lc-discovery-guides-inner"><p>LeatherCulture journal</p><h2 id="lc-discovery-guides-title">Read before you buy</h2><ul>${links}<li><a href="/blog">Browse all leather guides</a></li></ul></div></aside>`;
+  const block = `<aside class="lc-discovery-guides" data-lc-discovery-guides aria-labelledby="lc-discovery-guides-title"><div class="lc-discovery-guides-inner"><p>LeatherCulture / Pakistan</p><h2 id="lc-discovery-guides-title">Buy leather with confidence in Pakistan</h2><p class="lc-discovery-guides-copy">Compare the live price in Pakistani rupees, check your measurements and material details, then review delivery and return terms before you order online.</p><ul>${links}<li><a href="/terms#returns">Delivery &amp; returns</a></li><li><a href="/blog">Browse all leather guides</a></li></ul></div></aside>`;
   const footer = $("#lc-footer").first();
   if (footer.length) footer.before(block);
   else $("body").append(block);
@@ -225,12 +235,20 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   const product = settings.products?.find(item => pathname === `/shop/${item.slug}`);
   if (product && $("script[src*='store-override.js']").length) $("head").append('<script src="/shop/commerce-schema.js?v=1"></script>');
   const pageSeo = product || settings.pages?.find(page => page.path === pathname);
-  if (pageSeo?.metaTitle) {
-    $("title").text(pageSeo.metaTitle);
-    $("meta[property='og:title'],meta[name='twitter:title']").attr("content", pageSeo.metaTitle);
+  // The journal is the site's main regional knowledge hub. Keep its SERP snippet explicit about
+  // Pakistan even if an older CMS page record still has the generic template title.
+  const marketPageSeo = pathname === "/blog" ? {
+    ...pageSeo,
+    metaTitle: "Leather Buying Guides for Pakistan | LeatherCulture Journal",
+    metaDescription: "Read practical Pakistan-focused guides on leather jackets, original leather, sizing, prices, care and ordering online from LeatherCulture.",
+    keywords: "leather buying guide Pakistan, original leather Pakistan, leather jacket care Pakistan, leather jacket price Pakistan, leather jacket size guide"
+  } : pageSeo;
+  if (marketPageSeo?.metaTitle) {
+    $("title").text(marketPageSeo.metaTitle);
+    $("meta[property='og:title'],meta[name='twitter:title']").attr("content", marketPageSeo.metaTitle);
   }
-  if (pageSeo?.metaDescription) $("meta[name='description'],meta[property='og:description'],meta[name='twitter:description']").attr("content", pageSeo.metaDescription);
-  if (pageSeo?.keywords) $("meta[name='keywords']").attr("content", pageSeo.keywords);
+  if (marketPageSeo?.metaDescription) $("meta[name='description'],meta[property='og:description'],meta[name='twitter:description']").attr("content", marketPageSeo.metaDescription);
+  if (marketPageSeo?.keywords) $("meta[name='keywords']").attr("content", marketPageSeo.keywords);
   $("html").attr("lang", "en-PK");
   // The sitemap names the homepage with its trailing slash, so the canonical must match it exactly.
   if (pathname === "/") {
@@ -250,13 +268,14 @@ function materialize(html, settings, pathname, bindings, site, imageAlts = {}, a
   const priceText = prices.length ? ` Current collection prices start at Rs ${Math.min(...prices).toLocaleString("en-US")}.` : "";
   const deliveryText = deliveryEstimate ? ` Estimated delivery across Pakistan takes ${escape(deliveryEstimate)}.` : "";
   const leadCopy = {
-    "/": `Explore the current <a href="/shop">LeatherCulture leather collection</a> in Pakistan.${escape(priceText)}${deliveryText} Jackets are available now, with bags, shoes and accessories planned for future releases. For sizing, materials or order questions, <a href="/contact">contact our team</a>.`,
-    "/shop": `Browse the current LeatherCulture leather collection and choose a style for your wardrobe.${escape(priceText)}${deliveryText} Jackets are available now; bags, shoes and accessories are being prepared for future releases. Read the <a href="/blog/leather-jacket-price-pakistan">jacket buying guide</a> and <a href="/contact">ask our team</a> about measurements or materials before ordering.`,
-    "/about": 'LeatherCulture is building a leather-goods collection for Pakistan, beginning with jackets and expanding to bags, shoes and accessories. Explore the <a href="/shop">current collection</a>, or <a href="/contact">contact the team</a> for product measurements, material details and order support.',
-    "/contact": `Contact LeatherCulture at <a href="mailto:${escape(settings.footer?.email || "contact@leatherculture.shop")}">${escape(settings.footer?.email || "contact@leatherculture.shop")}</a> for sizing, product details, order updates and returns.${deliveryText} See our <a href="/terms#returns">returns and refund policy</a> before sending an item back.`,
-    "/blog": 'Practical jacket buying, sizing, styling and care guides from the LeatherCulture team. Browse the guides below and explore the <a href="/shop">current jacket collection</a>.'
+    "/": `Shop the current <a href="/shop">LeatherCulture leather jacket collection</a> online in Pakistan. Prices are shown in Pakistani rupees (Rs), with cash on delivery nationwide.${escape(priceText)}${deliveryText} For sizing, material or order questions, <a href="/contact">contact our team</a>.`,
+    "/shop": `Compare the current LeatherCulture leather jackets for Pakistan by live price in Pakistani rupees (Rs), photos and available size.${escape(priceText)}${deliveryText} Read the <a href="/blog/leather-jacket-price-pakistan">jacket price guide</a> and <a href="/contact">ask our team</a> about measurements or material details before ordering.`,
+    "/about": 'LeatherCulture is a Pakistan-focused online leather store, beginning with jackets and expanding to bags, shoes and accessories. Browse the <a href="/shop">current collection</a> in Pakistani rupees (Rs), or <a href="/contact">contact the team</a> for measurements, material details and order support.',
+    "/contact": `Contact LeatherCulture at <a href="mailto:${escape(settings.footer?.email || "contact@leatherculture.shop")}">${escape(settings.footer?.email || "contact@leatherculture.shop")}</a> for sizing, product details, Pakistan delivery questions, order updates and returns.${deliveryText} Share the product and your city so the team can help clearly before you order.`,
+    "/blog": 'Leather buying, sizing, care and style guides written for shoppers in Pakistan. Compare original and faux leather, learn what to check online, then explore the <a href="/shop">current jacket collection</a>.'
   };
   if (leadCopy[pathname]) $(".lc-answers .lc-lede").first().html(leadCopy[pathname]);
+  localizePakistanAnswers($, settings, pathname);
   injectCategoryDirectory($, settings, pathname);
   if (pathname === "/shop") $("#lc-category-directory h2").first().text("Shop leather categories");
   removeEmptyShopSection($, pathname);
@@ -589,6 +608,47 @@ function applyAccessibilityMarkup($, pathname, phone) {
   }
 }
 
+// Turn the inherited template FAQ into practical Pakistan-specific buying information. Every
+// promise comes from the live checkout configuration; material claims deliberately stay limited
+// to what a buyer can confirm for the exact product.
+function localizePakistanAnswers($, settings, pathname) {
+  if (!["/", "/shop", "/about", "/contact", "/blog"].includes(pathname)) return;
+  const root = $(".lc-answers").first();
+  if (!root.length) return;
+  const checkout = settings.checkout || {};
+  const currency = checkout.currency || "Rs";
+  const fee = Number(checkout.shippingFee) || 0;
+  const free = Number(checkout.freeShippingFrom) || 0;
+  const days = (String(checkout.codNote || "").match(/\d+\s*[-\u2013]\s*\d+\s*(?:working\s+)?days/i) || [""])[0];
+  const delivery = `We deliver across Pakistan${days ? ` in an estimated ${days}` : ""}.`;
+  const charge = fee ? ` Delivery is ${currency} ${fee.toLocaleString("en-PK")}${free ? `, free on orders of ${currency} ${free.toLocaleString("en-PK")} or more` : ""}.` : " Delivery is free.";
+  const returns = String(checkout.returnsPolicy || fallbackPolicy).trim();
+  const headings = {
+    "/": "Leather shopping in Pakistan: practical answers",
+    "/shop": "Buying a leather jacket online in Pakistan",
+    "/about": "A Pakistan-focused way to buy leather",
+    "/contact": "Order support for customers across Pakistan",
+    "/blog": "Leather buying questions in Pakistan"
+  };
+  root.find("h2").first().text(headings[pathname]);
+  const setAnswer = (pattern, title, html) => {
+    root.find("details").filter((_, element) => pattern.test(normalize($(element).find("summary").text()))).first().each((_, element) => {
+      const detail = $(element);
+      detail.find("summary h1,summary h2,summary h3,summary h4").first().text(title);
+      detail.children("p").first().html(html);
+    });
+  };
+  setAnswer(/deliver across pakistan/i, "Does LeatherCulture deliver across Pakistan?", `${escape(delivery + charge)} Cash on delivery is available for the current collection.`);
+  setAnswer(/how do i pay/i, "How does cash on delivery work in Pakistan?", "Choose your size and complete the order online. You pay the courier in cash when the parcel arrives; review the delivery and returns terms before ordering.");
+  setAnswer(/how much does delivery cost/i, "What are the Pakistan delivery charges?", escape(charge.trim() + (days ? ` Estimated delivery is ${days}.` : "")));
+  setAnswer(/is the leather genuine/i, "What material details can I confirm before ordering?", 'Ask the team to confirm the shell material, lining and construction of the exact item you want. Product descriptions and photos help with the design, while written details are best for a material question.');
+  setAnswer(/exchange an item|returns? policy/i, "What is the returns policy?", `${escape(returns)} Read the <a href="/terms#returns">delivery and returns terms</a> before ordering.`);
+  setAnswer(/choose the right size/i, "How can I choose the right size online?", 'Compare the listed option with a jacket you already own, then <a href="/contact">send the team your chest, shoulder and sleeve measurements</a> if you need help before ordering.');
+  if ((pathname === "/shop" || pathname === "/blog") && !root.find("details[data-lc-pakistan-ordering]").length) {
+    root.find(".lc-in").append('<details data-lc-pakistan-ordering><summary><h3>Leather jacket order karne se pehle kya check karein?</h3></summary><p lang="ur-Latn">Current price in Rs, available size, product photos, material details, delivery estimate aur return terms check karein. Kisi bhi baat par doubt ho to order se pehle team se pooch lein.</p></details>');
+  }
+}
+
 // Ordering facts as a table, from the same checkout settings the cart uses.
 function factsTable(settings) {
   const checkout = settings.checkout || {};
@@ -598,6 +658,7 @@ function factsTable(settings) {
   const days = (String(checkout.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [])[0];
   const prices = (settings.products || []).filter(item => item.enabled !== false).map(item => priceValue(item.price)).filter(Boolean);
   const rows = [
+    ["Currency", "Pakistani rupees (Rs)"],
     ["Delivery area", "Anywhere in Pakistan"],
     days && ["Delivery time", days],
     ["Delivery fee", fee ? `${money(fee)}${free ? `, free on orders of ${money(free)} or more` : ""}` : "Free"],
@@ -745,6 +806,7 @@ function frontLoad($, settings, assets, pathname) {
 
 async function buildStorefront(settings, posts, site) {
   settings = normalizeStoreCategories(structuredClone(settings));
+  localizePakistaniPageMetadata(settings);
   // The page text groups are defined in server.js: use the version being deployed, not whichever version
   // the backend happens to run while this build fetches its data.
   const serverSource = await fs.readFile(path.join(root, "server.js"), "utf8");
