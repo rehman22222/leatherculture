@@ -17,9 +17,9 @@ module.exports = {
     keywords: "about LeatherCulture, LeatherCulture Pakistan"
   },
   blog: {
-    metaTitle: "Leather Jacket Buying, Care & Style Guides | LeatherCulture",
-    metaDescription: "Read LeatherCulture's leather jacket buying, sizing, care and styling guides. Get practical answers and compare the current collection in Pakistan.",
-    keywords: "leather jacket buying guide, leather jacket care Pakistan, leather jacket size guide"
+    metaTitle: "Leather Buying Guides for Pakistan | LeatherCulture Journal",
+    metaDescription: "Read practical Pakistan-focused guides on leather jackets, original leather, sizing, prices, care and ordering online from LeatherCulture.",
+    keywords: "leather buying guide Pakistan, original leather Pakistan, leather jacket care Pakistan, leather jacket price Pakistan, leather jacket size guide"
   },
   contact: {
     metaTitle: "Contact LeatherCulture | Sizing & Order Help in Pakistan",

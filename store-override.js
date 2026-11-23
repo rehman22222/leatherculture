@@ -609,9 +609,14 @@
     const currentPage = currentPageSettings();
     const isHome = (location.pathname.replace(/\/$/, "") || "/") === "/";
     const record = product || post || currentPage;
+    const marketMeta = (location.pathname.replace(/\/$/, "") || "/") === "/blog" ? {
+      metaTitle: "Leather Buying Guides for Pakistan | LeatherCulture Journal",
+      metaDescription: "Read practical Pakistan-focused guides on leather jackets, original leather, sizing, prices, care and ordering online from LeatherCulture.",
+      keywords: "leather buying guide Pakistan, original leather Pakistan, leather jacket care Pakistan, leather jacket price Pakistan, leather jacket size guide"
+    } : null;
     const fallbackTitle = isHome ? get("brand.title") || `${get("brand.name") || "LeatherCulture"} - Premium Store` : document.title;
-    const title = (record && record.metaTitle) || fallbackTitle;
-    const description = (record && record.metaDescription) || (record && record.excerpt) || (isHome ? get("brand.description") : null);
+    const title = (marketMeta && marketMeta.metaTitle) || (record && record.metaTitle) || fallbackTitle;
+    const description = (marketMeta && marketMeta.metaDescription) || (record && record.metaDescription) || (record && record.excerpt) || (isHome ? get("brand.description") : null);
     document.title = title.replace(/Framer Template/gi, "Premium Store");
     document.querySelectorAll("meta[name='description'], meta[property='og:description'], meta[name='twitter:description']").forEach((meta) => {
       if (description) meta.setAttribute("content", description);
@@ -622,7 +627,7 @@
       keywords.setAttribute("name", "keywords");
       document.head.appendChild(keywords);
     }
-    if (record && record.keywords) keywords.setAttribute("content", record.keywords);
+    if (marketMeta?.keywords || (record && record.keywords)) keywords.setAttribute("content", marketMeta?.keywords || record.keywords);
     let canonical = document.querySelector("link[rel='canonical']");
     if (!canonical) {
       canonical = document.createElement("link");
@@ -1331,6 +1336,54 @@
     }
   }
 
+  function localizePakistanBuyerContent() {
+    const pathname = location.pathname.replace(/\/$/, "") || "/";
+    if (!["/", "/shop", "/about", "/contact", "/blog"].includes(pathname) || !settings) return;
+    const root = document.querySelector(".lc-answers");
+    if (!root) return;
+    const checkout = settings.checkout || {};
+    const currency = checkout.currency || "Rs";
+    const fee = Number(checkout.shippingFee) || 0;
+    const free = Number(checkout.freeShippingFrom) || 0;
+    const estimate = (String(checkout.codNote || "").match(/\d+\s*[-–]\s*\d+\s*(?:working\s+)?days/i) || [""])[0];
+    const policy = String(checkout.returnsPolicy || "Contact contact@leatherculture.shop for the current returns and exchange policy before ordering.").trim();
+    const prices = (settings.products || []).filter((item) => item.enabled !== false).map((item) => Number(String(item.price || "").replace(/[^0-9.]/g, ""))).filter(Boolean);
+    const range = prices.length ? ` Current collection prices range from ${currency} ${Math.min(...prices).toLocaleString("en-PK")} to ${currency} ${Math.max(...prices).toLocaleString("en-PK")}.` : "";
+    const delivery = `We deliver across Pakistan${estimate ? ` in an estimated ${estimate}` : ""}.`;
+    const charge = fee ? ` Delivery is ${currency} ${fee.toLocaleString("en-PK")}${free ? `, free on orders of ${currency} ${free.toLocaleString("en-PK")} or more` : ""}.` : " Delivery is free.";
+    const pageCopy = {
+      "/": ["Leather shopping in Pakistan: practical answers", `Shop LeatherCulture online in Pakistan with prices in Pakistani rupees (Rs), cash on delivery and clear size, material and delivery information.${range}`],
+      "/shop": ["Buying a leather jacket online in Pakistan", `Compare the current collection by price in Pakistani rupees, photos and available size before ordering.${range}`],
+      "/about": ["A Pakistan-focused way to buy leather", "LeatherCulture is an online leather store for customers in Pakistan. Compare live product details and ask for help before placing an order."],
+      "/contact": ["Order support for customers across Pakistan", "For sizing, material, delivery or return questions, contact the team with the product name and your city before ordering."],
+      "/blog": ["Leather buying questions in Pakistan", "Use these guides to compare original leather, price, sizing, care and online ordering before you buy in Pakistan."]
+    };
+    const heading = root.querySelector("h2");
+    const lead = root.querySelector(".lc-lede");
+    if (heading) heading.textContent = pageCopy[pathname][0];
+    if (lead) lead.textContent = pageCopy[pathname][1];
+    const setAnswer = (match, title, body) => {
+      Array.from(root.querySelectorAll("details")).filter((detail) => match.test(normalizeText(detail.querySelector("summary")?.textContent))).slice(0, 1).forEach((detail) => {
+        const question = detail.querySelector("summary h1,summary h2,summary h3,summary h4");
+        const answer = detail.querySelector("p");
+        if (question) question.textContent = title;
+        if (answer) answer.textContent = body;
+      });
+    };
+    setAnswer(/deliver across pakistan/i, "Does LeatherCulture deliver across Pakistan?", `${delivery}${charge} Cash on delivery is available for the current collection.`);
+    setAnswer(/how do i pay/i, "How does cash on delivery work in Pakistan?", "Complete your order online, then pay the courier in cash when the parcel arrives. Review delivery and return terms before ordering.");
+    setAnswer(/how much does delivery cost/i, "What are the Pakistan delivery charges?", `${charge.trim()}${estimate ? ` Estimated delivery is ${estimate}.` : ""}`);
+    setAnswer(/is the leather genuine/i, "What material details can I confirm before ordering?", "Ask the team to confirm the shell material, lining and construction of the exact item you want. Product photos and descriptions show the design; written details are best for a material question.");
+    setAnswer(/exchange an item|returns? policy/i, "What is the returns policy?", policy);
+    setAnswer(/choose the right size/i, "How can I choose the right size online?", "Compare the listed option with a jacket you already own, then send the team your chest, shoulder and sleeve measurements if you need help before ordering.");
+    if ((pathname === "/shop" || pathname === "/blog") && !root.querySelector("details[data-lc-pakistan-ordering]")) {
+      const detail = document.createElement("details");
+      detail.dataset.lcPakistanOrdering = "true";
+      detail.innerHTML = '<summary><h3>Leather jacket order karne se pehle kya check karein?</h3></summary><p lang="ur-Latn">Current price in Rs, available size, product photos, material details, delivery estimate aur return terms check karein. Kisi bhi baat par doubt ho to order se pehle team se pooch lein.</p>';
+      root.querySelector(".lc-in")?.appendChild(detail);
+    }
+  }
+
   function applySettings() {
     if (!settings) return;
     normalizeStoreCategories();
@@ -1346,6 +1399,7 @@
     syncCatalogLinks();
     syncCategoryDirectory();
     syncProductSchema();
+    localizePakistanBuyerContent();
     syncBusinessDetails();
     applyCustomerReviews();
   }
