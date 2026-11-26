@@ -81,6 +81,17 @@ for (const url of urls) {
       assert.equal(card.find("img").first().attr("src"), cardImage(product.image), "homepage: product image does not match card");
     });
   }
+  if (url.pathname === "/blog" && settings) {
+    const directory = $("[data-lc-journal-directory]");
+    const published = settings.blogPosts.filter(post => post.status === "published" && post.slug);
+    assert.equal(directory.length, 1, "blog: published journal directory missing");
+    assert.equal(directory.find("[data-lc-journal-card]").length, published.length, "blog: directory is missing published guides");
+    assert.deepEqual(directory.find("[data-lc-journal-filter]").map((_, button) => $(button).attr("data-lc-journal-filter")).get(), ["all", "style", "buying", "care"], "blog: journal filters changed");
+    directory.find("[data-lc-journal-card]").each((_, card) => {
+      const groups = String($(card).attr("data-lc-groups") || "").split(" ");
+      assert(groups.includes("all") && groups.length > 1, "blog: guide is not assigned to a usable category");
+    });
+  }
   const productData = $("#lc-product-data").length ? JSON.parse($("#lc-product-data").text()).product : null;
   assert.equal($("body > #lc-account-link").length, 0, `${url.pathname}: legacy floating account link`);
   // Tools and crawlers that read only the start of a page must reach the structured data and the answers.
@@ -171,6 +182,8 @@ const bags = CATEGORY_CATALOG.find(category => category.id === "leather-bags");
 assert(bags, "catalogue: leather-bags category missing");
 assert.equal(categoryIsIndexable({ products: [] }, bags), false, "catalogue: empty future category must remain noindex");
 assert.equal(categoryIsIndexable({ products: [{ category: "leather-bags", enabled: true }] }, bags), true, "catalogue: stocked future category must become indexable");
+const storefrontRuntime = fs.readFileSync(path.join(__dirname, "..", "store-override.js"), "utf8");
+assert(storefrontRuntime.includes('location.pathname === "/blog" && document.querySelector("[data-lc-journal-directory]")'), "blog: legacy Framer runtime can replace the static journal");
 const fixture = { products: [], footer: { phone: "+92 300 9876543", email: "info@leatherculture.shop" }, checkout: { returnsPolicy: "Exchange within 14 days with original tags." }, content: { values: {} } };
 const result = cheerio.load(materialize('<html><head></head><body><p>+001 234 567 890</p><a href="tel:001234567890">Call</a><section id="faq"><details><summary>Can I exchange an item?</summary><p>Old policy</p></details></section></body></html>', fixture, "/contact", [], "https://www.leatherculture.shop"));
 assert.equal(result("a[href^='tel:']").text(), fixture.footer.phone);
