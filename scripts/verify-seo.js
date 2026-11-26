@@ -87,6 +87,7 @@ for (const url of urls) {
     assert.equal(directory.length, 1, "blog: published journal directory missing");
     assert.equal(directory.find("[data-lc-journal-card]").length, published.length, "blog: directory is missing published guides");
     assert.deepEqual(directory.find("[data-lc-journal-filter]").map((_, button) => $(button).attr("data-lc-journal-filter")).get(), ["all", "style", "buying", "care"], "blog: journal filters changed");
+    assert.equal(directory.find("[data-lc-journal-filter-script]").length, 0, "blog: mobile filters must use the persistent site runtime");
     directory.find("[data-lc-journal-card]").each((_, card) => {
       const groups = String($(card).attr("data-lc-groups") || "").split(" ");
       assert(groups.includes("all") && groups.length > 1, "blog: guide is not assigned to a usable category");
@@ -184,6 +185,7 @@ assert.equal(categoryIsIndexable({ products: [] }, bags), false, "catalogue: emp
 assert.equal(categoryIsIndexable({ products: [{ category: "leather-bags", enabled: true }] }, bags), true, "catalogue: stocked future category must become indexable");
 const storefrontRuntime = fs.readFileSync(path.join(__dirname, "..", "store-override.js"), "utf8");
 assert(storefrontRuntime.includes('location.pathname === "/blog" && document.querySelector("[data-lc-journal-directory]")'), "blog: legacy Framer runtime can replace the static journal");
+assert(storefrontRuntime.includes("function setupJournalFilters()"), "blog: persistent mobile journal filter handler missing");
 const fixture = { products: [], footer: { phone: "+92 300 9876543", email: "info@leatherculture.shop" }, checkout: { returnsPolicy: "Exchange within 14 days with original tags." }, content: { values: {} } };
 const result = cheerio.load(materialize('<html><head></head><body><p>+001 234 567 890</p><a href="tel:001234567890">Call</a><section id="faq"><details><summary>Can I exchange an item?</summary><p>Old policy</p></details></section></body></html>', fixture, "/contact", [], "https://www.leatherculture.shop"));
 assert.equal(result("a[href^='tel:']").text(), fixture.footer.phone);
