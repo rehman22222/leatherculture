@@ -1867,9 +1867,11 @@
   }
 
   function scheduleFramerRuntime() {
-    // The shop is fully materialized during the deployment. Starting Framer later can
-    // replace those live cards with its old CMS snapshot and reintroduce the empty carousel.
-    if (location.pathname === "/shop" && document.querySelector("#main[data-lc-static-shop]")) return;
+    // The shop and journal are fully materialized during the deployment. Starting Framer
+    // later can replace them with its old CMS snapshot after an otherwise correct reload.
+    const hasStaticShop = location.pathname === "/shop" && document.querySelector("#main[data-lc-static-shop]");
+    const hasStaticJournal = location.pathname === "/blog" && document.querySelector("[data-lc-journal-directory]");
+    if (hasStaticShop || hasStaticJournal) return;
     if (runtimeScheduled) return;
     runtimeScheduled = true;
     const start = (event) => {
