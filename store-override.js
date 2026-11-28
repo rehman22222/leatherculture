@@ -1638,6 +1638,7 @@
     document.querySelectorAll("[data-lc-journal-directory]").forEach((root) => {
       if (root.dataset.lcJournalReady) return;
       const buttons = Array.from(root.querySelectorAll("[data-lc-journal-filter]"));
+      const inputs = Array.from(root.querySelectorAll("[data-lc-journal-filter-input]"));
       const cards = Array.from(root.querySelectorAll("[data-lc-journal-card]"));
       const count = root.querySelector("[data-lc-journal-count]");
       const empty = root.querySelector("[data-lc-journal-empty]");
@@ -1650,7 +1651,8 @@
           card.hidden = !show;
           if (show) visible += 1;
         });
-        buttons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.lcJournalFilter === group)));
+        inputs.forEach((input) => { input.checked = input.value === group; });
+        buttons.forEach((button) => { button.dataset.lcJournalActive = String(button.dataset.lcJournalFilter === group); });
         if (count) count.textContent = visible === 1 ? "1 guide" : `${visible} guides`;
         if (empty) empty.hidden = visible !== 0;
       };
@@ -1661,6 +1663,7 @@
         event.preventDefault();
         select(target.dataset.lcJournalFilter || "all");
       });
+      inputs.forEach((input) => input.addEventListener("change", () => select(input.value || "all")));
       const reset = root.querySelector("[data-lc-journal-reset]");
       if (reset) reset.addEventListener("click", () => select("all"));
       root.dataset.lcJournalReady = "true";
