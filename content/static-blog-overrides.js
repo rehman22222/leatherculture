@@ -12,5 +12,6 @@ module.exports = [
   "slim-wallet-vs-bifold-pakistan",
   "leather-laptop-backpack-pakistan",
   "leather-duffel-bag-pakistan",
-  "suede-jacket-pakistan-care-fit-guide"
+  "suede-jacket-pakistan-care-fit-guide",
+  "burgundy-leather-jacket-karachi-style-guide"
 ];

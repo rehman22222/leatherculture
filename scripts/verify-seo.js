@@ -87,6 +87,10 @@ for (const url of urls) {
     assert.equal(directory.length, 1, "blog: published journal directory missing");
     assert.equal(directory.find("[data-lc-journal-card]").length, published.length, "blog: directory is missing published guides");
     assert.deepEqual(directory.find("[data-lc-journal-filter]").map((_, button) => $(button).attr("data-lc-journal-filter")).get(), ["all", "style", "buying", "care"], "blog: journal filters changed");
+    assert.equal(directory.find("[data-lc-journal-filter-input]").length, 4, "blog: no-JavaScript mobile filter fallback missing");
+    assert.deepEqual(directory.find("[data-lc-journal-filter-input]").map((_, input) => $(input).attr("value")).get(), ["all", "style", "buying", "care"], "blog: fallback filters changed");
+    assert.equal(directory.find("[data-lc-journal-filter-input][checked]").attr("value"), "all", "blog: all-guides fallback is not selected initially");
+    directory.find("[data-lc-journal-filter]").each((_, control) => assert(directory.find(`#${$(control).attr("for")}`).length, "blog: filter label is not connected to its fallback control"));
     assert.equal(directory.find("[data-lc-journal-filter-script]").length, 0, "blog: mobile filters must use the persistent site runtime");
     directory.find("[data-lc-journal-card]").each((_, card) => {
       const groups = String($(card).attr("data-lc-groups") || "").split(" ");
@@ -186,6 +190,7 @@ assert.equal(categoryIsIndexable({ products: [{ category: "leather-bags", enable
 const storefrontRuntime = fs.readFileSync(path.join(__dirname, "..", "store-override.js"), "utf8");
 assert(storefrontRuntime.includes('location.pathname === "/blog" && document.querySelector("[data-lc-journal-directory]")'), "blog: legacy Framer runtime can replace the static journal");
 assert(storefrontRuntime.includes("function setupJournalFilters()"), "blog: persistent mobile journal filter handler missing");
+assert(storefrontRuntime.includes("data-lc-journal-filter-input"), "blog: mobile filter fallback is not wired into the persistent handler");
 const fixture = { products: [], footer: { phone: "+92 300 9876543", email: "info@leatherculture.shop" }, checkout: { returnsPolicy: "Exchange within 14 days with original tags." }, content: { values: {} } };
 const result = cheerio.load(materialize('<html><head></head><body><p>+001 234 567 890</p><a href="tel:001234567890">Call</a><section id="faq"><details><summary>Can I exchange an item?</summary><p>Old policy</p></details></section></body></html>', fixture, "/contact", [], "https://www.leatherculture.shop"));
 assert.equal(result("a[href^='tel:']").text(), fixture.footer.phone);
