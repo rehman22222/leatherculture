@@ -1631,43 +1631,6 @@
     });
   }
 
-  // The generated Journal is intentionally static so it cannot be replaced by the legacy
-  // Framer CMS after a reload. Bind its filters from this persistent site script instead of
-  // an inline page script, which some mobile hydration paths can skip.
-  function setupJournalFilters() {
-    document.querySelectorAll("[data-lc-journal-directory]").forEach((root) => {
-      if (root.dataset.lcJournalReady) return;
-      const buttons = Array.from(root.querySelectorAll("[data-lc-journal-filter]"));
-      const cards = Array.from(root.querySelectorAll("[data-lc-journal-card]"));
-      const count = root.querySelector("[data-lc-journal-count]");
-      const empty = root.querySelector("[data-lc-journal-empty]");
-      if (!buttons.length || !cards.length) return;
-
-      const select = (group) => {
-        let visible = 0;
-        cards.forEach((card) => {
-          const show = group === "all" || (card.dataset.lcGroups || "").split(" ").includes(group);
-          card.hidden = !show;
-          if (show) visible += 1;
-        });
-        buttons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.lcJournalFilter === group)));
-        if (count) count.textContent = visible === 1 ? "1 guide" : `${visible} guides`;
-        if (empty) empty.hidden = visible !== 0;
-      };
-
-      root.addEventListener("click", (event) => {
-        const target = event.target instanceof Element ? event.target.closest("[data-lc-journal-filter]") : null;
-        if (!target || !root.contains(target)) return;
-        event.preventDefault();
-        select(target.dataset.lcJournalFilter || "all");
-      });
-      const reset = root.querySelector("[data-lc-journal-reset]");
-      if (reset) reset.addEventListener("click", () => select("all"));
-      root.dataset.lcJournalReady = "true";
-      select("all");
-    });
-  }
-
   // The answer section is authored after Framer's React root so hydration can't drop it;
   // with JS available we lift it above the footer where a FAQ belongs. Framer's recovery render
   // detaches it from there again, so every pass puts the same node back if it has gone.
@@ -1748,7 +1711,6 @@
       cleanVisibleBranding();
       hidePlaceholderLogos();
       placeAnswers();
-      setupJournalFilters();
       enforceSingleH1();
       enforceHeadingLevels();
       enforceTickerListSemantics();
